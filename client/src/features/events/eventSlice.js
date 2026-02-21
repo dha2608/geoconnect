@@ -1,0 +1,47 @@
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { eventApi } from '../../api/eventApi';
+
+export const fetchViewportEvents = createAsyncThunk('events/fetchViewport', async (bounds, { rejectWithValue }) => {
+  try { const res = await eventApi.getViewportEvents(bounds); return res.data; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
+export const fetchEvent = createAsyncThunk('events/fetchOne', async (id, { rejectWithValue }) => {
+  try { const res = await eventApi.getEvent(id); return res.data; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
+export const createEvent = createAsyncThunk('events/create', async (data, { rejectWithValue }) => {
+  try { const res = await eventApi.createEvent(data); return res.data; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
+export const toggleRsvp = createAsyncThunk('events/toggleRsvp', async (id, { rejectWithValue }) => {
+  try { const res = await eventApi.toggleRsvp(id); return res.data; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
+const eventSlice = createSlice({
+  name: 'events',
+  initialState: { events: [], selectedEvent: null, loading: false, error: null },
+  reducers: {
+    setSelectedEvent: (state, action) => { state.selectedEvent = action.payload; },
+    clearSelectedEvent: (state) => { state.selectedEvent = null; },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(fetchViewportEvents.pending, (state) => { state.loading = true; });
+    builder.addCase(fetchViewportEvents.fulfilled, (state, action) => { state.loading = false; state.events = action.payload.events || action.payload; });
+    builder.addCase(fetchViewportEvents.rejected, (state, action) => { state.loading = false; state.error = action.payload?.message; });
+    builder.addCase(fetchEvent.fulfilled, (state, action) => { state.selectedEvent = action.payload.event || action.payload; });
+    builder.addCase(createEvent.fulfilled, (state, action) => { state.events.push(action.payload.event || action.payload); });
+    builder.addCase(toggleRsvp.fulfilled, (state, action) => {
+      const updated = action.payload.event || action.payload;
+      const idx = state.events.findIndex(e => e._id === updated._id);
+      if (idx !== -1) state.events[idx] = updated;
+      if (state.selectedEvent?._id === updated._id) state.selectedEvent = updated;
+    });
+  },
+});
+
+export const { setSelectedEvent, clearSelectedEvent } = eventSlice.actions;
+export default eventSlice.reducer;
