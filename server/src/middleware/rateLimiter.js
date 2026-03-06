@@ -1,17 +1,19 @@
 import rateLimit from 'express-rate-limit';
 
+// General API limiter
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
-  message: { message: 'Too many requests, please try again later' },
+  max: 500,                  // 500 requests per window (generous for SPA)
   standardHeaders: true,
   legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
 });
 
+// Stricter limiter for auth endpoints (prevent brute force)
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { message: 'Too many auth attempts, please try again later' },
+  max: 50,                   // 50 auth attempts per 15 min
   standardHeaders: true,
   legacyHeaders: false,
+  message: { error: 'Too many auth attempts, please try again later.' },
 });

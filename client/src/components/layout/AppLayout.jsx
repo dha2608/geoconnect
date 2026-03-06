@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Outlet } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { setIsMobile } from '../../features/ui/uiSlice';
-import { getMe } from '../../features/auth/authSlice';
 import useSocket from '../../socket/useSocket';
 import Header from './Header';
 import Sidebar from './Sidebar';
@@ -28,10 +27,7 @@ export default function AppLayout() {
   // Initialize persistent socket connection for this session
   useSocket();
 
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (token) dispatch(getMe());
-  }, [dispatch]);
+  // NOTE: getMe() is called by ProtectedRoute — no need to call it here
 
   useEffect(() => {
     const handleResize = () => {

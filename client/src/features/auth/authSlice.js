@@ -50,18 +50,33 @@ export const getMe = createAsyncThunk('auth/getMe', async (_, { rejectWithValue 
   }
 });
 
+// If a token exists in localStorage on startup, we should show a loading
+// state until getMe resolves — otherwise ProtectedRoute immediately
+// redirects to /login before we can verify the token.
+const hasTokenOnLoad = !!localStorage.getItem('accessToken');
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
     user: null,
     isAuthenticated: false,
     isGuest: false,
-    loading: false,
+    loading: hasTokenOnLoad,   // true if token exists → show spinner until getMe resolves
+    initialized: false,        // becomes true after first getMe attempt
     error: null,
   },
   reducers: {
     clearError: (state) => { state.error = null; },
     setUser: (state, action) => { state.user = action.payload; state.isAuthenticated = true; },
+    // Called by axios interceptor when refresh fails — avoids hard redirect
+    forceLogout: (state) => {
+      state.user = null;
+      state.isAuthenticated = false;
+      state.isGuest = false;
+      state.loading = false;
+      state.initialized = true;
+      localStorage.removeItem('accessToken');
+    },
   },
   extraReducers: (builder) => {
     // Register
@@ -92,11 +107,16 @@ const authSlice = createSlice({
     // getMe
     builder.addCase(getMe.pending, (state) => { state.loading = true; });
     builder.addCase(getMe.fulfilled, (state, action) => {
-      state.loading = false; state.user = action.payload.user; state.isAuthenticated = true;
+      state.loading = false; state.initialized = true;
+      state.user = action.payload.user; state.isAuthenticated = true;
     });
-    builder.addCase(getMe.rejected, (state) => { state.loading = false; state.isAuthenticated = false; state.user = null; });
+    builder.addCase(getMe.rejected, (state) => {
+      state.loading = false; state.initialized = true;
+      state.isAuthenticated = false; state.user = null;
+      localStorage.removeItem('accessToken');
+    });
   },
 });
 
-export const { clearError, setUser } = authSlice.actions;
+export const { clearError, setUser, forceLogout } = authSlice.actions;
 export default authSlice.reducer;
