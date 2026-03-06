@@ -7,6 +7,7 @@ import { setTileLayer } from '../../features/map/mapSlice';
 
 const TILE_OPTIONS = [
   { id: 'dark',      label: 'Dark',      icon: '🌙' },
+  { id: 'street',    label: 'Street',    icon: '🗺️' },
   { id: 'light',     label: 'Light',     icon: '☀️' },
   { id: 'satellite', label: 'Satellite', icon: '🛰️' },
 ];

@@ -2,9 +2,16 @@ import axios from 'axios';
 import { store } from '../app/store';
 import { forceLogout } from '../features/auth/authSlice';
 
+// In development, Vite proxy forwards /api → localhost:5000
+// In production, VITE_API_URL points to the actual backend (e.g. Render)
+const baseURL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api';
+
 const API = axios.create({
-  baseURL: '/api',
+  baseURL,
   withCredentials: true,
+  timeout: 15000, // 15s timeout — fail fast instead of hanging forever
 });
 
 // Request interceptor - attach access token
@@ -49,7 +56,7 @@ API.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const { data } = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
+        const { data } = await axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true });
         const newToken = data.accessToken;
         localStorage.setItem('accessToken', newToken);
         originalRequest.headers.Authorization = `Bearer ${newToken}`;

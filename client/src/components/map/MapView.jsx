@@ -16,15 +16,24 @@ const TILE_LAYERS = {
     url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    className: 'map-dark',
+  },
+  street: {
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    className: '',
   },
   light: {
     url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    className: '',
   },
   satellite: {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: '&copy; Esri',
+    className: 'map-satellite',
   },
 };
 
@@ -68,7 +77,7 @@ export default function MapView() {
   const tile = TILE_LAYERS[tileLayer] ?? TILE_LAYERS.dark;
 
   return (
-    <div className="relative w-full h-full">
+    <div className={`relative w-full h-full ${tile.className ?? ''}`}>
       <MapContainer
         center={center}
         zoom={zoom}
