@@ -10,12 +10,14 @@ export default function ProtectedRoute({ children }) {
   const location = useLocation();
 
   // On mount, if we have a token but haven't verified it yet, fire getMe
+  // NOTE: Do NOT gate on !loading — loading starts as true (hasTokenOnLoad)
+  // which would create a deadlock where getMe never fires.
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    if (token && !initialized && !loading) {
+    if (token && !initialized) {
       dispatch(getMe());
     }
-  }, [dispatch, initialized, loading]);
+  }, [dispatch, initialized]);
 
   // Still loading / verifying token → show spinner
   if (loading || (!initialized && localStorage.getItem('accessToken'))) {

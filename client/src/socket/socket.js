@@ -24,10 +24,11 @@ let socket = null;
  * @returns {import('socket.io-client').Socket}
  */
 export const connectSocket = (token) => {
-  // Return existing live connection rather than creating a duplicate
-  if (socket?.connected) return socket;
+  // Return existing live or connecting socket — prevents triple-connect on
+  // StrictMode double-invocations and HMR remounts
+  if (socket?.connected || socket?.active) return socket;
 
-  // If a stale / disconnected socket exists, remove it before reconnecting
+  // If a stale / fully disconnected socket exists, remove it before reconnecting
   if (socket) {
     socket.removeAllListeners();
     socket.disconnect();

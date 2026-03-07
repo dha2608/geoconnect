@@ -53,7 +53,7 @@ export default function NearbyUsersLayer() {
           display: flex; align-items: center; justify-content: center;
           color: #f1f5f9; font-size: 11px; font-weight: 600;
           overflow: hidden;
-        ">${!user.avatar ? user.username[0].toUpperCase() : ''}</div>`,
+        ">${!user.avatar ? (user.username || user.name || '?')[0].toUpperCase() : ''}</div>`,
         iconSize:   [28, 28],
         iconAnchor: [14, 14],
       });
@@ -70,7 +70,7 @@ export default function NearbyUsersLayer() {
       });
 
       // Hover tooltip
-      marker.bindTooltip(user.username, {
+      marker.bindTooltip(user.username || user.name || 'User', {
         direction:  'top',
         className:  'dark-tooltip',
         offset:     [0, -14],

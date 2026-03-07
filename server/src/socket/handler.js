@@ -31,6 +31,12 @@ export const setupSocket = (io) => {
       socket.join(`user:${userId}`);
     });
 
+    // Join conversation room for messaging + typing events
+    socket.on('join_conversation', ({ conversationId }) => {
+      if (!conversationId) return;
+      socket.join(`conversation:${conversationId}`);
+    });
+
     // Location sharing
     socket.on('location_update', async ({ lat, lng, heading }) => {
       try {

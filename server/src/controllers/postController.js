@@ -142,3 +142,18 @@ export const addComment = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const getUserPosts = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    const posts = await Post.find({ author: req.params.userId })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate('author', 'username name avatar');
+    res.json(posts);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch user posts' });
+  }
+};

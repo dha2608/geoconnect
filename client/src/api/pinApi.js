@@ -10,3 +10,5 @@ export const pinApi = {
   toggleLike: (id) => API.post(`/pins/${id}/like`),
   toggleSave: (id) => API.post(`/pins/${id}/save`),
 };
+
+export const getSavedPins = (userId) => API.get(`/pins/saved/${userId}`);

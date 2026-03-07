@@ -10,3 +10,5 @@ export const postApi = {
   toggleLike: (id) => API.post(`/posts/${id}/like`),
   addComment: (id, data) => API.post(`/posts/${id}/comments`, data),
 };
+
+export const getUserPosts = (userId, page = 1) => API.get(`/posts/user/${userId}?page=${page}`);

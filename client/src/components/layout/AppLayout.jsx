@@ -18,6 +18,7 @@ import CreateEventModal from '../events/CreateEventModal';
 import EventDetailPanel from '../events/EventDetailPanel';
 import NotificationPanel from '../notifications/NotificationPanel';
 import MessagesPanel from '../messages/MessagesPanel';
+import SearchPanel from '../search/SearchPanel';
 
 export default function AppLayout() {
   const dispatch = useDispatch();
@@ -55,6 +56,7 @@ export default function AppLayout() {
         {activePanel === 'events' && <EventListPanel />}
         {activePanel === 'notifications' && <NotificationPanel />}
         {activePanel === 'messages' && <MessagesPanel />}
+        {activePanel === 'search' && <SearchPanel />}
       </AnimatePresence>
 
       {/* ── Modals (always mounted, render conditionally from Redux state) ── */}

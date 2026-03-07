@@ -181,3 +181,16 @@ export const unsavePin = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+export const getSavedPins = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId).select('savedPins');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    const pins = await Pin.find({ _id: { $in: user.savedPins || [] } })
+      .populate('creator', 'username name avatar')
+      .limit(50);
+    res.json(pins);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch saved pins' });
+  }
+};
