@@ -75,4 +75,26 @@ API.interceptors.response.use(
   }
 );
 
+// Retry interceptor — retries failed GET requests (network errors / 5xx), max 2 times with backoff
+const MAX_RETRIES = 2;
+const RETRY_DELAY = 1000;
+
+API.interceptors.response.use(null, async (error) => {
+  const config = error.config;
+
+  // Don't retry if no config, or retry limit reached
+  if (!config || config._retryCount >= MAX_RETRIES) return Promise.reject(error);
+  // Don't retry auth/validation errors — let the 401 refresh interceptor handle those
+  if (error.response?.status === 401 || error.response?.status === 403) return Promise.reject(error);
+  if (error.response?.status === 400 || error.response?.status === 422) return Promise.reject(error);
+  // Only retry idempotent GET requests
+  if (config.method !== 'get') return Promise.reject(error);
+
+  config._retryCount = (config._retryCount || 0) + 1;
+
+  // Exponential-ish backoff: 1s, 2s
+  await new Promise((r) => setTimeout(r, RETRY_DELAY * config._retryCount));
+  return API(config);
+});
+
 export default API;

@@ -1,91 +1,155 @@
 # GeoConnect
 
-Location-based social network built with the MERN stack + Leaflet.
+> A location-based social network — discover places, share experiences, and connect with people nearby on an interactive map.
 
-## Tech Stack
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)](https://nodejs.org)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com)
+[![Socket.io](https://img.shields.io/badge/Socket.io-4-010101?logo=socket.io&logoColor=white)](https://socket.io)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-- **Frontend:** React 18 + Vite, Redux Toolkit, Tailwind CSS, React Leaflet, Framer Motion
-- **Backend:** Node.js + Express, MongoDB, Socket.io, JWT Auth, Passport.js OAuth
-- **Maps:** OpenStreetMap + Leaflet.js, Nominatim Geocoding, OSRM Routing
-- **Deploy:** Vercel (frontend) + Render (backend)
+---
 
-## Getting Started
+## ✨ Features
 
-### Prerequisites
+- 🗺️ **Interactive Map** — Browse and interact with a live OpenStreetMap canvas powered by Leaflet
+- 📍 **Pin System** — Drop pins at any location with categories, descriptions, photos, and reviews
+- 🔴 **Real-Time Location** — Live user presence on the map via Socket.io
+- 👥 **Social Graph** — Follow users, view profiles, and build your network
+- 💬 **Messaging** — Real-time direct messages and group conversations
+- 📅 **Events** — Create location-pinned events with RSVP and map markers
+- 🔐 **Authentication** — Email/password + Google & GitHub OAuth (Passport.js)
+- 🌙 **Dark Glass UI** — Custom dark theme with glassmorphism and Framer Motion animations
+- 📲 **PWA Ready** — Installable on mobile, offline shell caching via Service Worker
 
-- Node.js >= 18
-- MongoDB (local or Atlas)
-- npm
+---
 
-### Installation
+## 🛠 Tech Stack
+
+| Layer      | Technology                                                   |
+| ---------- | ------------------------------------------------------------ |
+| Frontend   | React 18, Vite, Redux Toolkit, React Router v6, Tailwind CSS |
+| Maps       | Leaflet.js, React Leaflet, OpenStreetMap, Nominatim, OSRM    |
+| Animation  | Framer Motion                                                |
+| Backend    | Node.js, Express, MongoDB, Mongoose                          |
+| Real-time  | Socket.io                                                    |
+| Auth       | JWT, Passport.js (Google, GitHub OAuth)                      |
+| Validation | Zod, React Hook Form                                         |
+| Deploy     | Vercel (frontend), Render (backend)                          |
+
+---
+
+## 🚀 Getting Started
+
+See **[INSTALLATION.md](./INSTALLATION.md)** for full setup instructions.
+
+### Quick Start
 
 ```bash
-# Install all dependencies
+# 1. Install all dependencies
 npm run install:all
 
-# Copy environment files
+# 2. Configure environment variables
 cp server/.env.example server/.env
 cp client/.env.example client/.env
+# Edit both .env files with your credentials
 
-# Edit .env files with your credentials
-```
-
-### Development
-
-```bash
-# Run both client and server
+# 3. Start development servers (client + server concurrently)
 npm run dev
-
-# Or run separately
-npm run dev:client
-npm run dev:server
 ```
 
-### Build
+The client runs on **http://localhost:5173** and the server on **http://localhost:5000**.
 
-```bash
-npm run build
-```
+### Available Scripts
 
-## Project Structure
+| Command               | Description                           |
+| --------------------- | ------------------------------------- |
+| `npm run dev`         | Start client + server concurrently    |
+| `npm run dev:client`  | Start Vite dev server only            |
+| `npm run dev:server`  | Start Express server only             |
+| `npm run build`       | Production build (client + server)    |
+| `npm run install:all` | Install root, client, and server deps |
+
+---
+
+## 📁 Project Structure
 
 ```
 geoconnect/
-├── client/              # React frontend (Vite)
-│   ├── src/
-│   │   ├── app/         # Redux store
-│   │   ├── components/  # Reusable UI components
-│   │   ├── features/    # Feature modules (auth, map, pins, etc.)
-│   │   ├── hooks/       # Custom hooks
-│   │   ├── pages/       # Route pages
-│   │   ├── styles/      # Global CSS
-│   │   └── utils/       # Utilities
-│   └── public/
-├── server/              # Express backend
+├── client/                  # React frontend (Vite)
+│   ├── public/              # Static assets, manifest.json, sw.js
 │   └── src/
-│       ├── controllers/ # Route handlers
-│       ├── middleware/   # Express middleware
-│       ├── models/      # Mongoose models
-│       ├── routes/      # API routes
-│       ├── socket/      # Socket.io handlers
-│       └── utils/       # Server utilities
+│       ├── app/             # Redux store configuration
+│       ├── components/      # Reusable UI components
+│       ├── features/        # Feature modules (auth, map, pins, events…)
+│       ├── hooks/           # Custom React hooks
+│       ├── pages/           # Route-level page components
+│       ├── styles/          # Global CSS + Tailwind config
+│       └── utils/           # Shared utility functions
+│
+├── server/                  # Express backend
+│   └── src/
+│       ├── controllers/     # Route handlers
+│       ├── middleware/      # Express middleware (auth, error, upload)
+│       ├── models/          # Mongoose schemas
+│       ├── routes/          # API route definitions
+│       ├── socket/          # Socket.io event handlers
+│       └── utils/           # Server utilities
+│
+├── package.json             # Root scripts
 └── README.md
 ```
 
-## Features
+---
 
-- Interactive map with real-time location sharing
-- Pin creation with categories and reviews
-- Social features: follow, posts, messaging
-- Events with RSVP and map markers
-- Google & GitHub OAuth
-- Dark glass UI theme
+## 🌐 API Summary
 
-## Deployment
+Base URL: `https://geoconnect-api.onrender.com/api`
 
-- **Frontend:** Deploy `client/` to Vercel
-- **Backend:** Deploy `server/` to Render (see `server/render.yaml`)
+| Resource    | Endpoints                                  |
+| ----------- | ------------------------------------------ |
+| Auth        | `POST /auth/register`, `POST /auth/login`  |
+| Users       | `GET /users/:id`, `PUT /users/:id`         |
+| Pins        | `GET /pins`, `POST /pins`, `DELETE /pins/:id` |
+| Posts       | `GET /posts`, `POST /posts`                |
+| Events      | `GET /events`, `POST /events`              |
+| Messages    | `GET /messages/:conversationId`            |
+| Geocoding   | `GET /geocoding/search?q=`                 |
 
-## License
+All protected routes require `Authorization: Bearer <token>`.
 
-MIT
+---
+
+## ☁️ Deployment
+
+| Target   | Service | Config              |
+| -------- | ------- | ------------------- |
+| Frontend | Vercel  | `client/` directory |
+| Backend  | Render  | `server/render.yaml` |
+
+```bash
+# Build for production
+npm run build
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feat/your-feature`
+3. Commit changes: `git commit -m 'feat: add your feature'`
+4. Push to branch: `git push origin feat/your-feature`
+5. Open a Pull Request
+
+Please follow the existing code style and include relevant tests.
+
+---
+
+## 📄 License
+
+[MIT](./LICENSE) © GeoConnect

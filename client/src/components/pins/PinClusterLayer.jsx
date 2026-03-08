@@ -9,7 +9,7 @@
  *     images, creator, likes, saves, rating, reviewCount }
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.markercluster';
@@ -113,7 +113,7 @@ function createPinIcon(category) {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function PinClusterLayer() {
+const PinClusterLayer = memo(function PinClusterLayer() {
   const map = useMap();
   const dispatch = useDispatch();
 
@@ -180,4 +180,7 @@ export default function PinClusterLayer() {
   }, [map, pins, filters, dispatch]);
 
   return null;
-}
+});
+
+PinClusterLayer.displayName = 'PinClusterLayer';
+export default PinClusterLayer;

@@ -19,5 +19,16 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-redux': ['@reduxjs/toolkit', 'react-redux'],
+          'vendor-map': ['leaflet', 'react-leaflet'],
+          'vendor-animation': ['framer-motion'],
+          'vendor-utils': ['axios', 'date-fns', 'zod', 'react-hook-form'],
+        },
+      },
+    },
   },
 });

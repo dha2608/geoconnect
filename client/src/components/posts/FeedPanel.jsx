@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchFeed, clearPosts } from '../../features/posts/postSlice';
@@ -90,23 +90,31 @@ export default function FeedPanel() {
 
   // ── Responsive classes ───────────────────────────────────────────────────
 
-  const panelClass = isMobile
-    ? 'fixed top-16 bottom-16 left-0 right-0 z-20 glass overflow-hidden flex flex-col'
-    : 'fixed top-16 bottom-0 left-[72px] w-[380px] z-20 glass border-r border-accent-primary/10 overflow-hidden flex flex-col';
+  const panelClass = useMemo(
+    () =>
+      isMobile
+        ? 'fixed top-16 bottom-16 left-0 right-0 z-20 glass overflow-hidden flex flex-col'
+        : 'fixed top-16 bottom-0 left-[72px] w-[380px] z-20 glass border-r border-accent-primary/10 overflow-hidden flex flex-col',
+    [isMobile]
+  );
 
-  const motionProps = isMobile
-    ? {
-        initial: { opacity: 0, y: 20 },
-        animate: { opacity: 1, y: 0 },
-        exit:    { opacity: 0, y: 20 },
-        transition: { duration: 0.22, ease: 'easeOut' },
-      }
-    : {
-        initial: { x: -380 },
-        animate: { x: 0 },
-        exit:    { x: -380 },
-        transition: SPRING,
-      };
+  const motionProps = useMemo(
+    () =>
+      isMobile
+        ? {
+            initial: { opacity: 0, y: 20 },
+            animate: { opacity: 1, y: 0 },
+            exit:    { opacity: 0, y: 20 },
+            transition: { duration: 0.22, ease: 'easeOut' },
+          }
+        : {
+            initial: { x: -380 },
+            animate: { x: 0 },
+            exit:    { x: -380 },
+            transition: SPRING,
+          },
+    [isMobile]
+  );
 
   // ── Render ───────────────────────────────────────────────────────────────
 

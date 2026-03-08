@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
+import toast from 'react-hot-toast';
 // ─── Inline SVG Icons ─────────────────────────────────────────────────────────
 const Heart = ({ className, size = 24, ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
@@ -18,7 +19,14 @@ const MapPin = ({ className, size = 24, ...props }) => (
 const MoreHorizontal = ({ className, size = 24, ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
 );
+const Pencil = ({ className, size = 24, ...props }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+    <path d="m15 5 4 4"/>
+  </svg>
+);
 import { togglePostLike } from '../../features/posts/postSlice';
+import { openModal } from '../../features/ui/uiSlice';
 import Avatar from '../ui/Avatar';
 import GlassCard from '../ui/GlassCard';
 import CommentSection from './CommentSection';
@@ -98,16 +106,17 @@ function ImageGrid({ images }) {
 
 const CONTENT_CHAR_LIMIT = 220;
 
-export default function PostCard({ post }) {
+const PostCard = memo(function PostCard({ post }) {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
 
   const [showComments, setShowComments] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  const isLiked = user?._id ? post.likes?.includes(user._id) : false;
-  const likeCount = post.likes?.length ?? 0;
-  const commentCount = post.comments?.length ?? 0;
+  const isLiked       = user?._id ? post.likes?.includes(user._id) : false;
+  const likeCount     = post.likes?.length ?? 0;
+  const commentCount  = post.comments?.length ?? 0;
+  const isAuthor      = user?._id && post.creator?._id === user._id;
 
   const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
 
@@ -115,8 +124,14 @@ export default function PostCard({ post }) {
     post.content &&
     (post.content.length > CONTENT_CHAR_LIMIT || post.content.split('\n').length > 3);
 
-  const handleLike = () => {
-    dispatch(togglePostLike(post._id));
+  const handleLike = async () => {
+    const wasLiked = isLiked;
+    try {
+      await dispatch(togglePostLike(post._id)).unwrap();
+      if (!wasLiked) toast.success('Liked! ❤️', { duration: 1200 });
+    } catch {
+      toast.error('Failed to like post');
+    }
   };
 
   const handleShare = async () => {
@@ -155,12 +170,25 @@ export default function PostCard({ post }) {
             </div>
           </div>
 
-          <button
-            aria-label="More options"
-            className="text-txt-muted hover:text-txt-secondary transition-colors p-1.5 rounded-lg hover:bg-white/5 flex-shrink-0 ml-2"
-          >
-            <MoreHorizontal size={17} />
-          </button>
+          <div className="flex items-center gap-0.5 flex-shrink-0 ml-2">
+            {/* Edit button — only shown to the post author */}
+            {isAuthor && (
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => dispatch(openModal({ type: 'editPost', data: post }))}
+                aria-label="Edit post"
+                className="text-txt-muted hover:text-accent-primary transition-colors p-1.5 rounded-lg hover:bg-accent-primary/10"
+              >
+                <Pencil size={15} />
+              </motion.button>
+            )}
+            <button
+              aria-label="More options"
+              className="text-txt-muted hover:text-txt-secondary transition-colors p-1.5 rounded-lg hover:bg-white/5"
+            >
+              <MoreHorizontal size={17} />
+            </button>
+          </div>
         </div>
 
         {/* ── Content ── */}
@@ -271,4 +299,7 @@ export default function PostCard({ post }) {
       </GlassCard>
     </motion.div>
   );
-}
+});
+
+PostCard.displayName = 'PostCard';
+export default PostCard;

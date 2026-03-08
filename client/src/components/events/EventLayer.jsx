@@ -13,7 +13,7 @@
  * the last 60 minutes (so "just-ended" events remain discoverable).
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useSelector, useDispatch } from 'react-redux';
@@ -179,7 +179,7 @@ function buildTooltip(event) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function EventLayer() {
+const EventLayer = memo(function EventLayer() {
   const dispatch = useDispatch();
   const map      = useMap();
 
@@ -235,4 +235,7 @@ export default function EventLayer() {
   }, [events, dispatch]);   // map is stable after mount — no need in deps
 
   return null;  // Pure side-effect component
-}
+});
+
+EventLayer.displayName = 'EventLayer';
+export default EventLayer;

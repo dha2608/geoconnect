@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, memo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -12,7 +12,7 @@ import { openModal } from '../../features/ui/uiSlice';
  * Renders each nearby user as a small circular avatar marker on the Leaflet map.
  * Clicking a marker opens the UserProfile modal via Redux.
  */
-export default function NearbyUsersLayer() {
+const NearbyUsersLayer = memo(function NearbyUsersLayer() {
   const map      = useMap();
   const dispatch = useDispatch();
   const { nearbyUsers }  = useSelector((state) => state.users);
@@ -87,4 +87,7 @@ export default function NearbyUsersLayer() {
   }, [nearbyUsers, map, dispatch]);
 
   return null; // purely imperative — no React DOM output
-}
+});
+
+NearbyUsersLayer.displayName = 'NearbyUsersLayer';
+export default NearbyUsersLayer;

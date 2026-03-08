@@ -6,6 +6,9 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
+import mongoSanitize from 'express-mongo-sanitize';
+import xss from 'xss-clean';
+import hpp from 'hpp';
 
 import connectDB from './config/db.js';
 import passport from './config/passport.js';
@@ -44,6 +47,9 @@ app.set('io', io);
 
 // Middleware
 app.use(helmet());
+app.use(mongoSanitize());  // Sanitize data against NoSQL injection
+app.use(xss());            // Prevent XSS attacks
+app.use(hpp());            // Prevent HTTP parameter pollution
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,

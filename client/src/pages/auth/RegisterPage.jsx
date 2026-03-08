@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { register as registerUser, clearError } from '../../features/auth/authSlice';
+import { register as registerUser } from '../../features/auth/authSlice';
 import GlassCard from '../../components/ui/GlassCard';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';

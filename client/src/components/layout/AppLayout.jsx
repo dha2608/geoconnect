@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Outlet } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
@@ -8,17 +8,22 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
 import { ToastProvider } from '../ui/Toast';
-import FeedPanel from '../posts/FeedPanel';
 import UserProfilePanel from '../social/UserProfilePanel';
 import CreatePinModal from '../pins/CreatePinModal';
+import EditPinModal from '../pins/EditPinModal';
 import CreatePostModal from '../posts/CreatePostModal';
+import EditPostModal from '../posts/EditPostModal';
 import PinDetailPanel from '../pins/PinDetailPanel';
 import EventListPanel from '../events/EventListPanel';
 import CreateEventModal from '../events/CreateEventModal';
 import EventDetailPanel from '../events/EventDetailPanel';
-import NotificationPanel from '../notifications/NotificationPanel';
-import MessagesPanel from '../messages/MessagesPanel';
-import SearchPanel from '../search/SearchPanel';
+import SectionErrorBoundary from '../SectionErrorBoundary';
+
+// Heavy panels — lazy-loaded so they don't block the initial map render
+const FeedPanel         = lazy(() => import('../posts/FeedPanel'));
+const NotificationPanel = lazy(() => import('../notifications/NotificationPanel'));
+const MessagesPanel     = lazy(() => import('../messages/MessagesPanel'));
+const SearchPanel       = lazy(() => import('../search/SearchPanel'));
 
 export default function AppLayout() {
   const dispatch = useDispatch();
@@ -44,24 +49,50 @@ export default function AppLayout() {
       <Header />
       <Sidebar />
       <main className={`fixed top-16 bottom-0 right-0 ${isMobile ? 'left-0 pb-16' : 'left-[72px]'} overflow-hidden`}>
-        <Outlet />
+        <SectionErrorBoundary name="Map">
+          <Outlet />
+        </SectionErrorBoundary>
       </main>
 
       {/* ── Side panels (overlay alongside main, not inside it) ── */}
       <AnimatePresence>
-        {activePanel === 'feed' && <FeedPanel />}
-        {activePanel === 'profile' && (
-          <UserProfilePanel userId={modalData?.userId || user?._id} />
+        {activePanel === 'feed' && (
+          <SectionErrorBoundary name="Feed">
+            <Suspense fallback={null}><FeedPanel /></Suspense>
+          </SectionErrorBoundary>
         )}
-        {activePanel === 'events' && <EventListPanel />}
-        {activePanel === 'notifications' && <NotificationPanel />}
-        {activePanel === 'messages' && <MessagesPanel />}
-        {activePanel === 'search' && <SearchPanel />}
+        {activePanel === 'profile' && (
+          <SectionErrorBoundary name="Profile">
+            <UserProfilePanel userId={modalData?.userId || user?._id} />
+          </SectionErrorBoundary>
+        )}
+        {activePanel === 'events' && (
+          <SectionErrorBoundary name="Events">
+            <EventListPanel />
+          </SectionErrorBoundary>
+        )}
+        {activePanel === 'notifications' && (
+          <SectionErrorBoundary name="Notifications">
+            <Suspense fallback={null}><NotificationPanel /></Suspense>
+          </SectionErrorBoundary>
+        )}
+        {activePanel === 'messages' && (
+          <SectionErrorBoundary name="Messages">
+            <Suspense fallback={null}><MessagesPanel /></Suspense>
+          </SectionErrorBoundary>
+        )}
+        {activePanel === 'search' && (
+          <SectionErrorBoundary name="Search">
+            <Suspense fallback={null}><SearchPanel /></Suspense>
+          </SectionErrorBoundary>
+        )}
       </AnimatePresence>
 
       {/* ── Modals (always mounted, render conditionally from Redux state) ── */}
       <CreatePinModal />
+      <EditPinModal />
       <CreatePostModal />
+      <EditPostModal />
       <PinDetailPanel />
       <CreateEventModal />
       <EventDetailPanel />

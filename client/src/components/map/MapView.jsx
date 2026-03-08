@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, memo, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import { clearFlyTo } from '../../features/map/mapSlice';
@@ -72,9 +72,12 @@ function MapInner() {
  *   Overlay div (pointer-events-none)
  *     └─ SearchBar       (floats above the map canvas)
  */
-export default function MapView() {
+const MapView = memo(function MapView() {
   const { center, zoom, tileLayer } = useSelector((state) => state.map);
-  const tile = TILE_LAYERS[tileLayer] ?? TILE_LAYERS.dark;
+  const tile = useMemo(
+    () => TILE_LAYERS[tileLayer] ?? TILE_LAYERS.dark,
+    [tileLayer]
+  );
 
   return (
     <div className={`relative w-full h-full ${tile.className ?? ''}`}>
@@ -102,4 +105,7 @@ export default function MapView() {
       </div>
     </div>
   );
-}
+});
+
+MapView.displayName = 'MapView';
+export default MapView;
