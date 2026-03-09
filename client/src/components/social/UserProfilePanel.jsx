@@ -241,6 +241,7 @@ export default function UserProfilePanel({ userId }) {
   const dispatch = useDispatch();
   const { profile, loading } = useSelector((state) => state.users);
   const { user: currentUser }  = useSelector((state) => state.auth);
+  const { isMobile } = useSelector((state) => state.ui);
 
   const [activeTab,  setActiveTab]  = useState('posts');
   const [posts,      setPosts]      = useState([]);
@@ -302,13 +303,29 @@ export default function UserProfilePanel({ userId }) {
     ? format(new Date(profile.createdAt), 'MMMM yyyy')
     : null;
 
+  // ── Responsive layout ──
+  const motionProps = isMobile
+    ? {
+        initial:    { opacity: 0, y: 20 },
+        animate:    { opacity: 1, y: 0  },
+        exit:       { opacity: 0, y: 20 },
+        transition: { duration: 0.22, ease: 'easeOut' },
+      }
+    : {
+        initial:    { x: -380 },
+        animate:    { x: 0    },
+        exit:       { x: -380 },
+        transition: { type: 'spring', damping: 25, stiffness: 300 },
+      };
+
+  const panelClass = isMobile
+    ? 'fixed top-16 bottom-16 left-0 right-0 z-20 bg-base/95 backdrop-blur-xl overflow-y-auto'
+    : 'fixed top-16 bottom-0 left-[72px] w-[380px] z-20 bg-base/95 backdrop-blur-xl border-r border-accent-primary/10 overflow-y-auto';
+
   return (
     <motion.div
-      initial={{ x: -380 }}
-      animate={{ x: 0 }}
-      exit={{ x: -380 }}
-      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-      className="fixed top-16 bottom-0 left-[72px] w-[380px] z-20 bg-base/95 backdrop-blur-xl border-r border-accent-primary/10 overflow-y-auto"
+      {...motionProps}
+      className={panelClass}
     >
       {/* ── Header ── */}
       <div className="sticky top-0 z-10 bg-base/80 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center gap-3">

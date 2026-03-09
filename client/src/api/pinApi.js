@@ -9,6 +9,7 @@ export const pinApi = {
   deletePin: (id) => API.delete(`/pins/${id}`),
   toggleLike: (id) => API.post(`/pins/${id}/like`),
   toggleSave: (id) => API.post(`/pins/${id}/save`),
+  getTrending: () => API.get('/pins/trending'),
 };
 
 export const getSavedPins = (userId) => API.get(`/pins/saved/${userId}`);

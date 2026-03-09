@@ -20,6 +20,23 @@ const userSchema = new mongoose.Schema({
   following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   savedPins: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Pin' }],
   isGuest: { type: Boolean, default: false },
+  settings: {
+    privacy: {
+      shareLocation: { type: Boolean, default: true },
+      nearbyDiscovery: { type: Boolean, default: true },
+      publicProfile: { type: Boolean, default: true },
+    },
+    notifications: {
+      push: { type: Boolean, default: true },
+      email: { type: Boolean, default: false },
+      newFollower: { type: Boolean, default: true },
+      nearbyEvent: { type: Boolean, default: true },
+    },
+    appearance: {
+      mapStyle: { type: String, default: 'dark', enum: ['dark', 'street', 'light', 'satellite'] },
+      distanceUnit: { type: String, default: 'km', enum: ['km', 'miles'] },
+    },
+  },
 }, { timestamps: true });
 
 userSchema.index({ location: '2dsphere' });

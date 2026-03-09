@@ -11,6 +11,11 @@ export const createPost = createAsyncThunk('posts/create', async (data, { reject
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
+export const updatePost = createAsyncThunk('posts/update', async ({ id, data }, { rejectWithValue }) => {
+  try { const res = await postApi.updatePost(id, data); return res.data; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
 export const togglePostLike = createAsyncThunk('posts/toggleLike', async (id, { rejectWithValue }) => {
   try { const res = await postApi.toggleLike(id); return res.data; }
   catch (err) { return rejectWithValue(err.response?.data); }
@@ -38,6 +43,11 @@ const postSlice = createSlice({
     });
     builder.addCase(fetchFeed.rejected, (state, action) => { state.loading = false; state.error = action.payload?.message; });
     builder.addCase(createPost.fulfilled, (state, action) => { state.posts.unshift(action.payload.post || action.payload); });
+    builder.addCase(updatePost.fulfilled, (state, action) => {
+      const updated = action.payload.post || action.payload;
+      const idx = state.posts.findIndex(p => p._id === updated._id);
+      if (idx !== -1) state.posts[idx] = updated;
+    });
     builder.addCase(togglePostLike.fulfilled, (state, action) => {
       const updated = action.payload.post || action.payload;
       const idx = state.posts.findIndex(p => p._id === updated._id);

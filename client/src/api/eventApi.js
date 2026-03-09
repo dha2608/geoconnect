@@ -7,4 +7,5 @@ export const eventApi = {
   updateEvent: (id, data) => API.put(`/events/${id}`, data),
   deleteEvent: (id) => API.delete(`/events/${id}`),
   toggleRsvp: (id) => API.post(`/events/${id}/rsvp`),
+  getUpcoming: (limit = 12) => API.get('/events/upcoming', { params: { limit } }),
 };

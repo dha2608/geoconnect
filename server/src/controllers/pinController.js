@@ -182,6 +182,37 @@ export const unsavePin = async (req, res) => {
   }
 };
 
+export const getTrendingPins = async (req, res) => {
+  try {
+    const pins = await Pin.aggregate([
+      { $match: { visibility: 'public' } },
+      { $addFields: { likesCount: { $size: { $ifNull: ['$likes', []] } } } },
+      { $sort: { likesCount: -1, createdAt: -1 } },
+      { $limit: 12 },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'createdBy',
+          foreignField: '_id',
+          as: 'createdByArr',
+        },
+      },
+      { $addFields: { createdBy: { $arrayElemAt: ['$createdByArr', 0] } } },
+      {
+        $project: {
+          createdByArr: 0,
+          'createdBy.password': 0,
+          'createdBy.email': 0,
+          'createdBy.location': 0,
+        },
+      },
+    ]);
+    res.json(pins);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch trending pins' });
+  }
+};
+
 export const getSavedPins = async (req, res) => {
   try {
     const user = await User.findById(req.params.userId).select('savedPins');

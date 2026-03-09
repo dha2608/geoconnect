@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import passport from '../config/passport.js';
-import { register, login, logout, refresh, guestLogin, oauthCallback } from '../controllers/authController.js';
+import { register, login, logout, refresh, guestLogin, oauthCallback, changePassword } from '../controllers/authController.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -10,6 +11,7 @@ router.post('/login', authLimiter, login);
 router.post('/logout', logout);
 router.post('/refresh', refresh);
 router.post('/guest', guestLogin);
+router.put('/password', authenticate, changePassword);
 
 // Google OAuth
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));

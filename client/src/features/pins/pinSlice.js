@@ -16,6 +16,11 @@ export const createPin = createAsyncThunk('pins/create', async (data, { rejectWi
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
+export const updatePin = createAsyncThunk('pins/update', async ({ id, data }, { rejectWithValue }) => {
+  try { const res = await pinApi.updatePin(id, data); return res.data; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
 export const deletePin = createAsyncThunk('pins/delete', async (id, { rejectWithValue }) => {
   try { await pinApi.deletePin(id); return id; }
   catch (err) { return rejectWithValue(err.response?.data); }
@@ -51,6 +56,12 @@ const pinSlice = createSlice({
     builder.addCase(fetchViewportPins.rejected, (state, action) => { state.loading = false; state.error = action.payload?.message; });
     builder.addCase(fetchPin.fulfilled, (state, action) => { state.selectedPin = action.payload.pin || action.payload; });
     builder.addCase(createPin.fulfilled, (state, action) => { state.pins.push(action.payload.pin || action.payload); });
+    builder.addCase(updatePin.fulfilled, (state, action) => {
+      const updated = action.payload.pin || action.payload;
+      const idx = state.pins.findIndex(p => p._id === updated._id);
+      if (idx !== -1) state.pins[idx] = updated;
+      if (state.selectedPin?._id === updated._id) state.selectedPin = updated;
+    });
     builder.addCase(deletePin.fulfilled, (state, action) => { state.pins = state.pins.filter(p => p._id !== action.payload); });
     builder.addCase(togglePinLike.fulfilled, (state, action) => {
       const updated = action.payload.pin || action.payload;

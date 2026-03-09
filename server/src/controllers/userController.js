@@ -162,3 +162,36 @@ export const getFollowing = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+// GET /api/users/me/settings
+export const getSettings = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('settings');
+    res.json({ settings: user.settings || getDefaultSettings() });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch settings' });
+  }
+};
+
+// PUT /api/users/me/settings
+export const updateSettings = async (req, res) => {
+  try {
+    const allowedFields = ['privacy', 'notifications', 'appearance'];
+    const updates = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) updates[`settings.${field}`] = req.body[field];
+    }
+    const user = await User.findByIdAndUpdate(req.user._id, { $set: updates }, { new: true }).select('settings');
+    res.json({ settings: user.settings });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to update settings' });
+  }
+};
+
+function getDefaultSettings() {
+  return {
+    privacy: { shareLocation: true, nearbyDiscovery: true, publicProfile: true },
+    notifications: { push: true, email: false, newFollower: true, nearbyEvent: true },
+    appearance: { mapStyle: 'dark', distanceUnit: 'km' },
+  };
+}

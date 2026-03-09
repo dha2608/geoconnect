@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +13,7 @@ import Input from '../components/ui/Input';
 import Avatar from '../components/ui/Avatar';
 import { userApi } from '../api/userApi';
 import API from '../api/axios';
+import toast from 'react-hot-toast';
 
 /* ─────────────────────────── animation variants ─────────────────────────── */
 const pageVariants = {
@@ -194,6 +195,8 @@ export default function SettingsPage() {
   const { mapStyle } = useSelector((s) => s.ui);
 
   const fileInputRef = useRef();
+  const saveTimeoutRef = useRef(null);
+  const settingsLoaded = useRef(false);
 
   /* ── account form ── */
   const [avatarPreview, setAvatarPreview] = useState(null);
@@ -236,6 +239,35 @@ export default function SettingsPage() {
 
   /* ── appearance ── */
   const [distanceUnit, setDistanceUnit] = useState('km');
+
+  /* ── settings sync ── */
+  useEffect(() => {
+    if (isGuest) return;
+    userApi.getSettings()
+      .then((res) => {
+        const s = res.data.settings;
+        if (s.privacy) setPrivacy(s.privacy);
+        if (s.notifications) setNotifications(s.notifications);
+        if (s.appearance?.mapStyle) dispatch(setMapStyle(s.appearance.mapStyle));
+        if (s.appearance?.distanceUnit) setDistanceUnit(s.appearance.distanceUnit);
+        settingsLoaded.current = true;
+      })
+      .catch(() => {
+        settingsLoaded.current = true; // allow saves even if fetch fails
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saveSettings = (patch) => {
+    if (isGuest || !settingsLoaded.current) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await userApi.updateSettings(patch);
+      } catch {
+        toast.error('Failed to save settings');
+      }
+    }, 500);
+  };
 
   /* ── danger zone ── */
   const [deleteModal, setDeleteModal] = useState(false);
@@ -316,8 +348,21 @@ export default function SettingsPage() {
     navigate('/login', { replace: true });
   };
 
-  const togglePrivacy = (key) => setPrivacy((p) => ({ ...p, [key]: !p[key] }));
-  const toggleNotif = (key) => setNotifications((n) => ({ ...n, [key]: !n[key] }));
+  const togglePrivacy = (key) => {
+    setPrivacy((p) => {
+      const next = { ...p, [key]: !p[key] };
+      saveSettings({ privacy: next });
+      return next;
+    });
+  };
+
+  const toggleNotif = (key) => {
+    setNotifications((n) => {
+      const next = { ...n, [key]: !n[key] };
+      saveSettings({ notifications: next });
+      return next;
+    });
+  };
 
   return (
     <>
@@ -536,7 +581,10 @@ export default function SettingsPage() {
                   <motion.button
                     key={style.id}
                     type="button"
-                    onClick={() => dispatch(setMapStyle(style.id))}
+                    onClick={() => {
+                      dispatch(setMapStyle(style.id));
+                      saveSettings({ appearance: { mapStyle: style.id, distanceUnit } });
+                    }}
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
                     className={`relative rounded-xl overflow-hidden border-2 transition-all duration-150 cursor-pointer ${
@@ -580,7 +628,10 @@ export default function SettingsPage() {
                   <motion.button
                     key={unit}
                     type="button"
-                    onClick={() => setDistanceUnit(unit)}
+                    onClick={() => {
+                      setDistanceUnit(unit);
+                      saveSettings({ appearance: { mapStyle, distanceUnit: unit } });
+                    }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all duration-150 cursor-pointer ${

@@ -26,6 +26,22 @@ export const getEventsByViewport = async (req, res) => {
   }
 };
 
+export const getUpcomingEvents = async (req, res) => {
+  try {
+    const { limit = 12 } = req.query;
+    const events = await Event.find({
+      isPublic: true,
+      startTime: { $gte: new Date() },
+    })
+      .sort({ startTime: 1 })
+      .limit(parseInt(limit))
+      .populate('organizer', 'name avatar');
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch upcoming events' });
+  }
+};
+
 export const createEvent = async (req, res) => {
   try {
     const { title, description, lat, lng, address, startTime, endTime, maxCapacity, isPublic, category } = req.body;

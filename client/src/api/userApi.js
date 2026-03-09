@@ -9,4 +9,6 @@ export const userApi = {
   searchUsers: (query) => API.get('/users/search', { params: { q: query } }),
   getFollowers: (id) => API.get(`/users/${id}/followers`),
   getFollowing: (id) => API.get(`/users/${id}/following`),
+  getSettings: () => API.get('/users/me/settings'),
+  updateSettings: (settings) => API.put('/users/me/settings', settings),
 };
