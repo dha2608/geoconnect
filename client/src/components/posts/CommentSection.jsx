@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
+import toast from 'react-hot-toast';
 // ─── Inline SVG Icons ─────────────────────────────────────────────────────────
 const Send = ({ className, size = 24, ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
@@ -80,8 +81,10 @@ export default function CommentSection({ post }) {
     try {
       await dispatch(addComment({ id: post._id, data: { text: trimmed } })).unwrap();
       setText('');
+      toast.success('Comment posted!');
     } catch (err) {
       setError('Failed to post comment. Please try again.');
+      toast.error('Failed to post comment');
       console.error('[CommentSection] addComment error:', err);
     } finally {
       setSubmitting(false);

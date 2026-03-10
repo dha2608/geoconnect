@@ -24,6 +24,7 @@ export default function FollowButton({ userId, isFollowing: externalFollowing, s
 
     try {
       await dispatch(toggleFollow(userId)).unwrap();
+      toast.success(previousState ? 'Unfollowed' : 'Now following! 🎉');
     } catch (err) {
       // Revert on failure
       setIsFollowing(previousState);

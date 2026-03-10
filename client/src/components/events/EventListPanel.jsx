@@ -188,11 +188,17 @@ const EMPTY_STATES = {
 function EmptyState({ tab }) {
   const { emoji, title, body } = EMPTY_STATES[tab] ?? EMPTY_STATES.upcoming;
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <span className="text-5xl mb-4">{emoji}</span>
-      <p className="text-slate-300 font-semibold text-sm mb-1">{title}</p>
-      <p className="text-slate-600 text-xs leading-relaxed max-w-[240px]">{body}</p>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col items-center justify-center py-16 px-6 text-center"
+    >
+      <div className="w-16 h-16 rounded-2xl bg-accent-primary/10 border border-accent-primary/15 flex items-center justify-center mb-4">
+        <span className="text-2xl">{emoji}</span>
+      </div>
+      <p className="text-txt-primary font-heading font-semibold text-sm mb-1">{title}</p>
+      <p className="text-txt-muted text-xs max-w-[220px] leading-relaxed">{body}</p>
+    </motion.div>
   );
 }
 
@@ -202,6 +208,7 @@ export default function EventListPanel() {
   const dispatch = useDispatch();
 
   const activePanel = useSelector((s) => s.ui.activePanel);
+  const { isMobile } = useSelector((s) => s.ui);
   const { events, loading } = useSelector((s) => s.events);
   const viewport    = useSelector((s) => s.map.viewport);      // { north,south,east,west }
   const currentUser = useSelector((s) => s.auth?.user);
@@ -213,7 +220,14 @@ export default function EventListPanel() {
   // Fetch events when panel opens (or viewport changes while open)
   useEffect(() => {
     if (isVisible && viewport) {
-      dispatch(fetchViewportEvents(viewport));
+      // Convert Redux viewport {north,south,east,west} → server format {swLat,swLng,neLat,neLng}
+      const serverBounds = {
+        swLat: viewport.south,
+        swLng: viewport.west,
+        neLat: viewport.north,
+        neLng: viewport.east,
+      };
+      dispatch(fetchViewportEvents(serverBounds));
     }
   }, [isVisible, viewport, dispatch]);
 
@@ -266,6 +280,25 @@ export default function EventListPanel() {
   );
 
   // ── Render ─────────────────────────────────────────────────────────────────
+
+  const panelClass = isMobile
+    ? 'fixed top-16 bottom-16 left-0 right-0 z-30 flex flex-col bg-[rgba(15,21,32,0.72)] backdrop-blur-[20px] saturate-[180%]'
+    : 'fixed left-[72px] top-0 h-full w-[380px] z-30 flex flex-col bg-[rgba(15,21,32,0.72)] backdrop-blur-[20px] saturate-[180%] border-r border-[rgba(59,130,246,0.12)]';
+
+  const motionProps = isMobile
+    ? {
+        initial:    { opacity: 0, y: 20 },
+        animate:    { opacity: 1, y: 0  },
+        exit:       { opacity: 0, y: 20 },
+        transition: { duration: 0.22, ease: 'easeOut' },
+      }
+    : {
+        initial:    { x: -380 },
+        animate:    { x: 0    },
+        exit:       { x: -380 },
+        transition: { type: 'spring', stiffness: 320, damping: 32, mass: 0.85 },
+      };
+
   return (
     <AnimatePresence>
       {isVisible && (
@@ -273,13 +306,8 @@ export default function EventListPanel() {
           key="event-list-panel"
           role="complementary"
           aria-label="Events list"
-          initial={{ x: -380 }}
-          animate={{ x: 0    }}
-          exit={{    x: -380 }}
-          transition={{ type: 'spring', stiffness: 320, damping: 32, mass: 0.85 }}
-          className="fixed left-[72px] top-0 h-full w-[380px] z-30 flex flex-col
-                     bg-[rgba(15,21,32,0.72)] backdrop-blur-[20px] saturate-[180%]
-                     border-r border-[rgba(59,130,246,0.12)]"
+          {...motionProps}
+          className={panelClass}
           style={{ boxShadow: '6px 0 32px rgba(0,0,0,0.35)' }}
         >
 

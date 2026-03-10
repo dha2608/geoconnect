@@ -67,6 +67,7 @@ export default function EventDetailPanel() {
 
   const modalOpen    = useSelector((s) => s.ui.modalOpen);
   const modalData    = useSelector((s) => s.ui.modalData);
+  const { isMobile } = useSelector((s) => s.ui);
   const event        = useSelector((s) => s.events.selectedEvent);
   const { loading }  = useSelector((s) => s.events);
   const currentUser  = useSelector((s) => s.auth.user);
@@ -142,8 +143,11 @@ export default function EventDetailPanel() {
             animate={{ x: 0,      opacity: 1   }}
             exit={{    x: '100%', opacity: 0   }}
             transition={{ type: 'spring', stiffness: 320, damping: 32, mass: 0.9 }}
-            className="fixed right-0 top-0 h-full w-full max-w-[480px] z-50 flex flex-col
-                       bg-[#0f1520] border-l border-[rgba(59,130,246,0.12)]"
+            className={`fixed right-0 z-50 flex flex-col bg-[#0f1520] border-l border-[rgba(59,130,246,0.12)] ${
+              isMobile
+                ? 'top-16 bottom-16 left-0 border-l-0'
+                : 'top-0 h-full w-full max-w-[480px]'
+            }`}
             style={{ boxShadow: '-8px 0 40px rgba(0,0,0,0.45)' }}
           >
 

@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { togglePinLike, togglePinSave, clearSelectedPin, fetchPin } from '../../features/pins/pinSlice';
-import { closeModal } from '../../features/ui/uiSlice';
+import { closeModal, openModal } from '../../features/ui/uiSlice';
 import Modal from '../ui/Modal';
 import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
@@ -234,12 +234,19 @@ export default function PinDetailPanel() {
     dispatch(clearSelectedPin());
   }, [dispatch]);
 
+  const handleEdit = useCallback(() => {
+    if (!pin) return;
+    dispatch(openModal({ type: 'editPin', data: pin }));
+  }, [dispatch, pin]);
+
   const handleLike = async () => {
     if (!user) { toast.error('Please log in to like pins.'); return; }
     if (!pin) return;
     setLikeLoading(true);
+    const wasLiked = isLiked;
     try {
       await dispatch(togglePinLike(pin._id)).unwrap();
+      toast.success(wasLiked ? 'Like removed' : 'Liked! ❤️');
     } catch {
       toast.error('Failed to update like.');
     } finally {
@@ -255,6 +262,7 @@ export default function PinDetailPanel() {
     setSaveLoading(true);
     try {
       await dispatch(togglePinSave(pin._id)).unwrap();
+      toast.success(next ? 'Pin saved! 🔖' : 'Pin unsaved');
     } catch {
       setLocalSaved(!next); // revert optimistic update
       toast.error('Failed to save pin.');
@@ -285,18 +293,36 @@ export default function PinDetailPanel() {
           <h2 className="text-lg font-heading font-bold text-txt-primary">
             {pin?.title ?? 'Pin Details'}
           </h2>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={handleClose}
-            className="p-1.5 rounded-lg hover:bg-white/8 text-txt-muted hover:text-txt-primary transition-colors"
-            aria-label="Close"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </motion.button>
+          <div className="flex items-center gap-1.5">
+            {/* Edit button — only for the pin's creator */}
+            {user && pin?.creator?._id === user._id && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleEdit}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium font-body text-txt-secondary hover:text-accent-primary hover:bg-accent-primary/10 border border-white/8 transition-all duration-150"
+                aria-label="Edit pin"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                  <path d="m15 5 4 4"/>
+                </svg>
+                Edit
+              </motion.button>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleClose}
+              className="p-1.5 rounded-lg hover:bg-white/8 text-txt-muted hover:text-txt-primary transition-colors"
+              aria-label="Close"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </motion.button>
+          </div>
         </div>
 
         {/* Body */}
