@@ -214,7 +214,7 @@ mongosh
 6. Cập nhật `server/.env`:
 
 ```env
-MONGODB_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/geoconnect?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<your-username>:<your-password>@<your-cluster>.mongodb.net/geoconnect?retryWrites=true&w=majority
 ```
 
 ### 5. Thiết Lập Cloudinary
