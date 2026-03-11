@@ -4,6 +4,7 @@ import { useMap } from 'react-leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
 import L from 'leaflet';
 import { setTileLayer } from '../../features/map/mapSlice';
+import useGeolocation from '../../hooks/useGeolocation';
 
 const TILE_OPTIONS = [
   { id: 'dark',      label: 'Dark',      icon: '🌙' },
@@ -29,6 +30,20 @@ export default function MapControls() {
   const [showLayers, setShowLayers] = useState(false);
   const controlRef = useRef(null);
 
+  // Separate hook instance with autoWatch:false so it doesn't start a duplicate watcher.
+  // We only use it to imperatively trigger a one-shot locate() when the user taps the button.
+  const { locate, isLocating: geoLocating } = useGeolocation({ autoWatch: false });
+
+  // If we triggered locate() and were waiting for the first fix, fly once it arrives
+  const pendingFlyRef = useRef(false);
+
+  useEffect(() => {
+    if (pendingFlyRef.current && userLocation) {
+      map.flyTo([userLocation.lat, userLocation.lng], 16, { duration: 1.5 });
+      pendingFlyRef.current = false;
+    }
+  }, [userLocation, map]);
+
   // Isolate this DOM node from Leaflet's event system
   useEffect(() => {
     const el = controlRef.current;
@@ -38,8 +53,14 @@ export default function MapControls() {
   }, []);
 
   const handleLocateMe = () => {
-    if (!userLocation) return;
-    map.flyTo([userLocation.lat, userLocation.lng], 16, { duration: 1.5 });
+    if (userLocation) {
+      // Already have a fix — just fly to it
+      map.flyTo([userLocation.lat, userLocation.lng], 16, { duration: 1.5 });
+    } else {
+      // No fix yet — request location; fly once the first position arrives
+      pendingFlyRef.current = true;
+      locate();
+    }
   };
 
   const handleTileChange = (id) => {
@@ -55,12 +76,12 @@ export default function MapControls() {
       {/* ── Locate Me ─────────────────────────────────────────────── */}
       <button
         onClick={handleLocateMe}
-        disabled={isLocating || !userLocation}
+        disabled={isLocating || geoLocating}
         className="w-10 h-10 rounded-xl glass flex items-center justify-center text-txt-primary hover:text-accent-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         title="My Location"
         aria-label="Fly to my location"
       >
-        {isLocating ? (
+        {(isLocating || geoLocating) ? (
           /* Spinner while geolocation is in-flight */
           <svg
             className="w-5 h-5 animate-spin"

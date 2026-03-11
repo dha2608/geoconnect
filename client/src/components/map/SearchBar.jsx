@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { geocodeApi } from '../../api/geocodeApi';
-import { flyToLocation } from '../../features/map/mapSlice';
+import { flyToLocation, setDestination } from '../../features/map/mapSlice';
 
 export default function SearchBar() {
   const dispatch = useDispatch();
@@ -22,7 +22,7 @@ export default function SearchBar() {
     setIsLoading(true);
     try {
       const { data } = await geocodeApi.search(q);
-      setResults(data.data || []);
+      setResults(data || []);
       setIsOpen(true);
     } catch {
       setResults([]);
@@ -44,6 +44,16 @@ export default function SearchBar() {
       zoom: 16,
     }));
     setQuery(result.display_name.split(',')[0]);
+    setIsOpen(false);
+  };
+
+  const handleSetDestination = (result) => {
+    const lat = parseFloat(result.lat);
+    const lng = parseFloat(result.lon);
+    const name = result.display_name.split(',')[0];
+    const address = result.display_name;
+    dispatch(setDestination({ lat, lng, name, address }));
+    dispatch(flyToLocation({ lat, lng, zoom: 16 }));
     setIsOpen(false);
   };
 
@@ -104,19 +114,35 @@ export default function SearchBar() {
             className="mt-2 glass rounded-xl overflow-hidden max-h-72 overflow-y-auto"
           >
             {results.map((result, i) => (
-              <button
+              <div
                 key={result.place_id || i}
-                onClick={() => handleSelect(result)}
-                className="w-full px-3 py-2.5 flex items-start gap-3 hover:bg-white/5 transition-colors text-left border-b border-white/5 last:border-0"
+                className="flex items-center border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors group"
               >
-                <svg className="w-4 h-4 text-accent-primary mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
-                </svg>
-                <div className="min-w-0">
-                  <p className="text-sm text-txt-primary truncate">{result.display_name.split(',')[0]}</p>
-                  <p className="text-xs text-txt-muted truncate">{result.display_name}</p>
-                </div>
-              </button>
+                {/* Main area — click to fly to location */}
+                <button
+                  onClick={() => handleSelect(result)}
+                  className="flex-1 px-3 py-2.5 flex items-start gap-3 text-left min-w-0"
+                >
+                  <svg className="w-4 h-4 text-accent-primary mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  <div className="min-w-0">
+                    <p className="text-sm text-txt-primary truncate">{result.display_name.split(',')[0]}</p>
+                    <p className="text-xs text-txt-muted truncate">{result.display_name}</p>
+                  </div>
+                </button>
+
+                {/* Set as destination button */}
+                <button
+                  onClick={() => handleSetDestination(result)}
+                  title="Set as destination"
+                  className="p-2 mr-2 text-txt-muted hover:text-accent-primary transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+                  </svg>
+                </button>
+              </div>
             ))}
           </motion.div>
         )}

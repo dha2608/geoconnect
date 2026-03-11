@@ -27,8 +27,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { closePanel } from '../../features/ui/uiSlice';
-import { flyToLocation } from '../../features/map/mapSlice';
+import { flyToLocation, setDestination } from '../../features/map/mapSlice';
 import { geocodeApi } from '../../api/geocodeApi';
 import GlassCard from '../ui/GlassCard';
 import LoadingSpinner from '../ui/LoadingSpinner';
@@ -128,6 +129,13 @@ const IconChevronRight = () => (
   </svg>
 );
 
+const IconNavDest = ({ className = 'w-[12px] h-[12px]' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polygon points="3 11 22 2 13 21 11 13 3 11" />
+  </svg>
+);
+
 const IconAlert = () => (
   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -194,23 +202,25 @@ function NoResultsIllustration() {
 
 // ─── ResultCard ───────────────────────────────────────────────────────────────
 
-function ResultCard({ result, onSelect, index, isRecent = false }) {
+function ResultCard({ result, onSelect, onSetDestination, index, isRecent = false }) {
   const parts     = (result.display_name ?? '').split(', ');
   const placeName = parts[0] || 'Unknown place';
   const address   = parts.slice(1).join(', ');
   const { label, color } = resolveType(result.type, result.class);
 
   return (
-    <motion.button
+    <motion.div
       role="option"
       aria-selected="false"
       aria-label={`Go to ${result.display_name}`}
+      tabIndex={0}
       initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.04, duration: 0.20, ease: 'easeOut' }}
       whileHover={{ y: -1.5 }}
       whileTap={{ scale: 0.975 }}
       onClick={onSelect}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); } }}
       className={[
         'w-full flex items-center gap-3 p-3 rounded-xl text-left',
         'border transition-all duration-200 cursor-pointer',
@@ -262,11 +272,40 @@ function ResultCard({ result, onSelect, index, isRecent = false }) {
         )}
       </span>
 
+      {/* Destination button */}
+      {onSetDestination && (
+        <motion.button
+          whileHover={{ scale: 1.12 }}
+          whileTap={{ scale: 0.88 }}
+          onClick={(e) => { e.stopPropagation(); onSetDestination(); }}
+          aria-label={`Set ${result.display_name} as destination`}
+          title="Set as destination"
+          className="flex-shrink-0 flex items-center justify-center rounded-lg
+                     transition-all duration-150"
+          style={{
+            width: 26, height: 26,
+            background: 'rgba(239,68,68,0.10)',
+            border: '1px solid rgba(239,68,68,0.24)',
+            color: '#ef4444',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(239,68,68,0.20)';
+            e.currentTarget.style.borderColor = 'rgba(239,68,68,0.44)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(239,68,68,0.10)';
+            e.currentTarget.style.borderColor = 'rgba(239,68,68,0.24)';
+          }}
+        >
+          <IconNavDest />
+        </motion.button>
+      )}
+
       {/* Chevron */}
       <span className="flex-shrink-0 text-[#334155]">
         <IconChevronRight />
       </span>
-    </motion.button>
+    </motion.div>
   );
 }
 
@@ -348,6 +387,7 @@ function ViewEmpty() {
 
 export default function SearchPanel() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { isMobile } = useSelector((s) => s.ui);
 
   const [query,       setQuery]       = useState('');
@@ -412,6 +452,7 @@ export default function SearchPanel() {
     const lng = parseFloat(result.lon);
     if (Number.isNaN(lat) || Number.isNaN(lng)) return;
 
+    navigate('/');
     dispatch(flyToLocation({ lat, lng, zoom: 15 }));
 
     setRecent((prev) => {
@@ -421,7 +462,19 @@ export default function SearchPanel() {
     });
 
     dispatch(closePanel());
-  }, [dispatch]);
+  }, [dispatch, navigate]);
+
+  const handleSetDestination = useCallback((result) => {
+    const lat = parseFloat(result.lat);
+    const lng = parseFloat(result.lon);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+    const parts = (result.display_name ?? '').split(', ');
+    dispatch(setDestination({ lat, lng, name: parts[0], address: parts.slice(1).join(', ') }));
+    dispatch(flyToLocation({ lat, lng, zoom: 16 }));
+    navigate('/');
+    setRecent((prev) => { const updated = prependRecent(result, prev); persistRecent(updated); return updated; });
+    dispatch(closePanel());
+  }, [dispatch, navigate]);
 
   const handleClearRecent = useCallback(() => {
     setRecent([]);
@@ -634,6 +687,7 @@ export default function SearchPanel() {
                     <ResultCard
                       result={r}
                       onSelect={() => handleSelect(r)}
+                      onSetDestination={() => handleSetDestination(r)}
                       index={i}
                     />
                   </li>
@@ -687,6 +741,7 @@ export default function SearchPanel() {
                     <ResultCard
                       result={r}
                       onSelect={() => handleSelect(r)}
+                      onSetDestination={() => handleSetDestination(r)}
                       index={i}
                       isRecent
                     />

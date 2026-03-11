@@ -24,6 +24,7 @@ import postRoutes from './routes/posts.js';
 import eventRoutes from './routes/events.js';
 import messageRoutes from './routes/messages.js';
 import geocodeRoutes from './routes/geocode.js';
+import notificationRoutes from './routes/notifications.js';
 
 dotenv.config();
 
@@ -68,6 +69,7 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users/notifications', notificationRoutes); // must be before /api/users — prevents /:id swallowing "notifications"
 app.use('/api/users', userRoutes);
 app.use('/api/pins', pinRoutes);
 app.use('/api', reviewRoutes);

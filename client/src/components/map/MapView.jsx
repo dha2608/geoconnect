@@ -10,6 +10,7 @@ import NearbyUsersLayer from '../social/NearbyUsersLayer';
 import PinClusterLayer from '../pins/PinClusterLayer';
 import EventLayer from '../events/EventLayer';
 import MapToolbar from './MapToolbar';
+import DestinationMarker from './DestinationMarker';
 
 const TILE_LAYERS = {
   dark: {
@@ -67,6 +68,7 @@ function MapInner() {
  *     ├─ PinClusterLayer (clustered pin markers)
  *     ├─ EventLayer      (event markers on map)
  *     ├─ NearbyUsersLayer (nearby user avatars)
+ *     ├─ DestinationMarker (red pin for set destination)
  *     ├─ MapControls     (zoom / locate / tile switcher — uses useMap)
  *     └─ MapToolbar      (map tool actions — draw, measure, etc.)
  *   Overlay div (pointer-events-none)
@@ -95,6 +97,7 @@ const MapView = memo(function MapView() {
         <PinClusterLayer />
         <EventLayer />
         <NearbyUsersLayer />
+        <DestinationMarker />
         <MapControls />
         <MapToolbar />
       </MapContainer>

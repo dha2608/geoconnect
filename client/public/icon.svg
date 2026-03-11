@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Dark background circle -->
+  <circle cx="256" cy="256" r="256" fill="#080b12"/>
+
+  <!-- Location pin body (teardrop shape) -->
+  <!-- Pin head: circle centered at (256, 210), radius 90 -->
+  <circle cx="256" cy="210" r="90" fill="#3b82f6"/>
+
+  <!-- Pin tail: triangle pointing down to (256, 370) -->
+  <polygon points="176,240 336,240 256,370" fill="#3b82f6"/>
+
+  <!-- Smooth the join between circle and tail with a rect -->
+  <rect x="176" y="210" width="160" height="40" fill="#3b82f6"/>
+
+  <!-- White inner circle (pin hole) -->
+  <circle cx="256" cy="210" r="34" fill="#ffffff"/>
+</svg>

@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { setIsMobile } from '../../features/ui/uiSlice';
 import useSocket from '../../socket/useSocket';
+import useGeolocation from '../../hooks/useGeolocation';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
@@ -18,6 +19,7 @@ import EventListPanel from '../events/EventListPanel';
 import CreateEventModal from '../events/CreateEventModal';
 import EventDetailPanel from '../events/EventDetailPanel';
 import SectionErrorBoundary from '../SectionErrorBoundary';
+import LocationPermissionPrompt from '../map/LocationPermissionPrompt';
 
 // Heavy panels — lazy-loaded so they don't block the initial map render
 const FeedPanel         = lazy(() => import('../posts/FeedPanel'));
@@ -32,6 +34,9 @@ export default function AppLayout() {
 
   // Initialize persistent socket connection for this session
   useSocket();
+
+  // Start watching geolocation immediately; surfaces locationError to app-level if needed
+  const { locationError } = useGeolocation({ autoWatch: true }); // eslint-disable-line no-unused-vars
 
   // NOTE: getMe() is called by ProtectedRoute — no need to call it here
 
@@ -98,6 +103,7 @@ export default function AppLayout() {
       <EventDetailPanel />
 
       {isMobile && <MobileNav />}
+      <LocationPermissionPrompt />
       <ToastProvider />
     </div>
   );
