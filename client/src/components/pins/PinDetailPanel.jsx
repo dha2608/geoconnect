@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { togglePinLike, togglePinSave, clearSelectedPin, fetchPin } from '../../features/pins/pinSlice';
-import { closeModal, openModal } from '../../features/ui/uiSlice';
+import { closeModal, openModal, setActiveMapTool } from '../../features/ui/uiSlice';
+import { setRoutingDestination } from '../../features/map/mapSlice';
+import * as turf from '@turf/turf';
 import useRequireAuth from '../../hooks/useRequireAuth';
 import Modal from '../ui/Modal';
 import Avatar from '../ui/Avatar';
@@ -204,6 +206,7 @@ export default function PinDetailPanel() {
   const modalData   = useSelector((state) => state.ui.modalData);
   const selectedPin = useSelector((state) => state.pins.selectedPin);
   const user        = useSelector((state) => state.auth.user);
+  const userLocation = useSelector((state) => state.map.userLocation);
 
   const isOpen = modalOpen === 'pinDetail';
 
@@ -222,6 +225,20 @@ export default function PinDetailPanel() {
   const isSaved = localSaved !== null ? localSaved : (pin?.saves?.includes(user?._id) ?? false);
 
   const category = pin?.category ? CATEGORY_MAP[pin.category] ?? CATEGORY_MAP.other : null;
+
+  // Distance from user to pin
+  const distanceText = useMemo(() => {
+    if (!userLocation || !pin?.location?.coordinates) return null;
+    const [pinLng, pinLat] = pin.location.coordinates;
+    const dist = turf.distance(
+      turf.point([userLocation.lng, userLocation.lat]),
+      turf.point([pinLng, pinLat]),
+      { units: 'kilometers' }
+    );
+    return dist < 1
+      ? `${Math.round(dist * 1000)} m away`
+      : `${dist.toFixed(1)} km away`;
+  }, [userLocation, pin?.location?.coordinates]);
 
   // Fetch pin by ID if only the ID is in modalData
   useEffect(() => {
@@ -287,6 +304,25 @@ export default function PinDetailPanel() {
   const handleNewReview = (review) => {
     setLatestReview(review);
   };
+
+  const handleCopyCoords = useCallback(async () => {
+    if (!pin?.location?.coordinates) return;
+    const [lng, lat] = pin.location.coordinates;
+    try {
+      await navigator.clipboard.writeText(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      toast.success('Coordinates copied!');
+    } catch {
+      toast.error('Failed to copy coordinates.');
+    }
+  }, [pin?.location?.coordinates]);
+
+  const handleDirections = useCallback(() => {
+    if (!pin?.location?.coordinates) return;
+    const [pinLng, pinLat] = pin.location.coordinates;
+    dispatch(setRoutingDestination({ lat: pinLat, lng: pinLng, name: pin.title }));
+    dispatch(setActiveMapTool('route'));
+    handleClose();
+  }, [dispatch, pin, handleClose]);
 
   /* ── Render ── */
   return (
@@ -393,15 +429,35 @@ export default function PinDetailPanel() {
 
                   {/* Location coordinates */}
                   {pin.location?.coordinates && (
-                    <div className="flex items-center gap-1.5 text-xs text-txt-muted">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
-                        <circle cx="12" cy="9" r="2.5" />
-                      </svg>
-                      <span className="font-mono">
-                        {pin.location.coordinates[1].toFixed(5)},&nbsp;
-                        {pin.location.coordinates[0].toFixed(5)}
-                      </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-xs text-txt-muted">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                          <circle cx="12" cy="9" r="2.5" />
+                        </svg>
+                        <span className="font-mono">
+                          {pin.location.coordinates[1].toFixed(5)},&nbsp;
+                          {pin.location.coordinates[0].toFixed(5)}
+                        </span>
+                      </div>
+                      {/* Copy coordinates button */}
+                      <button
+                        onClick={handleCopyCoords}
+                        title="Copy coordinates"
+                        className="p-1 rounded-md hover:bg-surface-hover text-txt-muted hover:text-txt-primary transition-colors"
+                        aria-label="Copy coordinates"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                      </button>
+                      {/* Distance badge */}
+                      {distanceText && (
+                        <span className="text-xs text-accent-primary bg-accent-primary/10 px-2 py-1 rounded-full">
+                          {distanceText}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -492,6 +548,20 @@ export default function PinDetailPanel() {
                       <line x1="15.41" y1="6.51"  x2="8.59"  y2="10.49" />
                     </svg>
                     <span className="text-xs font-medium">Share</span>
+                  </motion.button>
+
+                  {/* Get Directions */}
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.93 }}
+                    onClick={handleDirections}
+                    className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border border-surface-divider bg-elevated text-txt-secondary hover:text-txt-primary hover:border-surface-divider transition-all duration-150"
+                    aria-label="Get directions"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="3 11 22 2 13 21 11 13 3 11" />
+                    </svg>
+                    <span className="text-xs font-medium">Directions</span>
                   </motion.button>
                 </div>
 
