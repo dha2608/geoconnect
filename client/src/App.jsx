@@ -8,6 +8,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import PageTransition from './components/ui/PageTransition';
 import OfflineBanner from './components/ui/OfflineBanner';
 
+const AuthPage = lazy(() => import('./pages/auth/AuthPage'));
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
@@ -34,8 +35,8 @@ function App() {
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               {/* Auth routes */}
-              <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
-              <Route path="/register" element={<PageTransition><RegisterPage /></PageTransition>} />
+              <Route path="/login" element={<PageTransition><AuthPage /></PageTransition>} />
+              <Route path="/register" element={<PageTransition><AuthPage /></PageTransition>} />
               <Route path="/forgot-password" element={<PageTransition><ForgotPasswordPage /></PageTransition>} />
               <Route path="/reset-password" element={<PageTransition><ResetPasswordPage /></PageTransition>} />
 
