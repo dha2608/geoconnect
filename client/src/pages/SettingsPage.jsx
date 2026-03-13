@@ -57,7 +57,7 @@ function Toggle({ checked, onChange, disabled = false }) {
       disabled={disabled}
       className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60
         ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
-        ${checked ? 'bg-accent-primary shadow-[0_0_12px_rgba(59,130,246,0.4)]' : 'bg-elevated border border-white/15'}`}
+        ${checked ? 'bg-accent-primary shadow-[0_0_12px_rgba(59,130,246,0.4)]' : 'bg-elevated border border-surface-divider'}`}
     >
       <motion.span
         layout
@@ -158,7 +158,7 @@ function DeleteModal({ isOpen, onClose, onConfirm, loading }) {
                   value={confirmText}
                   onChange={(e) => setConfirmText(e.target.value)}
                   placeholder="DELETE"
-                  className="w-full bg-elevated border border-white/10 rounded-xl px-3 py-2.5 text-sm text-txt-primary font-mono placeholder-txt-muted outline-none focus:border-accent-danger/50 transition-colors"
+                          className="w-full bg-elevated border border-surface-divider rounded-xl px-3 py-2.5 text-sm text-txt-primary font-mono placeholder-txt-muted outline-none focus:border-accent-danger/50 transition-colors"
                   autoComplete="off"
                   spellCheck={false}
                 />
@@ -460,7 +460,7 @@ export default function SettingsPage() {
                   maxLength={200}
                   placeholder="Tell the world a little about yourself..."
                   disabled={isGuest}
-                  className="w-full bg-elevated border border-white/10 rounded-xl px-4 py-3 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-accent-primary/50 focus:shadow-[0_0_16px_rgba(59,130,246,0.12)] transition-all duration-150 resize-none leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-elevated border border-surface-divider rounded-xl px-4 py-3 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-accent-primary/50 focus:shadow-[0_0_16px_rgba(59,130,246,0.12)] transition-all duration-150 resize-none leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {profileErrors.bio && <p className="text-xs text-accent-danger">{profileErrors.bio.message}</p>}
               </div>
@@ -480,7 +480,7 @@ export default function SettingsPage() {
               </AnimatePresence>
 
               {isGuest ? (
-                <p className="text-xs text-txt-muted bg-elevated rounded-xl px-3 py-2.5 border border-white/8">
+                <p className="text-xs text-txt-muted bg-elevated rounded-xl px-3 py-2.5 border border-surface-divider">
                   🔒 Create an account to edit your profile
                 </p>
               ) : (
@@ -590,7 +590,7 @@ export default function SettingsPage() {
                     className={`relative rounded-xl overflow-hidden border-2 transition-all duration-150 cursor-pointer ${
                       mapStyle === style.id
                         ? 'border-accent-primary shadow-[0_0_16px_rgba(59,130,246,0.3)]'
-                        : 'border-white/10 hover:border-white/25'
+                        : 'border-surface-divider hover:border-surface-active'
                     }`}
                   >
                     {/* Preview thumbnail */}
@@ -637,7 +637,7 @@ export default function SettingsPage() {
                     className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all duration-150 cursor-pointer ${
                       distanceUnit === unit
                         ? 'bg-accent-primary/10 border-accent-primary/50 text-accent-primary shadow-[0_0_12px_rgba(59,130,246,0.15)]'
-                        : 'bg-elevated border-white/10 text-txt-muted hover:border-white/25 hover:text-txt-secondary'
+                        : 'bg-elevated border-surface-divider text-txt-muted hover:border-surface-active hover:text-txt-secondary'
                     }`}
                   >
                     {unit === 'km' ? 'Kilometers (km)' : 'Miles (mi)'}
@@ -660,11 +660,11 @@ export default function SettingsPage() {
             <div className="space-y-3">
               {/* ── Change Password ── */}
               {!isGuest && (
-                <div className="border border-white/8 rounded-xl overflow-hidden">
+                <div className="border border-surface-divider rounded-xl overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setShowPasswordForm((p) => !p)}
-                    className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/3 transition-colors text-left"
+                    className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-surface-hover transition-colors text-left"
                   >
                     <div className="flex items-center gap-3">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
@@ -691,7 +691,7 @@ export default function SettingsPage() {
                         exit="exit"
                         style={{ overflow: 'hidden' }}
                       >
-                        <form onSubmit={submitPw(handleChangePassword)} className="px-4 pb-4 space-y-4 border-t border-white/8 pt-4">
+                        <form onSubmit={submitPw(handleChangePassword)} className="px-4 pb-4 space-y-4 border-t border-surface-divider pt-4">
                           <AnimatePresence>
                             {pwError && (
                               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-sm text-accent-danger bg-accent-danger/10 border border-accent-danger/20 px-3 py-2.5 rounded-xl">
@@ -748,7 +748,7 @@ export default function SettingsPage() {
               )}
 
               {/* ── Log Out ── */}
-              <div className="flex items-center justify-between px-4 py-3.5 border border-white/8 rounded-xl">
+              <div className="flex items-center justify-between px-4 py-3.5 border border-surface-divider rounded-xl">
                 <div className="flex items-center gap-3">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                   <div>

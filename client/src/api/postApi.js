@@ -8,7 +8,9 @@ export const postApi = {
   updatePost: (id, data) => API.put(`/posts/${id}`, data),
   deletePost: (id) => API.delete(`/posts/${id}`),
   toggleLike: (id) => API.post(`/posts/${id}/like`),
+  unlikePost: (id) => API.delete(`/posts/${id}/like`),
   addComment: (id, data) => API.post(`/posts/${id}/comments`, data),
+  deleteComment: (postId, commentId) => API.delete(`/posts/${postId}/comments/${commentId}`),
 };
 
 export const getUserPosts = (userId, page = 1) => API.get(`/posts/user/${userId}?page=${page}`);

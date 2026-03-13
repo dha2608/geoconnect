@@ -80,10 +80,10 @@ export default function ReviewForm({ pinId, onSuccess }) {
     >
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Avatar src={user.avatar} name={user.username} size="sm" />
+        <Avatar src={user.avatar} name={user.name} size="sm" />
         <div>
           <p className="text-sm font-semibold text-txt-primary font-heading">Write a Review</p>
-          <p className="text-xs text-txt-muted">as {user.username}</p>
+          <p className="text-xs text-txt-muted">as {user.name}</p>
         </div>
       </div>
 
@@ -146,7 +146,7 @@ export default function ReviewForm({ pinId, onSuccess }) {
                 w-full bg-elevated border rounded-xl px-4 py-3 text-sm text-txt-primary
                 placeholder-txt-muted outline-none transition-all duration-150 resize-none
                 focus:border-accent-primary/50 focus:shadow-[0_0_20px_rgba(59,130,246,0.12)]
-                ${errors.text ? 'border-accent-danger/50' : 'border-white/10'}
+                ${errors.text ? 'border-accent-danger/50' : 'border-surface-divider'}
               `}
             />
             <span

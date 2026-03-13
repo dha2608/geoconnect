@@ -9,6 +9,7 @@ import { createPin } from '../../features/pins/pinSlice';
 import { closeModal } from '../../features/ui/uiSlice';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
+import { compressImages } from '../../utils/compressImage';
 
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 const PIN_CATEGORIES = [
@@ -81,7 +82,7 @@ function ImagePreview({ url, index, onRemove }) {
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.15 } }}
-      className="relative group aspect-square rounded-xl overflow-hidden border border-white/10 bg-elevated"
+      className="relative group aspect-square rounded-xl overflow-hidden border border-surface-divider bg-elevated"
     >
       <img
         src={url}
@@ -217,7 +218,9 @@ export default function CreatePinModal() {
     formData.append('location[coordinates][0]',  String(data.lng));
     formData.append('location[coordinates][1]',  String(data.lat));
 
-    imageFiles.forEach((file) => formData.append('images', file));
+    // Compress images before upload
+    const compressed = await compressImages(imageFiles);
+    compressed.forEach((file) => formData.append('images', file));
 
     try {
       await dispatch(createPin(formData)).unwrap();
@@ -250,7 +253,7 @@ export default function CreatePinModal() {
               w-full bg-elevated border rounded-xl px-4 py-3 text-sm text-txt-primary
               placeholder-txt-muted outline-none transition-all duration-150
               focus:border-accent-primary/50 focus:shadow-[0_0_18px_rgba(59,130,246,0.12)]
-              ${errors.title ? 'border-accent-danger/50' : 'border-white/10'}
+              ${errors.title ? 'border-accent-danger/50' : 'border-surface-divider'}
             `}
           />
           <FieldError message={errors.title?.message} />
@@ -267,7 +270,7 @@ export default function CreatePinModal() {
               w-full bg-elevated border rounded-xl px-4 py-3 text-sm text-txt-primary
               placeholder-txt-muted outline-none transition-all duration-150 resize-none
               focus:border-accent-primary/50 focus:shadow-[0_0_18px_rgba(59,130,246,0.12)]
-              ${errors.description ? 'border-accent-danger/50' : 'border-white/10'}
+              ${errors.description ? 'border-accent-danger/50' : 'border-surface-divider'}
             `}
           />
           <FieldError message={errors.description?.message} />
@@ -295,7 +298,7 @@ export default function CreatePinModal() {
                         text-sm transition-all duration-150
                         ${selected
                           ? 'text-txt-primary shadow-[0_0_0_1px_var(--cat-color)]'
-                          : 'border-white/8 bg-elevated text-txt-secondary hover:border-white/15 hover:text-txt-primary'
+                          : 'border-surface-divider bg-elevated text-txt-secondary hover:border-surface-divider hover:text-txt-primary'
                         }
                       `}
                       style={{
@@ -367,7 +370,7 @@ export default function CreatePinModal() {
                       text-txt-primary placeholder-txt-muted outline-none font-mono
                       transition-all duration-150
                       focus:border-accent-primary/50 focus:shadow-[0_0_18px_rgba(59,130,246,0.12)]
-                      ${errors[key] ? 'border-accent-danger/50' : 'border-white/10'}
+                      ${errors[key] ? 'border-accent-danger/50' : 'border-surface-divider'}
                     `}
                   />
                 </div>
@@ -406,7 +409,7 @@ export default function CreatePinModal() {
               whileHover={{ borderColor: 'rgba(59,130,246,0.4)', scale: 1.005 }}
               whileTap={{ scale: 0.995 }}
               onClick={() => fileInputRef.current?.click()}
-              className="w-full py-4 rounded-xl border border-dashed border-white/15 bg-elevated/40 text-sm text-txt-muted hover:text-txt-secondary transition-all duration-150 flex items-center justify-center gap-2"
+              className="w-full py-4 rounded-xl border border-dashed border-[var(--glass-border)] bg-elevated/40 text-sm text-txt-muted hover:text-txt-secondary transition-all duration-150 flex items-center justify-center gap-2"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -442,7 +445,7 @@ export default function CreatePinModal() {
         </div>
 
         {/* Footer actions */}
-        <div className="flex gap-3 pt-2 border-t border-white/5">
+          <div className="flex gap-3 pt-2 border-t border-surface-divider">
           <Button
             type="button"
             variant="ghost"

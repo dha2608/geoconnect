@@ -17,7 +17,7 @@
  *  • Backdrop click closes the panel
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, formatDistanceToNow, isPast, isFuture } from 'date-fns';
@@ -27,6 +27,7 @@ import Avatar        from '../ui/Avatar';
 import Badge         from '../ui/Badge';
 import Button        from '../ui/Button';
 import LoadingSpinner from '../ui/LoadingSpinner';
+import ImageLightbox from '../ui/ImageLightbox';
 
 import {
   fetchEvent,
@@ -64,6 +65,7 @@ function SectionLabel({ children }) {
 
 export default function EventDetailPanel() {
   const dispatch = useDispatch();
+  const [coverLightbox, setCoverLightbox] = useState(false);
 
   const modalOpen    = useSelector((s) => s.ui.modalOpen);
   const modalData    = useSelector((s) => s.ui.modalData);
@@ -118,6 +120,7 @@ export default function EventDetailPanel() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
+    <>
     <AnimatePresence>
       {isOpen && (
         <>
@@ -143,7 +146,7 @@ export default function EventDetailPanel() {
             animate={{ x: 0,      opacity: 1   }}
             exit={{    x: '100%', opacity: 0   }}
             transition={{ type: 'spring', stiffness: 320, damping: 32, mass: 0.9 }}
-            className={`fixed right-0 z-50 flex flex-col bg-[#0f1520] border-l border-[rgba(59,130,246,0.12)] ${
+            className={`fixed right-0 z-50 flex flex-col glass border-l border-[var(--glass-border)] ${
               isMobile
                 ? 'top-16 bottom-16 left-0 border-l-0'
                 : 'top-0 h-full w-full max-w-[480px]'
@@ -173,15 +176,15 @@ export default function EventDetailPanel() {
                 {/* ── Hero: cover image or category placeholder ───────── */}
                 <div className="relative flex-shrink-0">
                   {event.coverImage ? (
-                    <div className="h-52">
+                    <div className="h-52 cursor-pointer" onClick={() => setCoverLightbox(true)}>
                       <img
                         src={event.coverImage}
                         alt={event.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover hover:brightness-90 transition-[filter] duration-150"
                       />
                       {/* Gradient fade into panel background */}
                       <div className="absolute inset-0 bg-gradient-to-t
-                                      from-[#0f1520] via-[#0f1520]/30 to-transparent" />
+                                      from-[var(--glass-bg)] via-[var(--glass-bg)]/30 to-transparent pointer-events-none" />
                     </div>
                   ) : (
                     <div
@@ -197,7 +200,7 @@ export default function EventDetailPanel() {
                     onClick={handleClose}
                     aria-label="Close panel"
                     className="absolute top-3 right-3 w-9 h-9 rounded-full
-                               bg-black/55 backdrop-blur-md border border-white/10
+                   bg-black/55 backdrop-blur-md border border-surface-divider
                                text-white/70 hover:text-white hover:bg-black/75
                                flex items-center justify-center text-lg leading-none
                                transition-all duration-150"
@@ -273,7 +276,7 @@ export default function EventDetailPanel() {
                       <div>
                         <SectionLabel>Organized by</SectionLabel>
                         <div className="flex items-center gap-3 px-3 py-3 rounded-xl
-                                        bg-[rgba(15,21,32,0.7)] border border-[rgba(59,130,246,0.08)]">
+                                        bg-[var(--glass-bg)] border border-[var(--glass-border)]">
                           <Avatar
                             src={event.organizer.avatar}
                             name={event.organizer.displayName ?? event.organizer.username ?? '?'}
@@ -332,7 +335,7 @@ export default function EventDetailPanel() {
 
                       {/* Capacity progress bar */}
                       {capacity > 0 && (
-                        <div className="h-1.5 rounded-full bg-[rgba(59,130,246,0.08)] overflow-hidden mb-3">
+                        <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden mb-3">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${capacityPct}%` }}
@@ -360,13 +363,13 @@ export default function EventDetailPanel() {
                                 src={attendee.avatar}
                                 name={attendee.displayName ?? attendee.username ?? '?'}
                                 size="xs"
-                                className="ring-2 ring-[#0f1520]"
+                                className="ring-2 ring-[var(--glass-bg)]"
                               />
                             </div>
                           ))}
                           {extraAttendees > 0 && (
                             <div className="-ml-2 w-7 h-7 rounded-full flex-shrink-0
-                                            bg-[rgba(59,130,246,0.15)] ring-2 ring-[#0f1520]
+                                            bg-surface-hover ring-2 ring-[var(--glass-bg)]
                                             flex items-center justify-center text-[10px]
                                             font-bold text-blue-400">
                               +{extraAttendees}
@@ -389,8 +392,8 @@ export default function EventDetailPanel() {
                 </div>
 
                 {/* ── Footer actions ───────────────────────────────────── */}
-                <div className="flex-shrink-0 p-4 border-t border-[rgba(59,130,246,0.08)]
-                                bg-[rgba(9,14,23,0.85)] backdrop-blur-sm">
+                <div className="flex-shrink-0 p-4 border-t border-surface-divider
+                                bg-[var(--glass-bg)] backdrop-blur-sm">
                   {isOrganizer ? (
                     /* Organizer: Edit + Delete */
                     <div className="flex gap-2">
@@ -440,5 +443,15 @@ export default function EventDetailPanel() {
         </>
       )}
     </AnimatePresence>
+
+      {event?.coverImage && (
+        <ImageLightbox
+          images={[event.coverImage]}
+          initialIndex={0}
+          isOpen={coverLightbox}
+          onClose={() => setCoverLightbox(false)}
+        />
+      )}
+    </>
   );
 }

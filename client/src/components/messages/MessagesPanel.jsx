@@ -35,8 +35,12 @@ import {
   fetchMessages,
   sendMessage,
   setActiveConversation,
+  createConversation,
+  markConversationRead,
+  fetchUnreadCount,
 } from '../../features/messages/messageSlice';
 import { closePanel } from '../../features/ui/uiSlice';
+import { userApi } from '../../api/userApi';
 import { formatDistanceToNow, format, isToday, isYesterday, isSameDay } from 'date-fns';
 import Avatar from '../ui/Avatar';
 
@@ -98,6 +102,22 @@ const MapPinIcon = () => (
   </svg>
 );
 
+const SearchIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
+const UserPlusIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-8 h-8">
+    <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" />
+    <circle cx="8.5" cy="7" r="4" />
+    <line x1="20" y1="8" x2="20" y2="14" />
+    <line x1="23" y1="11" x2="17" y2="11" />
+  </svg>
+);
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Returns the other participant in a 1-on-1 conversation */
@@ -128,12 +148,12 @@ function truncate(str = '', maxLen = 40) {
 function ConversationSkeleton() {
   return (
     <div className="flex items-center gap-3 px-3 py-3 rounded-xl animate-pulse">
-      <div className="w-10 h-10 rounded-full bg-[rgba(59,130,246,0.08)] flex-shrink-0" />
+      <div className="w-10 h-10 rounded-full bg-surface-hover flex-shrink-0" />
       <div className="flex-1 space-y-2">
-        <div className="h-3 bg-[rgba(59,130,246,0.08)] rounded-md w-3/5" />
-        <div className="h-2.5 bg-[rgba(59,130,246,0.05)] rounded-md w-4/5" />
+        <div className="h-3 bg-surface-hover rounded-md w-3/5" />
+        <div className="h-2.5 bg-surface-hover rounded-md w-4/5" />
       </div>
-      <div className="h-2 bg-[rgba(59,130,246,0.05)] rounded w-10 flex-shrink-0" />
+      <div className="h-2 bg-surface-hover rounded w-10 flex-shrink-0" />
     </div>
   );
 }
@@ -143,7 +163,7 @@ function MessageSkeleton({ align = 'left' }) {
   return (
     <div className={`flex ${isRight ? 'justify-end' : 'justify-start'} animate-pulse`}>
       <div
-        className={`h-8 rounded-2xl bg-[rgba(59,130,246,0.08)] ${isRight ? 'w-36' : 'w-48'}`}
+        className={`h-8 rounded-2xl bg-surface-hover ${isRight ? 'w-36' : 'w-48'}`}
       />
     </div>
   );
@@ -198,7 +218,7 @@ function TypingIndicator() {
     <div className="flex items-end gap-2 px-1">
       <div
         className="flex items-center gap-1 px-3.5 py-2.5 rounded-2xl rounded-bl-sm"
-        style={{ background: 'rgba(13,17,23,0.75)', border: '1px solid rgba(59,130,246,0.1)' }}
+        style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)' }}
       >
         {[0, 1, 2].map((i) => (
           <motion.span
@@ -223,23 +243,46 @@ function TypingIndicator() {
 function DateSeparator({ date }) {
   return (
     <div className="flex items-center gap-3 py-3">
-      <div className="flex-1 h-px bg-white/5" />
-      <span className="text-[10px] font-body font-medium text-txt-muted uppercase tracking-wider flex-shrink-0">
+      <div className="flex-1 h-px bg-surface-divider" />
+      <span className="text-[11px] font-medium text-txt-muted uppercase tracking-wider">
         {formatDateLabel(date)}
       </span>
-      <div className="flex-1 h-px bg-white/5" />
+      <div className="flex-1 h-px bg-surface-divider" />
     </div>
   );
 }
 
+// ─── Read receipt icons ───────────────────────────────────────────────────────
+
+/** Single check = sent/delivered */
+const SingleCheckIcon = () => (
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+    <polyline points="2 8.5 6 12.5 14 4.5" />
+  </svg>
+);
+
+/** Double check = read by recipient */
+const DoubleCheckIcon = ({ read }) => (
+  <svg viewBox="0 0 20 16" fill="none" stroke={read ? '#60a5fa' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3">
+    <polyline points="1 8.5 5 12.5 13 4.5" />
+    <polyline points="5 8.5 9 12.5 17 4.5" />
+  </svg>
+);
+
 // ─── Single message bubble ────────────────────────────────────────────────────
 
-function MessageBubble({ message, isOwn }) {
+function MessageBubble({ message, isOwn, otherParticipantId }) {
   const time = message.createdAt
     ? format(new Date(message.createdAt), 'h:mm a')
     : '';
 
   const isLocation = message.type === 'location' || message.type === 'pin';
+
+  // Determine read status for own messages
+  const readBy = message.readBy || [];
+  const isReadByOther = isOwn && otherParticipantId
+    ? readBy.some(id => (id._id ?? id).toString() === otherParticipantId.toString())
+    : false;
 
   return (
     <motion.div
@@ -257,12 +300,12 @@ function MessageBubble({ message, isOwn }) {
             className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-[13px] font-body ${
               isOwn
                 ? 'rounded-br-sm text-white'
-                : 'rounded-bl-sm text-txt-primary border border-[rgba(59,130,246,0.12)]'
+                : 'rounded-bl-sm text-txt-primary border border-[var(--glass-border)]'
             }`}
             style={
               isOwn
                 ? { background: '#3b82f6', boxShadow: '0 2px 12px rgba(59,130,246,0.35)' }
-                : { background: 'rgba(13,17,23,0.75)' }
+                : { background: 'var(--glass-bg)' }
             }
           >
             <MapPinIcon />
@@ -276,20 +319,232 @@ function MessageBubble({ message, isOwn }) {
             className={`px-3.5 py-2.5 rounded-2xl text-[13px] font-body leading-relaxed break-words ${
               isOwn
                 ? 'rounded-br-sm text-white'
-                : 'rounded-bl-sm text-txt-primary border border-[rgba(59,130,246,0.1)]'
+                : 'rounded-bl-sm text-txt-primary border border-[var(--glass-border)]'
             }`}
             style={
               isOwn
                 ? { background: '#3b82f6', boxShadow: '0 2px 12px rgba(59,130,246,0.3)' }
-                : { background: 'rgba(13,17,23,0.72)' }
+                : { background: 'var(--glass-bg)' }
             }
           >
             {message.text}
           </div>
         )}
 
-        {/* Timestamp */}
-        <span className="text-[10px] text-txt-muted font-body px-1">{time}</span>
+        {/* Timestamp + read receipt */}
+        <div className="flex items-center gap-1 px-1">
+          <span className="text-[10px] text-txt-muted font-body">{time}</span>
+          {isOwn && (
+            <span className="text-txt-muted flex-shrink-0">
+              {isReadByOther ? <DoubleCheckIcon read /> : <SingleCheckIcon />}
+            </span>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── NewConversationView ──────────────────────────────────────────────────────
+
+function NewConversationView({ currentUserId, onClose, onBack, onStartChat }) {
+  const [query, setQuery]       = useState('');
+  const [results, setResults]   = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [error, setError]       = useState('');
+  const debounceRef             = useRef(null);
+  const inputRef                = useRef(null);
+
+  // Focus search input on mount
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const trimmed = query.trim();
+    if (trimmed.length < 2) {
+      setResults([]);
+      setSearching(false);
+      setError('');
+      return;
+    }
+
+    setSearching(true);
+    setError('');
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await userApi.searchUsers(trimmed);
+        const users = (res.data || []).filter(u => u._id !== currentUserId);
+        setResults(users);
+      } catch {
+        setError('Search failed. Try again.');
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 350);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query, currentUserId]);
+
+  return (
+    <motion.div
+      key="new-conversation"
+      initial={{ opacity: 0, x: 24 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -24 }}
+      transition={{ duration: 0.18, ease: 'easeOut' }}
+      className="flex flex-col h-full"
+    >
+      {/* Header */}
+      <div className="flex-shrink-0 px-4 pt-5 pb-3 border-b border-surface-divider">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <motion.button
+              whileHover={{ scale: 1.08, x: -1 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={onBack}
+              aria-label="Back to conversations"
+              className="w-8 h-8 flex items-center justify-center rounded-lg
+                         text-txt-muted hover:text-txt-primary hover:bg-surface-hover transition-all duration-150"
+            >
+              <ArrowLeftIcon />
+            </motion.button>
+            <h2 className="text-[15px] font-bold text-txt-primary font-heading tracking-tight">
+              New Message
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-txt-muted
+                       hover:text-txt-primary hover:bg-surface-hover transition-all duration-150"
+          >
+            <XIcon />
+          </button>
+        </div>
+
+        {/* Search input */}
+        <div
+          className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5"
+          style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)' }}
+        >
+          <span className="text-txt-muted flex-shrink-0"><SearchIcon /></span>
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search people by name..."
+            className="flex-1 bg-transparent text-[13px] text-txt-primary font-body
+                       placeholder-txt-muted outline-none"
+          />
+          {query && (
+            <button
+              onClick={() => { setQuery(''); setResults([]); }}
+              className="text-txt-muted hover:text-txt-primary transition-colors"
+            >
+              <XIcon />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Results */}
+      <div
+        className="flex-1 overflow-y-auto px-2 pt-2 pb-4 min-h-0"
+        style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.07) transparent' }}
+      >
+        {/* Loading */}
+        {searching && (
+          <div className="space-y-1 pt-1">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <ConversationSkeleton key={i} />
+            ))}
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <p className="text-center text-sm text-red-400 font-body py-4">{error}</p>
+        )}
+
+        {/* No results */}
+        {!searching && !error && query.trim().length >= 2 && results.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-16 px-6 text-center"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-surface-hover flex items-center justify-center mb-4 text-txt-muted">
+              <UserPlusIcon />
+            </div>
+            <p className="text-txt-secondary font-body text-sm">
+              No users found for "<span className="text-txt-primary font-medium">{query.trim()}</span>"
+            </p>
+          </motion.div>
+        )}
+
+        {/* Prompt */}
+        {!searching && query.trim().length < 2 && results.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-16 px-6 text-center"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-accent-primary/10 border border-accent-primary/15 flex items-center justify-center mb-4 text-txt-muted">
+              <UserPlusIcon />
+            </div>
+            <p className="text-txt-primary font-heading font-semibold text-base mb-1">
+              Find someone to chat with
+            </p>
+            <p className="text-txt-muted font-body text-sm leading-relaxed max-w-[220px]">
+              Search by name to start a new conversation.
+            </p>
+          </motion.div>
+        )}
+
+        {/* User results */}
+        {results.length > 0 && (
+          <AnimatePresence initial={false}>
+            {results.map((user, i) => (
+              <motion.button
+                key={user._id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.97 }}
+                transition={{ delay: i < 6 ? i * 0.04 : 0, duration: 0.18 }}
+                whileHover={{ scale: 1.012, x: 2 }}
+                whileTap={{ scale: 0.985 }}
+                onClick={() => onStartChat(user._id)}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left
+                           border border-[var(--glass-border)] bg-transparent
+                           hover:bg-surface-hover transition-all duration-200 mb-1"
+              >
+                <Avatar src={user.avatar} name={user.name} size="md" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-txt-primary font-body truncate">
+                    {user.name}
+                  </p>
+                  {user.bio && (
+                    <p className="text-[11px] text-txt-muted font-body truncate">
+                      {truncate(user.bio, 50)}
+                    </p>
+                  )}
+                </div>
+                <span className="text-[11px] text-accent-primary font-body font-medium flex-shrink-0">
+                  Chat
+                </span>
+              </motion.button>
+            ))}
+          </AnimatePresence>
+        )}
       </div>
     </motion.div>
   );
@@ -297,7 +552,7 @@ function MessageBubble({ message, isOwn }) {
 
 // ─── ConversationListView ─────────────────────────────────────────────────────
 
-function ConversationListView({ currentUserId, onClose, onSelectConversation }) {
+function ConversationListView({ currentUserId, onClose, onSelectConversation, onCompose }) {
   const dispatch = useDispatch();
   const { conversations, loading } = useSelector((s) => s.messages);
 
@@ -315,7 +570,7 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation }) 
       className="flex flex-col h-full"
     >
       {/* Header */}
-      <div className="flex-shrink-0 px-4 pt-5 pb-3 border-b border-[rgba(59,130,246,0.08)]">
+      <div className="flex-shrink-0 px-4 pt-5 pb-3 border-b border-surface-divider">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-accent-primary/15 flex items-center justify-center text-accent-primary">
@@ -325,7 +580,7 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation }) 
               Messages
             </h2>
             {conversations.length > 0 && (
-              <span className="bg-white/5 text-txt-muted text-[10px] font-body font-medium px-1.5 py-0.5 rounded-full">
+              <span className="bg-surface-hover text-txt-muted text-[10px] font-body font-medium px-1.5 py-0.5 rounded-full">
                 {conversations.length}
               </span>
             )}
@@ -333,6 +588,7 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation }) 
 
           <div className="flex items-center gap-1">
             <button
+              onClick={onCompose}
               aria-label="New message"
               className="w-8 h-8 flex items-center justify-center rounded-lg text-txt-muted
                          hover:text-accent-primary hover:bg-accent-primary/10 transition-all duration-150"
@@ -343,7 +599,7 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation }) 
               onClick={onClose}
               aria-label="Close messages"
               className="w-8 h-8 flex items-center justify-center rounded-lg text-txt-muted
-                         hover:text-txt-primary hover:bg-white/5 transition-all duration-150"
+                         hover:text-txt-primary hover:bg-surface-hover transition-all duration-150"
             >
               <XIcon />
             </button>
@@ -373,8 +629,8 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation }) 
           <AnimatePresence initial={false}>
             {conversations.map((conv, i) => {
               const other      = getOtherParticipant(conv, currentUserId);
-              const name       = other?.displayName || other?.username || 'Unknown';
-              const avatar     = other?.avatar || other?.profileImage;
+              const name       = other?.name || 'Unknown';
+              const avatar     = other?.avatar;
               const isOnline   = other?.isOnline ?? false;
               const lastMsg    = conv.lastMessage;
               const hasUnread  = (conv.unreadCount ?? 0) > 0;
@@ -396,8 +652,8 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation }) 
                     'w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left',
                     'border transition-all duration-200 mb-1',
                     hasUnread
-                      ? 'border-[rgba(59,130,246,0.14)] bg-[rgba(15,21,32,0.68)] hover:bg-[rgba(15,21,32,0.82)]'
-                      : 'border-[rgba(59,130,246,0.06)] bg-transparent hover:bg-[rgba(15,21,32,0.5)]',
+                      ? 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-surface-active'
+                      : 'border-[var(--glass-border)] bg-transparent hover:bg-surface-hover',
                   ].join(' ')}
                 >
                   <Avatar
@@ -463,8 +719,8 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
   const inputRef                      = useRef(null);
 
   const other     = getOtherParticipant(conversation, currentUserId);
-  const name      = other?.displayName || other?.username || 'User';
-  const avatar    = other?.avatar || other?.profileImage;
+  const name      = other?.name || 'User';
+  const avatar    = other?.avatar;
   const isOnline  = other?.isOnline ?? false;
   const convId    = conversation._id;
 
@@ -573,7 +829,7 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
       {/* ── Chat Header ──────────────────────────────────────────────────── */}
       <div
         className="flex-shrink-0 flex items-center gap-3 px-3 py-3
-                   border-b border-[rgba(59,130,246,0.08)]"
+                   border-b border-surface-divider"
       >
         {/* Back button */}
         <motion.button
@@ -582,7 +838,7 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
           onClick={onBack}
           aria-label="Back to conversations"
           className="w-8 h-8 flex items-center justify-center rounded-lg
-                     text-txt-muted hover:text-txt-primary hover:bg-white/5 transition-all duration-150"
+                     text-txt-muted hover:text-txt-primary hover:bg-surface-hover transition-all duration-150"
         >
           <ArrowLeftIcon />
         </motion.button>
@@ -607,7 +863,7 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
           onClick={onClose}
           aria-label="Close messages"
           className="w-8 h-8 flex items-center justify-center rounded-lg
-                     text-txt-muted hover:text-txt-primary hover:bg-white/5 transition-all duration-150"
+                     text-txt-muted hover:text-txt-primary hover:bg-surface-hover transition-all duration-150"
         >
           <XIcon />
         </button>
@@ -643,7 +899,7 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
             const isOwn = (msg.sender?._id ?? msg.sender) === currentUserId;
 
             return (
-              <MessageBubble key={item.key} message={msg} isOwn={isOwn} />
+              <MessageBubble key={item.key} message={msg} isOwn={isOwn} otherParticipantId={other?._id} />
             );
           })}
         </AnimatePresence>
@@ -669,13 +925,13 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
       {/* ── Input bar ────────────────────────────────────────────────────── */}
       <div
         className="flex-shrink-0 flex items-end gap-2 p-3
-                   border-t border-[rgba(59,130,246,0.08)]"
+                   border-t border-surface-divider"
       >
         <div
           className="flex-1 flex items-end rounded-xl px-3.5 py-2.5 min-h-[42px]"
           style={{
-            background: 'rgba(9,14,23,0.6)',
-            border: '1px solid rgba(59,130,246,0.12)',
+            background: 'var(--glass-bg)',
+            border: '1px solid var(--glass-border)',
           }}
         >
           <textarea
@@ -710,7 +966,7 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
             'transition-all duration-150',
             inputText.trim() && !isSending
               ? 'bg-accent-primary text-white shadow-[0_0_16px_rgba(59,130,246,0.4)] hover:bg-blue-500'
-              : 'bg-[rgba(59,130,246,0.08)] text-txt-muted cursor-not-allowed',
+              : 'bg-surface-hover text-txt-muted cursor-not-allowed',
           ].join(' ')}
         >
           {isSending ? (
@@ -735,33 +991,66 @@ export default function MessagesPanel() {
   const { activePanel, isMobile } = useSelector((s) => s.ui);
   const currentUser = useSelector((s) => s.auth?.user);
 
+  const [showNewConversation, setShowNewConversation] = useState(false);
   const isOpen = activePanel === 'messages';
 
-  // Reset active conversation when panel closes
+  // Reset state when panel closes
   useEffect(() => {
-    if (!isOpen) dispatch(setActiveConversation(null));
+    if (!isOpen) {
+      dispatch(setActiveConversation(null));
+      setShowNewConversation(false);
+    }
   }, [isOpen, dispatch]);
 
   const handleClose = useCallback(() => dispatch(closePanel()), [dispatch]);
 
   const handleSelectConversation = useCallback(
     (conv) => {
+      setShowNewConversation(false);
       dispatch(setActiveConversation(conv));
       dispatch(fetchMessages({ conversationId: conv._id }));
+      dispatch(markConversationRead(conv._id)).then(() => dispatch(fetchUnreadCount()));
     },
     [dispatch],
   );
 
   const handleBack = useCallback(
-    () => dispatch(setActiveConversation(null)),
+    () => {
+      dispatch(setActiveConversation(null));
+      setShowNewConversation(false);
+    },
     [dispatch],
   );
+
+  const handleCompose = useCallback(() => {
+    dispatch(setActiveConversation(null));
+    setShowNewConversation(true);
+  }, [dispatch]);
+
+  const handleStartChat = useCallback(async (recipientId) => {
+    try {
+      const result = await dispatch(createConversation(recipientId)).unwrap();
+      setShowNewConversation(false);
+      dispatch(setActiveConversation(result));
+      dispatch(fetchMessages({ conversationId: result._id }));
+      dispatch(markConversationRead(result._id)).then(() => dispatch(fetchUnreadCount()));
+    } catch {
+      // Error handled by Redux rejection — stays on search view
+    }
+  }, [dispatch]);
+
+  // Determine current view
+  const currentView = activeConversation
+    ? 'chat'
+    : showNewConversation
+    ? 'new'
+    : 'list';
 
   // ── Responsive layout ──────────────────────────────────────────────────────
 
   const panelClass = isMobile
-    ? 'fixed top-16 bottom-16 left-0 right-0 z-30 flex flex-col overflow-hidden'
-    : 'fixed top-16 bottom-0 left-[72px] w-[380px] z-30 flex flex-col overflow-hidden';
+    ? 'fixed top-16 bottom-16 left-0 right-0 z-30 flex flex-col overflow-hidden glass'
+    : 'fixed top-16 bottom-0 left-[72px] w-[380px] z-30 flex flex-col overflow-hidden glass border-r border-[var(--glass-border)]';
 
   const motionProps = isMobile
     ? {
@@ -788,24 +1077,28 @@ export default function MessagesPanel() {
           aria-label="Messages"
           {...motionProps}
           className={panelClass}
-          style={{
-            background: 'rgba(15,21,32,0.72)',
-            backdropFilter: 'blur(20px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-            borderRight: '1px solid rgba(59,130,246,0.12)',
-            boxShadow: '6px 0 32px rgba(0,0,0,0.35)',
-          }}
         >
-          {/* Swap between list and chat with AnimatePresence */}
+          {/* Swap between list, new conversation, and chat with AnimatePresence */}
           <AnimatePresence mode="wait" initial={false}>
-            {!activeConversation ? (
+            {currentView === 'list' && (
               <ConversationListView
                 key="conv-list"
                 currentUserId={currentUser?._id}
                 onClose={handleClose}
                 onSelectConversation={handleSelectConversation}
+                onCompose={handleCompose}
               />
-            ) : (
+            )}
+            {currentView === 'new' && (
+              <NewConversationView
+                key="new-conv"
+                currentUserId={currentUser?._id}
+                onClose={handleClose}
+                onBack={handleBack}
+                onStartChat={handleStartChat}
+              />
+            )}
+            {currentView === 'chat' && (
               <ActiveChatView
                 key={`chat-${activeConversation._id}`}
                 conversation={activeConversation}

@@ -31,8 +31,7 @@ const fadeVariants = {
 
 /* ─────────────────────────── validation schema ───────────────────────────── */
 const editSchema = z.object({
-  username: z.string().min(2, 'At least 2 characters').max(30, 'Max 30 characters'),
-  email: z.string().email('Invalid email address'),
+  name: z.string().min(2, 'At least 2 characters').max(50, 'Max 50 characters'),
   bio: z.string().max(200, 'Max 200 characters').optional().or(z.literal('')),
 });
 
@@ -54,10 +53,10 @@ function StatItem({ count, label, onClick }) {
 function SkeletonCard() {
   return (
     <div className="glass p-4 rounded-2xl space-y-3">
-      <div className="h-36 bg-white/5 rounded-xl animate-[shimmer_2s_linear_infinite] bg-gradient-to-r from-white/5 via-white/10 to-white/5 bg-[length:200%_100%]" />
+      <div className="h-36 bg-surface-hover rounded-xl animate-[shimmer_2s_linear_infinite] bg-gradient-to-r from-[var(--surface-hover)] via-[var(--surface-active)] to-[var(--surface-hover)] bg-[length:200%_100%]" />
       <div className="space-y-2">
-        <div className="h-3.5 bg-white/5 rounded w-4/5 animate-pulse" />
-        <div className="h-3 bg-white/5 rounded w-2/5 animate-pulse" />
+        <div className="h-3.5 bg-surface-hover rounded w-4/5 animate-pulse" />
+        <div className="h-3 bg-surface-hover rounded w-2/5 animate-pulse" />
       </div>
     </div>
   );
@@ -177,7 +176,7 @@ function FollowListModal({ isOpen, title, users, onClose }) {
           >
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-heading font-bold text-txt-primary">{title}</h3>
-              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5 text-txt-muted hover:text-txt-primary transition-colors">
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-hover text-txt-muted hover:text-txt-primary transition-colors">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -189,9 +188,9 @@ function FollowListModal({ isOpen, title, users, onClose }) {
                   const user = typeof u === 'object' ? u : { _id: u };
                   return (
                     <div key={user._id || i} className="flex items-center gap-3">
-                      <Avatar name={user.username} src={user.avatar} size="sm" />
+                      <Avatar name={user.name} src={user.avatar} size="sm" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-txt-primary truncate">{user.username || 'User'}</p>
+                        <p className="text-sm font-medium text-txt-primary truncate">{user.name || 'User'}</p>
                         {user.bio && <p className="text-xs text-txt-muted truncate">{user.bio}</p>}
                       </div>
                     </div>
@@ -231,7 +230,7 @@ export default function ProfilePage() {
 
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({
     resolver: zodResolver(editSchema),
-    defaultValues: { username: '', email: '', bio: '' },
+    defaultValues: { name: '', bio: '' },
   });
 
   const bioValue = watch('bio') ?? '';
@@ -244,7 +243,7 @@ export default function ProfilePage() {
   /* ── seed form when profile loads ── */
   useEffect(() => {
     if (profile) {
-      reset({ username: profile.username || '', email: profile.email || '', bio: profile.bio || '' });
+      reset({ name: profile.name || '', bio: profile.bio || '' });
       setAvatarPreview(null);
       setAvatarFile(null);
     }
@@ -282,13 +281,13 @@ export default function ProfilePage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const payload = new FormData();
-      payload.append('username', data.username);
-      payload.append('email', data.email);
-      if (data.bio) payload.append('bio', data.bio);
-      if (avatarFile) payload.append('avatar', avatarFile);
+      // Upload avatar separately if changed
+      if (avatarFile) {
+        await userApi.uploadAvatar(avatarFile);
+      }
 
-      const res = await userApi.updateProfile(payload);
+      // Update profile fields (name, bio)
+      const res = await userApi.updateProfile({ name: data.name, bio: data.bio || '' });
       dispatch(setUser(res.data.user || res.data));
       await dispatch(fetchUserProfile(profileId));
       setEditMode(false);
@@ -304,7 +303,7 @@ export default function ProfilePage() {
     setAvatarPreview(null);
     setAvatarFile(null);
     setSaveError(null);
-    if (profile) reset({ username: profile.username || '', email: profile.email || '', bio: profile.bio || '' });
+    if (profile) reset({ name: profile.name || '', bio: profile.bio || '' });
   };
 
   /* ── loading / 404 guards ── */
@@ -341,7 +340,7 @@ export default function ProfilePage() {
         {/* ── Cover + Avatar ── */}
         <motion.div variants={itemVariants}>
           {/* Cover gradient */}
-          <div className="h-52 rounded-2xl relative overflow-hidden bg-gradient-to-br from-accent-primary/25 via-panel to-accent-secondary/15 border border-white/5">
+          <div className="h-52 rounded-2xl relative overflow-hidden bg-gradient-to-br from-accent-primary/25 via-panel to-accent-secondary/15 border border-surface-divider">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_70%_20%,rgba(59,130,246,0.2),transparent)]" />
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_10%_80%,rgba(6,182,212,0.12),transparent)]" />
             {/* Geometric accent nodes */}
@@ -372,7 +371,7 @@ export default function ProfilePage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <Avatar name={displayUser.username} size="xl" className="w-28 h-28 text-3xl" />
+                        <Avatar name={displayUser.name} size="xl" className="w-28 h-28 text-3xl" />
                       )}
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -382,9 +381,9 @@ export default function ProfilePage() {
                       </div>
                     </button>
                   ) : displayUser.avatar ? (
-                    <img src={displayUser.avatar} alt={displayUser.username} className="w-full h-full object-cover" />
+                    <img src={displayUser.avatar} alt={displayUser.name} className="w-full h-full object-cover" />
                   ) : (
-                    <Avatar name={displayUser.username} size="xl" className="w-28 h-28 text-3xl" />
+                    <Avatar name={displayUser.name} size="xl" className="w-28 h-28 text-3xl" />
                   )}
                 </div>
                 {/* Live-sharing indicator */}
@@ -455,27 +454,16 @@ export default function ProfilePage() {
                       )}
                     </AnimatePresence>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                       <div className="space-y-1.5">
-                        <label className="block text-xs font-medium text-txt-secondary">Username</label>
+                        <label className="block text-xs font-medium text-txt-secondary">Name</label>
                         <input
-                          {...register('username')}
-                          autoComplete="username"
-                          placeholder="your_username"
-                          className="w-full bg-elevated border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-accent-primary/50 focus:shadow-[0_0_16px_rgba(59,130,246,0.12)] transition-all duration-150"
+                          {...register('name')}
+                          autoComplete="name"
+                          placeholder="Your name"
+                          className="w-full bg-elevated border border-surface-divider rounded-xl px-3.5 py-2.5 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-accent-primary/50 focus:shadow-[0_0_16px_rgba(59,130,246,0.12)] transition-all duration-150"
                         />
-                        {errors.username && <p className="text-xs text-accent-danger">{errors.username.message}</p>}
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-medium text-txt-secondary">Email</label>
-                        <input
-                          {...register('email')}
-                          type="email"
-                          autoComplete="email"
-                          placeholder="you@example.com"
-                          className="w-full bg-elevated border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-accent-primary/50 focus:shadow-[0_0_16px_rgba(59,130,246,0.12)] transition-all duration-150"
-                        />
-                        {errors.email && <p className="text-xs text-accent-danger">{errors.email.message}</p>}
+                        {errors.name && <p className="text-xs text-accent-danger">{errors.name.message}</p>}
                       </div>
                     </div>
 
@@ -491,7 +479,7 @@ export default function ProfilePage() {
                         rows={3}
                         maxLength={200}
                         placeholder="Tell people a little about yourself..."
-                        className="w-full bg-elevated border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-accent-primary/50 focus:shadow-[0_0_16px_rgba(59,130,246,0.12)] transition-all duration-150 resize-none leading-relaxed"
+                        className="w-full bg-elevated border border-surface-divider rounded-xl px-3.5 py-2.5 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-accent-primary/50 focus:shadow-[0_0_16px_rgba(59,130,246,0.12)] transition-all duration-150 resize-none leading-relaxed"
                       />
                       {errors.bio && <p className="text-xs text-accent-danger">{errors.bio.message}</p>}
                     </div>
@@ -516,11 +504,11 @@ export default function ProfilePage() {
               ) : (
                 <motion.div key="view" variants={fadeVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4 mt-2">
                   {/* Name + handle */}
-                  <div>
+                   <div>
                     <h1 className="text-2xl font-heading font-bold text-txt-primary leading-tight">
-                      {displayUser.username}
+                      {displayUser.name}
                     </h1>
-                    <p className="text-sm text-txt-muted">@{displayUser.username?.toLowerCase().replace(/\s+/g, '_')}</p>
+                    <p className="text-sm text-txt-muted">@{displayUser.name?.toLowerCase().replace(/\s+/g, '_')}</p>
                   </div>
 
                   {/* Bio */}
@@ -551,13 +539,13 @@ export default function ProfilePage() {
                   {/* Stats */}
                   <div className="flex items-center gap-6 pt-1">
                     <StatItem count={userPosts.length} label="Posts" />
-                    <div className="w-px h-8 bg-white/10" />
+                    <div className="w-px h-8 bg-surface-active" />
                     <StatItem
                       count={displayUser.followers?.length}
                       label="Followers"
                       onClick={() => setStatsModal('followers')}
                     />
-                    <div className="w-px h-8 bg-white/10" />
+                    <div className="w-px h-8 bg-surface-active" />
                     <StatItem
                       count={displayUser.following?.length}
                       label="Following"
@@ -565,7 +553,7 @@ export default function ProfilePage() {
                     />
                     {displayUser.savedPins?.length > 0 && (
                       <>
-                        <div className="w-px h-8 bg-white/10" />
+                        <div className="w-px h-8 bg-surface-active" />
                         <StatItem count={displayUser.savedPins.length} label="Saved" />
                       </>
                     )}
@@ -580,7 +568,7 @@ export default function ProfilePage() {
         {!editMode && (
           <motion.div variants={itemVariants} className="mt-8">
             {/* Tab bar */}
-            <div className="flex border-b border-white/8 mb-6">
+            <div className="flex border-b border-surface-divider mb-6">
               {TABS.map((tab) => (
                 <button
                   key={tab}
@@ -610,7 +598,7 @@ export default function ProfilePage() {
                       {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
                     </div>
                   ) : userPosts.length === 0 ? (
-                    <EmptyState icon="📝" title="No posts yet" message={isOwnProfile ? 'Share your first post on the map!' : `${displayUser.username} hasn't posted yet.`} />
+                    <EmptyState icon="📝" title="No posts yet" message={isOwnProfile ? 'Share your first post on the map!' : `${displayUser.name} hasn't posted yet.`} />
                   ) : (
                     <div className="grid grid-cols-2 gap-4">
                       {userPosts.map((post) => <PostCard key={post._id} post={post} />)}
@@ -626,7 +614,7 @@ export default function ProfilePage() {
                       {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
                     </div>
                   ) : userPins.length === 0 ? (
-                    <EmptyState icon="📍" title="No pins created" message={isOwnProfile ? 'Drop your first pin on the map!' : `${displayUser.username} hasn't created any pins yet.`} />
+                    <EmptyState icon="📍" title="No pins created" message={isOwnProfile ? 'Drop your first pin on the map!' : `${displayUser.name} hasn't created any pins yet.`} />
                   ) : (
                     <div className="grid grid-cols-2 gap-4">
                       {userPins.map((pin) => <PinCard key={pin._id} pin={pin} />)}
@@ -640,7 +628,7 @@ export default function ProfilePage() {
                   <EmptyState
                     icon="⭐"
                     title="No reviews yet"
-                    message={isOwnProfile ? 'Visit a place and leave your first review!' : `${displayUser.username} hasn't reviewed any places yet.`}
+                    message={isOwnProfile ? 'Visit a place and leave your first review!' : `${displayUser.name} hasn't reviewed any places yet.`}
                   />
                 </motion.div>
               )}

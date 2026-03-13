@@ -1,4 +1,5 @@
 import Post from '../models/Post.js';
+import { createNotification } from '../utils/createNotification.js';
 
 export const getFeed = async (req, res) => {
   try {
@@ -88,6 +89,15 @@ export const likePost = async (req, res) => {
       { new: true }
     );
     if (!post) return res.status(404).json({ message: 'Post not found' });
+
+    // Notify post author
+    await createNotification(req, {
+      recipientId: post.author,
+      senderId: req.user._id,
+      type: 'like',
+      data: { postId: post._id, preview: post.text?.slice(0, 80) },
+    });
+
     res.json({ likes: post.likes });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -135,9 +145,55 @@ export const addComment = async (req, res) => {
     
     post.comments.push({ user: req.user._id, text: text.trim() });
     await post.save();
+
+    // Notify post author
+    await createNotification(req, {
+      recipientId: post.author,
+      senderId: req.user._id,
+      type: 'comment',
+      data: { postId: post._id, preview: text.trim().slice(0, 80) },
+    });
     
     const populated = await post.populate('comments.user', 'name avatar');
     res.json(populated.comments);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const deleteComment = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+
+    const comment = post.comments.id(req.params.commentId);
+    if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+    // Only comment author or post author can delete
+    const isCommentAuthor = comment.user.toString() === req.user._id.toString();
+    const isPostAuthor = post.author.toString() === req.user._id.toString();
+    if (!isCommentAuthor && !isPostAuthor) {
+      return res.status(403).json({ message: 'Not authorized to delete this comment' });
+    }
+
+    post.comments.pull({ _id: req.params.commentId });
+    await post.save();
+
+    res.json({ message: 'Comment deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const unlikePost = async (req, res) => {
+  try {
+    const post = await Post.findByIdAndUpdate(
+      req.params.id,
+      { $pull: { likes: req.user._id } },
+      { new: true }
+    );
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+    res.json({ likes: post.likes });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

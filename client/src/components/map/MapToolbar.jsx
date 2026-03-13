@@ -107,13 +107,7 @@ export default function MapToolbar() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.1 }}
-        className="flex items-center gap-1 px-2 py-1.5 rounded-xl"
-        style={{
-          background: 'rgba(15,21,32,0.85)',
-          backdropFilter: 'blur(20px) saturate(180%)',
-          border: '1px solid rgba(59,130,246,0.12)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-        }}
+        className="flex items-center gap-1 px-2 py-1.5 glass rounded-xl"
       >
         {TOOLS.map((tool, i) => {
           const isActive = activeTool === tool.key;

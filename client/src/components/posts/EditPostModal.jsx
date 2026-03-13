@@ -10,6 +10,7 @@ import { closeModal } from '../../features/ui/uiSlice';
 import Modal from '../ui/Modal';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
+import { compressImages } from '../../utils/compressImage';
 
 // ─── Inline SVG Icons ─────────────────────────────────────────────────────────
 const ImagePlus = ({ size = 24, className, ...props }) => (
@@ -100,7 +101,7 @@ function PreviewGrid({ existingUrls, newItems, onRemoveExisting, onRemoveNew }) 
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.85 }}
                 transition={{ duration: 0.18 }}
-                className="relative group rounded-xl overflow-hidden bg-white/5"
+                className="relative group rounded-xl overflow-hidden bg-surface-hover"
               >
                 <img
                   src={url}
@@ -133,7 +134,7 @@ function PreviewGrid({ existingUrls, newItems, onRemoveExisting, onRemoveNew }) 
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.85 }}
                 transition={{ duration: 0.18 }}
-                className="relative group rounded-xl overflow-hidden bg-white/5 ring-1 ring-accent-primary/25"
+                className="relative group rounded-xl overflow-hidden bg-surface-hover ring-1 ring-accent-primary/25"
               >
                 <img
                   src={item.preview}
@@ -252,8 +253,10 @@ export default function EditPostModal() {
 
       // Tell backend which existing images to keep
       existingUrls.forEach((url) => formData.append('keepImages', url));
-      // Append new files
-      newItems.forEach(({ file }) => formData.append('images', file));
+      // Compress and append new files
+      const files = newItems.map(({ file }) => file);
+      const compressed = await compressImages(files);
+      compressed.forEach((file) => formData.append('images', file));
 
       await dispatch(updatePost({ id: post._id, data: formData })).unwrap();
       toast.success('✏️ Post updated!');
@@ -297,12 +300,12 @@ export default function EditPostModal() {
             rows={5}
             placeholder="What's happening around you?"
             disabled={submitting}
-            className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-txt-primary font-body text-sm
+            className={`w-full bg-surface-hover border rounded-xl px-4 py-3 text-txt-primary font-body text-sm
               placeholder:text-txt-muted outline-none resize-none transition-colors
               disabled:opacity-60 disabled:cursor-not-allowed
               ${errors.content
                 ? 'border-accent-danger/50 focus:border-accent-danger'
-                : 'border-white/10 focus:border-accent-primary/40'
+                : 'border-surface-divider focus:border-accent-primary/40'
               }`}
           />
           <div className="absolute bottom-3 right-3 pointer-events-none">
@@ -345,7 +348,7 @@ export default function EditPostModal() {
         </AnimatePresence>
 
         {/* Toolbar */}
-        <div className="flex items-center gap-1 pt-3 border-t border-white/5">
+          <div className="flex items-center gap-1 pt-3 border-t border-surface-divider">
           {/* Image upload trigger */}
           <button
             type="button"

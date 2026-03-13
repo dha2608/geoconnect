@@ -21,12 +21,18 @@ export const toggleRsvp = createAsyncThunk('events/toggleRsvp', async (id, { rej
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
+export const searchEvents = createAsyncThunk('events/search', async (query, { rejectWithValue }) => {
+  try { const res = await eventApi.searchEvents(query); return res.data; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
 const eventSlice = createSlice({
   name: 'events',
-  initialState: { events: [], selectedEvent: null, loading: false, error: null },
+  initialState: { events: [], selectedEvent: null, searchResults: [], loading: false, error: null },
   reducers: {
     setSelectedEvent: (state, action) => { state.selectedEvent = action.payload; },
     clearSelectedEvent: (state) => { state.selectedEvent = null; },
+    clearEventSearch: (state) => { state.searchResults = []; },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchViewportEvents.pending, (state) => { state.loading = true; });
@@ -40,8 +46,9 @@ const eventSlice = createSlice({
       if (idx !== -1) state.events[idx] = updated;
       if (state.selectedEvent?._id === updated._id) state.selectedEvent = updated;
     });
+    builder.addCase(searchEvents.fulfilled, (state, action) => { state.searchResults = action.payload.events || action.payload; });
   },
 });
 
-export const { setSelectedEvent, clearSelectedEvent } = eventSlice.actions;
+export const { setSelectedEvent, clearSelectedEvent, clearEventSearch } = eventSlice.actions;
 export default eventSlice.reducer;

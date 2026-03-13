@@ -36,11 +36,17 @@ export const togglePinSave = createAsyncThunk('pins/toggleSave', async (id, { re
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
+export const searchPins = createAsyncThunk('pins/search', async (query, { rejectWithValue }) => {
+  try { const res = await pinApi.searchPins(query); return res.data; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
 const pinSlice = createSlice({
   name: 'pins',
   initialState: {
     pins: [],
     selectedPin: null,
+    searchResults: [],
     loading: false,
     error: null,
     filters: { category: 'all', radius: 5000 },
@@ -49,6 +55,7 @@ const pinSlice = createSlice({
     setSelectedPin: (state, action) => { state.selectedPin = action.payload; },
     clearSelectedPin: (state) => { state.selectedPin = null; },
     setFilters: (state, action) => { state.filters = { ...state.filters, ...action.payload }; },
+    clearPinSearch: (state) => { state.searchResults = []; },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchViewportPins.pending, (state) => { state.loading = true; });
@@ -69,8 +76,9 @@ const pinSlice = createSlice({
       if (idx !== -1) state.pins[idx] = updated;
       if (state.selectedPin?._id === updated._id) state.selectedPin = updated;
     });
+    builder.addCase(searchPins.fulfilled, (state, action) => { state.searchResults = action.payload.pins || action.payload; });
   },
 });
 
-export const { setSelectedPin, clearSelectedPin, setFilters } = pinSlice.actions;
+export const { setSelectedPin, clearSelectedPin, setFilters, clearPinSearch } = pinSlice.actions;
 export default pinSlice.reducer;

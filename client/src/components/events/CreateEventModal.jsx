@@ -22,6 +22,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
+import compressImage from '../../utils/compressImage';
 
 import Modal  from '../ui/Modal';
 import Button from '../ui/Button';
@@ -115,7 +116,7 @@ function FieldError({ message }) {
 
 const INPUT_CLS = [
   'w-full px-3 py-2.5 rounded-lg text-sm',
-  'bg-[rgba(13,17,23,0.8)] border border-[rgba(59,130,246,0.15)]',
+  'bg-[var(--glass-bg)] border border-[var(--glass-border)]',
   'text-slate-100 placeholder:text-slate-600',
   'focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25',
   'transition-colors duration-200',
@@ -222,7 +223,10 @@ export default function CreateEventModal() {
     fd.append('isPublic',    String(values.isPublic));
 
     if (values.address) fd.append('address', values.address);
-    if (coverFile)       fd.append('coverImage', coverFile);
+    if (coverFile) {
+      const compressed = await compressImage(coverFile);
+      fd.append('coverImage', compressed);
+    }
 
     // GeoJSON Point from map centre — center is [lat, lng]
     if (mapCenter) {
@@ -262,7 +266,7 @@ export default function CreateEventModal() {
               coverPreview ? 'h-40' : 'h-28',
               isDragging
                 ? 'border-blue-500/70 bg-blue-500/10 scale-[1.01]'
-                : 'border-[rgba(59,130,246,0.2)] hover:border-[rgba(59,130,246,0.4)] bg-[rgba(13,17,23,0.5)]',
+                : 'border-[var(--glass-border)] hover:border-[var(--glass-border)] bg-[var(--glass-bg)]',
             ].join(' ')}
           >
             {/* Hidden file input overlays the whole drop zone */}
@@ -334,10 +338,10 @@ export default function CreateEventModal() {
                       className={[
                         'relative flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl',
                         'border-2 cursor-pointer transition-all duration-200 focus:outline-none',
-                        'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1117]',
+                        'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)]',
                         active
                           ? 'shadow-lg'
-                          : 'border-[rgba(59,130,246,0.12)] bg-[rgba(13,17,23,0.5)] hover:bg-[rgba(13,17,23,0.8)] hover:border-[rgba(59,130,246,0.25)]',
+                          : 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-surface-active hover:border-[var(--glass-border)]',
                       ].join(' ')}
                       style={
                         active
@@ -454,7 +458,7 @@ export default function CreateEventModal() {
               render={({ field }) => (
                 <div
                   className="flex h-[42px] rounded-lg overflow-hidden
-                             border border-[rgba(59,130,246,0.15)] bg-[rgba(13,17,23,0.5)]"
+                             border border-[var(--glass-border)] bg-[var(--glass-bg)]"
                 >
                   {[
                     { value: true,  icon: '🌍', label: 'Public' },
@@ -484,7 +488,7 @@ export default function CreateEventModal() {
         {/* ── Location preview (read-only info) ────────────────────────── */}
         {mapCenter && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg
-                          bg-[rgba(59,130,246,0.06)] border border-[rgba(59,130,246,0.12)]">
+                          bg-surface-hover border border-[var(--glass-border)]">
             <span className="text-blue-400 text-sm">📍</span>
             <p className="text-[11px] text-slate-500">
               Location from map centre:&nbsp;
@@ -497,7 +501,7 @@ export default function CreateEventModal() {
 
         {/* ── Actions ───────────────────────────────────────────────────── */}
         <div className="flex gap-3 pt-1 pb-1 sticky bottom-0
-                        bg-gradient-to-t from-[#0f1520] via-[#0f1520]/90 to-transparent -mx-0.5 px-0.5">
+                        bg-gradient-to-t from-[var(--glass-bg)] via-[var(--glass-bg)]/90 to-transparent -mx-0.5 px-0.5">
           <Button
             type="button"
             variant="ghost"

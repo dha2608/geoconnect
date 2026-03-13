@@ -100,7 +100,7 @@ function PinCard({ pin, onClick }) {
       whileHover={{ scale: 1.02, y: -3 }}
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
-      className="glass rounded-2xl overflow-hidden cursor-pointer border border-white/5 hover:border-accent-primary/20 transition-colors duration-200"
+      className="glass rounded-2xl overflow-hidden cursor-pointer border border-surface-divider hover:border-accent-primary/20 transition-colors duration-200"
     >
       {/* Thumbnail */}
       <div className={`h-36 relative overflow-hidden ${hasImage ? '' : `bg-gradient-to-br ${gradient}`}`}>
@@ -158,7 +158,7 @@ function EventCard({ event, onClick }) {
       whileHover={{ scale: 1.02, y: -3 }}
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
-      className="glass rounded-2xl p-4 cursor-pointer border border-white/5 hover:border-accent-primary/20 transition-colors duration-200"
+      className="glass rounded-2xl p-4 cursor-pointer border border-surface-divider hover:border-accent-primary/20 transition-colors duration-200"
     >
       <div className="flex items-start gap-3">
         {/* Emoji icon */}
@@ -218,7 +218,7 @@ function UserCard({ targetUser, currentUser }) {
   return (
     <motion.div
       variants={cardVariants}
-      className="glass rounded-2xl p-4 border border-white/5 hover:border-white/10 transition-colors duration-200"
+      className="glass rounded-2xl p-4 border border-surface-divider hover:border-surface-active transition-colors duration-200"
     >
       <div className="flex items-center gap-3 mb-3">
         <Avatar src={targetUser.avatar} name={targetUser.name} size="md" />

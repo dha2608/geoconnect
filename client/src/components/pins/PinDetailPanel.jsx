@@ -8,6 +8,7 @@ import Modal from '../ui/Modal';
 import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
+import ImageLightbox from '../ui/ImageLightbox';
 import StarRating from '../reviews/StarRating';
 import ReviewForm from '../reviews/ReviewForm';
 import ReviewList from '../reviews/ReviewList';
@@ -29,6 +30,7 @@ const CATEGORY_MAP = {
 /* ─── Image Carousel ────────────────────────────────────────────────────── */
 function ImageCarousel({ images = [], title = '' }) {
   const [current, setCurrent] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const prev = () => setCurrent((c) => (c - 1 + images.length) % images.length);
   const next = () => setCurrent((c) => (c + 1) % images.length);
@@ -38,7 +40,7 @@ function ImageCarousel({ images = [], title = '' }) {
 
   if (!images.length) {
     return (
-      <div className="w-full h-52 rounded-xl bg-elevated flex items-center justify-center border border-white/8">
+      <div className="w-full h-52 rounded-xl bg-elevated flex items-center justify-center border border-surface-divider">
         <span className="text-txt-muted text-sm flex flex-col items-center gap-2">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
             <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -52,7 +54,8 @@ function ImageCarousel({ images = [], title = '' }) {
   }
 
   return (
-    <div className="relative rounded-xl overflow-hidden select-none" style={{ height: '220px' }}>
+    <>
+    <div className="relative rounded-xl overflow-hidden select-none cursor-pointer" style={{ height: '220px' }} onClick={() => setLightboxOpen(true)}>
       <AnimatePresence mode="wait" initial={false}>
         <motion.img
           key={current}
@@ -81,7 +84,7 @@ function ImageCarousel({ images = [], title = '' }) {
           <motion.button
             whileHover={{ scale: 1.1, x: -1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={prev}
+            onClick={(e) => { e.stopPropagation(); prev(); }}
             className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors"
             aria-label="Previous photo"
           >
@@ -92,7 +95,7 @@ function ImageCarousel({ images = [], title = '' }) {
           <motion.button
             whileHover={{ scale: 1.1, x: 1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={next}
+            onClick={(e) => { e.stopPropagation(); next(); }}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors"
             aria-label="Next photo"
           >
@@ -106,7 +109,7 @@ function ImageCarousel({ images = [], title = '' }) {
             {images.map((_, i) => (
               <motion.button
                 key={i}
-                onClick={() => setCurrent(i)}
+                onClick={(e) => { e.stopPropagation(); setCurrent(i); }}
                 animate={{ scale: i === current ? 1.2 : 1, opacity: i === current ? 1 : 0.5 }}
                 className={`rounded-full transition-all ${i === current ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/70'}`}
                 aria-label={`Go to photo ${i + 1}`}
@@ -116,6 +119,14 @@ function ImageCarousel({ images = [], title = '' }) {
         </>
       )}
     </div>
+
+      <ImageLightbox
+        images={images}
+        initialIndex={current}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
+    </>
   );
 }
 
@@ -133,7 +144,7 @@ function ActionButton({ onClick, active, activeColor, label, children, loading }
         disabled:opacity-50 disabled:cursor-not-allowed
         ${active
           ? `border-[${activeColor}]/30 bg-[${activeColor}]/10 text-[${activeColor}]`
-          : 'border-white/8 bg-elevated text-txt-secondary hover:text-txt-primary hover:border-white/15'
+          : 'border-surface-divider bg-elevated text-txt-secondary hover:text-txt-primary hover:border-surface-divider'
         }
       `}
     >
@@ -147,18 +158,18 @@ function ActionButton({ onClick, active, activeColor, label, children, loading }
 function PinDetailSkeleton() {
   return (
     <div className="space-y-5 animate-pulse">
-      <div className="w-full h-52 rounded-xl bg-white/8" />
+      <div className="w-full h-52 rounded-xl bg-surface-hover" />
       <div className="space-y-3">
-        <div className="h-6 bg-white/8 rounded-lg w-3/4" />
-        <div className="h-3.5 bg-white/5 rounded-lg w-1/4" />
+        <div className="h-6 bg-surface-hover rounded-lg w-3/4" />
+        <div className="h-3.5 bg-surface-hover rounded-lg w-1/4" />
       </div>
       <div className="flex gap-2">
-        {[1, 2, 3].map((i) => <div key={i} className="flex-1 h-14 bg-white/5 rounded-xl" />)}
+        {[1, 2, 3].map((i) => <div key={i} className="flex-1 h-14 bg-surface-hover rounded-xl" />)}
       </div>
       <div className="space-y-2">
-        <div className="h-3 bg-white/8 rounded w-full" />
-        <div className="h-3 bg-white/5 rounded w-4/5" />
-        <div className="h-3 bg-white/5 rounded w-3/5" />
+        <div className="h-3 bg-surface-hover rounded w-full" />
+        <div className="h-3 bg-surface-hover rounded w-4/5" />
+        <div className="h-3 bg-surface-hover rounded w-3/5" />
       </div>
     </div>
   );
@@ -213,7 +224,7 @@ export default function PinDetailPanel() {
   // Fetch pin by ID if only the ID is in modalData
   useEffect(() => {
     if (!isOpen) return;
-    const id = modalData?.id ?? modalData?._id;
+    const id = modalData?.pinId ?? modalData?.id ?? modalData?._id;
     if (id && !selectedPin) {
       setFetchError(null);
       dispatch(fetchPin(id)).unwrap().catch(() => {
@@ -289,18 +300,18 @@ export default function PinDetailPanel() {
         transition={{ duration: 0.25 }}
       >
         {/* Modal custom header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/5">
+          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-surface-divider">
           <h2 className="text-lg font-heading font-bold text-txt-primary">
             {pin?.title ?? 'Pin Details'}
           </h2>
           <div className="flex items-center gap-1.5">
             {/* Edit button — only for the pin's creator */}
-            {user && pin?.creator?._id === user._id && (
+            {user && pin?.createdBy?._id === user._id && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleEdit}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium font-body text-txt-secondary hover:text-accent-primary hover:bg-accent-primary/10 border border-white/8 transition-all duration-150"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium font-body text-txt-secondary hover:text-accent-primary hover:bg-accent-primary/10 border border-surface-divider transition-all duration-150"
                 aria-label="Edit pin"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -314,7 +325,7 @@ export default function PinDetailPanel() {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleClose}
-              className="p-1.5 rounded-lg hover:bg-white/8 text-txt-muted hover:text-txt-primary transition-colors"
+              className="p-1.5 rounded-lg hover:bg-surface-hover text-txt-muted hover:text-txt-primary transition-colors"
               aria-label="Close"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -366,11 +377,11 @@ export default function PinDetailPanel() {
                   </div>
 
                   {/* Rating row */}
-                  {(pin.rating != null || pin.reviewCount != null) && (
+                  {(pin.averageRating != null || pin.reviewCount != null) && (
                     <div className="flex items-center gap-2.5">
-                      <StarRating value={pin.rating ?? 0} readonly size="sm" />
+                      <StarRating value={pin.averageRating ?? 0} readonly size="sm" />
                       <span className="text-sm font-semibold text-accent-warning">
-                        {pin.rating ? pin.rating.toFixed(1) : '—'}
+                        {pin.averageRating ? pin.averageRating.toFixed(1) : '—'}
                       </span>
                       <span className="text-xs text-txt-muted">
                         ({pin.reviewCount ?? 0} review{pin.reviewCount !== 1 ? 's' : ''})
@@ -404,9 +415,9 @@ export default function PinDetailPanel() {
                     className={`
                       flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border
                       transition-all duration-150 disabled:opacity-60
-                      ${isLiked
+                       ${isLiked
                         ? 'border-accent-danger/30 bg-accent-danger/10 text-accent-danger'
-                        : 'border-white/8 bg-elevated text-txt-secondary hover:text-txt-primary hover:border-white/15'
+                        : 'border-surface-divider bg-elevated text-txt-secondary hover:text-txt-primary hover:border-surface-divider'
                       }
                     `}
                     aria-label={isLiked ? 'Unlike' : 'Like'}
@@ -438,9 +449,9 @@ export default function PinDetailPanel() {
                     className={`
                       flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border
                       transition-all duration-150 disabled:opacity-60
-                      ${isSaved
+                       ${isSaved
                         ? 'border-accent-primary/30 bg-accent-primary/10 text-accent-primary'
-                        : 'border-white/8 bg-elevated text-txt-secondary hover:text-txt-primary hover:border-white/15'
+                        : 'border-surface-divider bg-elevated text-txt-secondary hover:text-txt-primary hover:border-surface-divider'
                       }
                     `}
                     aria-label={isSaved ? 'Unsave' : 'Save'}
@@ -468,7 +479,7 @@ export default function PinDetailPanel() {
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.93 }}
                     onClick={() => sharePin(pin)}
-                    className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border border-white/8 bg-elevated text-txt-secondary hover:text-txt-primary hover:border-white/15 transition-all duration-150"
+                    className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border border-surface-divider bg-elevated text-txt-secondary hover:text-txt-primary hover:border-surface-divider transition-all duration-150"
                     aria-label="Share pin"
                   >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -491,17 +502,17 @@ export default function PinDetailPanel() {
                 )}
 
                 {/* Creator */}
-                {pin.creator && (
-                  <div className="flex items-center gap-3 p-3.5 rounded-xl bg-elevated border border-white/8">
+                {pin.createdBy && (
+                  <div className="flex items-center gap-3 p-3.5 rounded-xl bg-elevated border border-surface-divider">
                     <Avatar
-                      src={pin.creator.avatar}
-                      name={pin.creator.username}
+                      src={pin.createdBy.avatar}
+                      name={pin.createdBy.name}
                       size="md"
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-txt-muted">Created by</p>
                       <p className="text-sm font-semibold text-txt-primary truncate">
-                        {pin.creator.username}
+                        {pin.createdBy.name}
                       </p>
                     </div>
                     {pin.createdAt && (
@@ -515,7 +526,7 @@ export default function PinDetailPanel() {
                 )}
 
                 {/* ── Reviews ─────────────────────────────────────────── */}
-                <div className="space-y-4 pt-2 border-t border-white/5">
+                <div className="space-y-4 pt-2 border-t border-surface-divider">
                   <h4 className="font-heading font-semibold text-txt-primary">
                     Reviews
                   </h4>

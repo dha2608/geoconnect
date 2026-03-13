@@ -4,7 +4,7 @@ import { forwardRef } from 'react';
 const variants = {
   primary:  'bg-accent-primary hover:bg-blue-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]',
   secondary:'bg-accent-secondary hover:bg-cyan-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)]',
-  ghost:    'bg-transparent hover:bg-white/5 text-txt-secondary hover:text-txt-primary border border-white/10',
+  ghost:    'bg-transparent hover:bg-surface-hover text-txt-secondary hover:text-txt-primary border border-surface-divider',
   danger:   'bg-accent-danger hover:bg-red-600 text-white',
   glass:    'glass hover:border-accent-primary/25 text-txt-primary',
   outline:  'bg-transparent border border-accent-primary/50 text-accent-primary hover:bg-accent-primary/10',

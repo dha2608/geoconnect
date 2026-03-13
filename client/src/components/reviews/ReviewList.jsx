@@ -17,21 +17,21 @@ function ReviewSkeleton({ delay = 0 }) {
       className="glass rounded-xl p-4 space-y-3 animate-pulse"
     >
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-white/8 flex-shrink-0" />
+        <div className="w-8 h-8 rounded-full bg-surface-active flex-shrink-0" />
         <div className="space-y-1.5 flex-1">
-          <div className="h-3 bg-white/8 rounded-md w-28" />
-          <div className="h-2 bg-white/5 rounded-md w-16" />
+          <div className="h-3 bg-surface-active rounded-md w-28" />
+          <div className="h-2 bg-surface-hover rounded-md w-16" />
         </div>
         <div className="flex gap-0.5">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="w-4 h-4 rounded bg-white/8" />
+            <div key={i} className="w-4 h-4 rounded bg-surface-active" />
           ))}
         </div>
       </div>
       <div className="space-y-2 pl-11">
-        <div className="h-2.5 bg-white/8 rounded-md w-full" />
-        <div className="h-2.5 bg-white/5 rounded-md w-4/5" />
-        <div className="h-2.5 bg-white/5 rounded-md w-3/5" />
+        <div className="h-2.5 bg-surface-active rounded-md w-full" />
+        <div className="h-2.5 bg-surface-hover rounded-md w-4/5" />
+        <div className="h-2.5 bg-surface-hover rounded-md w-3/5" />
       </div>
     </motion.div>
   );
@@ -57,7 +57,7 @@ function EmptyReviews() {
 /* ─── Single Review Card ────────────────────────────────────────────────── */
 function ReviewCard({ review, currentUserId, onDelete }) {
   const [deleting, setDeleting] = useState(false);
-  const isOwner = currentUserId && review.author?._id === currentUserId;
+  const isOwner = currentUserId && review.user?._id === currentUserId;
 
   const handleDelete = async () => {
     if (!window.confirm('Delete your review?')) return;
@@ -89,13 +89,13 @@ function ReviewCard({ review, currentUserId, onDelete }) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <Avatar
-            src={review.author?.avatar}
-            name={review.author?.username ?? 'User'}
+            src={review.user?.avatar}
+            name={review.user?.name ?? 'User'}
             size="sm"
           />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-txt-primary truncate">
-              {review.author?.username ?? 'Anonymous'}
+              {review.user?.name ?? 'Anonymous'}
             </p>
             <time className="text-xs text-txt-muted" dateTime={review.createdAt}>
               {formattedDate}
@@ -297,7 +297,7 @@ export default function ReviewList({ pinId, newReview }) {
           whileTap={{ scale: 0.99 }}
           onClick={() => fetchReviews(page + 1, true)}
           disabled={loadingMore}
-          className="w-full py-2.5 rounded-xl border border-white/10 text-sm text-txt-secondary hover:text-txt-primary hover:border-accent-primary/30 transition-all duration-150 disabled:opacity-50"
+          className="w-full py-2.5 rounded-xl border border-surface-divider text-sm text-txt-secondary hover:text-txt-primary hover:border-accent-primary/30 transition-all duration-150 disabled:opacity-50"
         >
           {loadingMore ? 'Loading…' : 'Load more reviews'}
         </motion.button>

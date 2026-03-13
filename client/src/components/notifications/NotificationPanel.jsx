@@ -127,13 +127,13 @@ const CheckAllIcon = () => (
 
 function NotificationSkeleton() {
   return (
-    <div className="flex items-start gap-3 p-3.5 rounded-xl border border-[rgba(59,130,246,0.07)] bg-[rgba(13,17,23,0.5)] animate-pulse">
-      <div className="w-9 h-9 rounded-full bg-[rgba(59,130,246,0.08)] flex-shrink-0" />
+    <div className="flex items-start gap-3 p-3.5 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] animate-pulse">
+      <div className="w-9 h-9 rounded-full bg-surface-hover flex-shrink-0" />
       <div className="flex-1 space-y-2 pt-0.5">
-        <div className="h-3 bg-[rgba(59,130,246,0.08)] rounded-md w-4/5" />
-        <div className="h-2.5 bg-[rgba(59,130,246,0.05)] rounded-md w-2/5" />
+        <div className="h-3 bg-surface-hover rounded-md w-4/5" />
+        <div className="h-2.5 bg-surface-hover rounded-md w-2/5" />
       </div>
-      <div className="w-1.5 h-1.5 rounded-full bg-[rgba(59,130,246,0.12)] mt-2 flex-shrink-0" />
+      <div className="w-1.5 h-1.5 rounded-full bg-surface-active mt-2 flex-shrink-0" />
     </div>
   );
 }
@@ -200,8 +200,8 @@ function NotificationItem({ notification, onRead }) {
         'w-full flex items-start gap-3 p-3.5 rounded-xl text-left',
         'border transition-all duration-200 cursor-pointer',
         read
-          ? 'border-[rgba(59,130,246,0.06)] bg-[rgba(13,17,23,0.4)] hover:bg-[rgba(15,21,32,0.65)]'
-          : 'border-[rgba(59,130,246,0.14)] bg-[rgba(15,21,32,0.68)] hover:bg-[rgba(15,21,32,0.82)] hover:border-[rgba(59,130,246,0.25)]',
+          ? 'border-[var(--glass-border)] bg-surface-hover hover:bg-surface-active'
+          : 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-surface-active hover:border-[var(--glass-border)]',
       ].join(' ')}
     >
       {/* Type icon bubble */}
@@ -278,8 +278,8 @@ export default function NotificationPanel() {
   // ── Responsive layout ─────────────────────────────────────────────────────
 
   const panelClass = isMobile
-    ? 'fixed top-16 bottom-16 left-0 right-0 z-30 flex flex-col overflow-hidden'
-    : 'fixed top-16 bottom-0 left-[72px] w-[380px] z-30 flex flex-col overflow-hidden';
+    ? 'fixed top-16 bottom-16 left-0 right-0 z-30 flex flex-col overflow-hidden glass'
+    : 'fixed top-16 bottom-0 left-[72px] w-[380px] z-30 flex flex-col overflow-hidden glass border-r border-[var(--glass-border)]';
 
   const motionProps = isMobile
     ? {
@@ -306,16 +306,9 @@ export default function NotificationPanel() {
           aria-label="Notifications"
           {...motionProps}
           className={panelClass}
-          style={{
-            background: 'rgba(15,21,32,0.72)',
-            backdropFilter: 'blur(20px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-            borderRight: '1px solid rgba(59,130,246,0.12)',
-            boxShadow: '6px 0 32px rgba(0,0,0,0.35)',
-          }}
         >
           {/* ── Header ───────────────────────────────────────────────────── */}
-          <div className="flex-shrink-0 px-4 pt-5 pb-3 border-b border-[rgba(59,130,246,0.08)]">
+          <div className="flex-shrink-0 px-4 pt-5 pb-3 border-b border-surface-divider">
             <div className="flex items-center justify-between">
               {/* Title + unread badge */}
               <div className="flex items-center gap-2.5">
@@ -358,8 +351,8 @@ export default function NotificationPanel() {
                   onClick={handleClose}
                   aria-label="Close notifications"
                   className="w-8 h-8 flex items-center justify-center rounded-lg
-                             text-txt-muted hover:text-txt-primary hover:bg-white/5
-                             transition-all duration-150"
+                   text-txt-muted hover:text-txt-primary hover:bg-surface-hover
+                   transition-all duration-150"
                 >
                   <XIcon />
                 </button>

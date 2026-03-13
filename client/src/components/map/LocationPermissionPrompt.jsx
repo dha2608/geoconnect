@@ -127,7 +127,7 @@ export default function LocationPermissionPrompt() {
               {/* Ghost — subtle border */}
               <button
                 onClick={handleDismiss}
-                className="w-full py-3 px-6 rounded-xl border border-white/10 text-txt-secondary font-body text-sm transition-colors hover:text-txt-primary hover:bg-white/5 active:bg-white/10"
+                className="w-full py-3 px-6 rounded-xl border border-surface-divider text-txt-secondary font-body text-sm transition-colors hover:text-txt-primary hover:bg-surface-hover active:bg-surface-active"
               >
                 Maybe Later
               </button>

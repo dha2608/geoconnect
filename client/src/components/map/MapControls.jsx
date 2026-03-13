@@ -150,7 +150,7 @@ export default function MapControls() {
                   className={`w-full px-3 py-2 rounded-lg text-sm text-left flex items-center gap-2 transition-colors font-body ${
                     tileLayer === opt.id
                       ? 'bg-accent-primary/20 text-accent-primary'
-                      : 'text-txt-secondary hover:text-txt-primary hover:bg-white/5'
+                      : 'text-txt-secondary hover:text-txt-primary hover:bg-surface-hover'
                   }`}
                 >
                   <span aria-hidden="true">{opt.icon}</span>
@@ -166,7 +166,7 @@ export default function MapControls() {
       <div className="glass rounded-xl overflow-hidden flex flex-col">
         <button
           onClick={() => map.zoomIn()}
-          className="w-10 h-10 flex items-center justify-center text-txt-primary hover:text-accent-primary hover:bg-white/5 transition-colors border-b border-white/5"
+          className="w-10 h-10 flex items-center justify-center text-txt-primary hover:text-accent-primary hover:bg-surface-hover transition-colors border-b border-surface-divider"
           title="Zoom In"
           aria-label="Zoom in"
         >
@@ -184,7 +184,7 @@ export default function MapControls() {
 
         <button
           onClick={() => map.zoomOut()}
-          className="w-10 h-10 flex items-center justify-center text-txt-primary hover:text-accent-primary hover:bg-white/5 transition-colors"
+          className="w-10 h-10 flex items-center justify-center text-txt-primary hover:text-accent-primary hover:bg-surface-hover transition-colors"
           title="Zoom Out"
           aria-label="Zoom out"
         >

@@ -9,6 +9,7 @@ import { updatePin } from '../../features/pins/pinSlice';
 import { closeModal } from '../../features/ui/uiSlice';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
+import { compressImages } from '../../utils/compressImage';
 
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 const PIN_CATEGORIES = [
@@ -73,7 +74,7 @@ function ImageThumb({ src, label, labelColor = 'bg-black/60', onRemove, ariaLabe
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.15 } }}
-      className="relative group aspect-square rounded-xl overflow-hidden border border-white/10 bg-elevated"
+      className="relative group aspect-square rounded-xl overflow-hidden border border-surface-divider bg-elevated"
     >
       <img
         src={src}
@@ -219,8 +220,9 @@ export default function EditPinModal() {
 
     // Tell the server which existing images to keep
     existingUrls.forEach((url) => formData.append('keepImages', url));
-    // Append new uploads
-    newFiles.forEach((file) => formData.append('images', file));
+    // Compress and append new uploads
+    const compressed = await compressImages(newFiles);
+    compressed.forEach((file) => formData.append('images', file));
 
     try {
       await dispatch(updatePin({ id: pin._id, data: formData })).unwrap();
@@ -247,7 +249,7 @@ export default function EditPinModal() {
               w-full bg-elevated border rounded-xl px-4 py-3 text-sm text-txt-primary
               placeholder-txt-muted outline-none transition-all duration-150
               focus:border-accent-primary/50 focus:shadow-[0_0_18px_rgba(59,130,246,0.12)]
-              ${errors.title ? 'border-accent-danger/50' : 'border-white/10'}
+              ${errors.title ? 'border-accent-danger/50' : 'border-surface-divider'}
             `}
           />
           <FieldError message={errors.title?.message} />
@@ -264,7 +266,7 @@ export default function EditPinModal() {
               w-full bg-elevated border rounded-xl px-4 py-3 text-sm text-txt-primary
               placeholder-txt-muted outline-none transition-all duration-150 resize-none
               focus:border-accent-primary/50 focus:shadow-[0_0_18px_rgba(59,130,246,0.12)]
-              ${errors.description ? 'border-accent-danger/50' : 'border-white/10'}
+              ${errors.description ? 'border-accent-danger/50' : 'border-surface-divider'}
             `}
           />
           <FieldError message={errors.description?.message} />
@@ -292,7 +294,7 @@ export default function EditPinModal() {
                         text-sm transition-all duration-150
                         ${selected
                           ? 'text-txt-primary shadow-[0_0_0_1px_var(--cat-color)]'
-                          : 'border-white/8 bg-elevated text-txt-secondary hover:border-white/15 hover:text-txt-primary'
+                          : 'border-surface-divider bg-elevated text-txt-secondary hover:border-surface-divider hover:text-txt-primary'
                         }
                       `}
                       style={{
@@ -376,7 +378,7 @@ export default function EditPinModal() {
               whileHover={{ borderColor: 'rgba(59,130,246,0.4)', scale: 1.005 }}
               whileTap={{ scale: 0.995 }}
               onClick={() => fileInputRef.current?.click()}
-              className="w-full py-4 rounded-xl border border-dashed border-white/15 bg-elevated/40 text-sm text-txt-muted hover:text-txt-secondary transition-all duration-150 flex items-center justify-center gap-2"
+              className="w-full py-4 rounded-xl border border-dashed border-[var(--glass-border)] bg-elevated/40 text-sm text-txt-muted hover:text-txt-secondary transition-all duration-150 flex items-center justify-center gap-2"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -412,7 +414,7 @@ export default function EditPinModal() {
         </div>
 
         {/* Location read-only note */}
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-elevated border border-white/8 text-xs text-txt-muted">
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-elevated border border-surface-divider text-xs text-txt-muted">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
             <circle cx="12" cy="9" r="2.5" />
@@ -421,7 +423,7 @@ export default function EditPinModal() {
         </div>
 
         {/* Footer actions */}
-        <div className="flex gap-3 pt-2 border-t border-white/5">
+          <div className="flex gap-3 pt-2 border-t border-surface-divider">
           <Button
             type="button"
             variant="ghost"

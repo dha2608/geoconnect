@@ -25,6 +25,7 @@ import eventRoutes from './routes/events.js';
 import messageRoutes from './routes/messages.js';
 import geocodeRoutes from './routes/geocode.js';
 import notificationRoutes from './routes/notifications.js';
+import reportRoutes from './routes/reports.js';
 
 dotenv.config();
 
@@ -76,6 +77,7 @@ app.use('/api', reviewRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/reports', reportRoutes);
 app.use('/api/geocode', geocodeRoutes);
 
 // Error handler

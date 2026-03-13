@@ -10,6 +10,7 @@ export const pinApi = {
   toggleLike: (id) => API.post(`/pins/${id}/like`),
   toggleSave: (id) => API.post(`/pins/${id}/save`),
   getTrending: () => API.get('/pins/trending'),
+  searchPins: (query) => API.get('/pins/search', { params: { q: query } }),
 };
 
 export const getSavedPins = (userId) => API.get(`/pins/saved/${userId}`);

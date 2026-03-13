@@ -88,7 +88,7 @@ const MapView = memo(function MapView() {
         zoom={zoom}
         zoomControl={false}
         className="w-full h-full z-0"
-        style={{ background: '#080b12' }}
+        style={{ background: 'var(--bg-base)' }}
       >
         <TileLayer url={tile.url} attribution={tile.attribution} />
         <MapInner />
