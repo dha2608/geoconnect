@@ -69,3 +69,31 @@ export const getUnreadCount = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+// DELETE /api/users/notifications/:id — delete a single notification
+export const deleteNotification = async (req, res) => {
+  try {
+    const notification = await Notification.findOneAndDelete({
+      _id: req.params.id,
+      recipient: req.user._id,
+    });
+
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    res.json({ message: 'Notification deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// DELETE /api/users/notifications — clear all notifications for the user
+export const clearAllNotifications = async (req, res) => {
+  try {
+    const result = await Notification.deleteMany({ recipient: req.user._id });
+    res.json({ message: 'All notifications cleared', deleted: result.deletedCount });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
