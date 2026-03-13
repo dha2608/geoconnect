@@ -1,7 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import useRequireAuth from '../../hooks/useRequireAuth';
 import { motion, AnimatePresence } from 'framer-motion';
+
+/* ─── Sort Options ──────────────────────────────────────────────────────── */
+const SORT_OPTIONS = [
+  { key: 'newest', label: 'Newest', icon: '🕐' },
+  { key: 'highest', label: 'Highest Rated', icon: '⭐' },
+  { key: 'helpful', label: 'Most Helpful', icon: '👍' },
+];
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import { reviewApi } from '../../api/reviewApi';
@@ -204,8 +211,27 @@ export default function ReviewList({ pinId, newReview }) {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [sortBy, setSortBy] = useState('newest');
 
   const LIMIT = 10;
+
+  // Client-side sort — applied after fetch
+  const sortedReviews = useMemo(() => {
+    const copy = [...reviews];
+    switch (sortBy) {
+      case 'highest':
+        return copy.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      case 'helpful':
+        return copy.sort(
+          (a, b) => (b.helpfulVotes?.length || 0) - (a.helpfulVotes?.length || 0),
+        );
+      case 'newest':
+      default:
+        return copy.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+        );
+    }
+  }, [reviews, sortBy]);
 
   const fetchReviews = useCallback(
     async (pageNum = 1, append = false) => {
@@ -324,16 +350,37 @@ export default function ReviewList({ pinId, newReview }) {
 
   return (
     <div className="space-y-3">
-      {/* Summary row */}
+      {/* Summary row + sort */}
       <div className="flex items-center justify-between px-1">
         <h4 className="text-sm font-semibold text-txt-primary font-heading">
           {reviews.length} Review{reviews.length !== 1 ? 's' : ''}
         </h4>
+
+        {/* Sort dropdown */}
+        {reviews.length > 1 && (
+          <div className="flex items-center gap-1 bg-surface-hover rounded-lg p-0.5">
+            {SORT_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setSortBy(opt.key)}
+                title={opt.label}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all duration-150 ${
+                  sortBy === opt.key
+                    ? 'bg-accent-primary/15 text-accent-primary shadow-sm'
+                    : 'text-txt-muted hover:text-txt-secondary hover:bg-surface-active'
+                }`}
+              >
+                <span className="text-[10px]">{opt.icon}</span>
+                <span className="hidden sm:inline">{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* List */}
       <AnimatePresence mode="popLayout">
-        {reviews.map((review) => (
+        {sortedReviews.map((review) => (
           <ReviewCard
             key={review._id}
             review={review}
