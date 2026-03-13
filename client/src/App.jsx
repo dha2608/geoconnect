@@ -17,6 +17,7 @@ const MapView = lazy(() => import('./components/map/MapView'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function App() {
   const location = useLocation();
@@ -54,6 +55,8 @@ function App() {
                 <Route path="settings" element={<PageTransition><SettingsPage /></PageTransition>} />
                 <Route path="explore" element={<PageTransition><ExplorePage /></PageTransition>} />
               </Route>
+              {/* 404 catch-all */}
+              <Route path="*" element={<PageTransition><NotFoundPage /></PageTransition>} />
             </Routes>
           </AnimatePresence>
         </Suspense>

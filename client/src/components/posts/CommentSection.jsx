@@ -13,6 +13,7 @@ const MessageSquare = ({ className, size = 24, ...props }) => (
 import { addComment, deleteComment } from '../../features/posts/postSlice';
 import useRequireAuth from '../../hooks/useRequireAuth';
 import Avatar from '../ui/Avatar';
+import ConfirmDialog from '../ui/ConfirmDialog';
 
 // ─── Single Comment Row ───────────────────────────────────────────────────────
 
@@ -26,6 +27,8 @@ function CommentRow({ comment, index, postId, currentUserId, postAuthorId }) {
   const isPostAuthor = currentUserId && postAuthorId === currentUserId;
   const canDelete = isOwner || isPostAuthor;
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   const handleDelete = async () => {
     if (deleting) return;
     setDeleting(true);
@@ -36,6 +39,7 @@ function CommentRow({ comment, index, postId, currentUserId, postAuthorId }) {
       toast.error('Failed to delete comment');
     } finally {
       setDeleting(false);
+      setConfirmOpen(false);
     }
   };
 
@@ -59,10 +63,11 @@ function CommentRow({ comment, index, postId, currentUserId, postAuthorId }) {
               {comment.user.name || comment.user.username}
             </span>
             {canDelete && (
+              <>
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={handleDelete}
+                onClick={() => setConfirmOpen(true)}
                 disabled={deleting}
                 title="Delete comment"
                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-txt-muted hover:text-accent-danger transition-all duration-150 disabled:opacity-40"
@@ -81,6 +86,17 @@ function CommentRow({ comment, index, postId, currentUserId, postAuthorId }) {
                   </svg>
                 )}
               </motion.button>
+              <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleDelete}
+                title="Delete comment?"
+                message="This action cannot be undone."
+                confirmText="Delete"
+                variant="danger"
+                loading={deleting}
+              />
+              </>
             )}
           </div>
           <p className="text-txt-secondary text-sm font-body leading-relaxed break-words mt-1">
