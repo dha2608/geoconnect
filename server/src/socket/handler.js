@@ -1,9 +1,12 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { updateLocation, removeLocation, startLocationManager } from './locationManager.js';
 
 const onlineUsers = new Map(); // userId -> socketId
 
 export const setupSocket = (io) => {
+  // Start in-memory location store background flush
+  startLocationManager();
   // Auth middleware
   io.use(async (socket, next) => {
     try {
@@ -43,11 +46,8 @@ export const setupSocket = (io) => {
         const user = await User.findById(socket.userId);
         if (!user || !user.isLiveSharing) return;
 
-        // Update DB
-        await User.findByIdAndUpdate(socket.userId, {
-          location: { type: 'Point', coordinates: [lng, lat] },
-          lastLocationUpdate: new Date(),
-        });
+        // Store in memory (batched DB flush via locationManager)
+        updateLocation(socket.userId, { lat, lng, heading });
 
         // Broadcast to mutual followers
         const mutualFollowers = user.followers.filter(f =>
@@ -71,6 +71,7 @@ export const setupSocket = (io) => {
 
     // Stop sharing
     socket.on('stop_sharing', async () => {
+      removeLocation(socket.userId);
       await User.findByIdAndUpdate(socket.userId, { isLiveSharing: false });
       const user = await User.findById(socket.userId);
       if (user) {
@@ -112,6 +113,7 @@ export const setupSocket = (io) => {
     socket.on('disconnect', () => {
       console.log(`[Socket] User disconnected: ${socket.userId}`);
       onlineUsers.delete(socket.userId);
+      removeLocation(socket.userId);
     });
   });
 };
