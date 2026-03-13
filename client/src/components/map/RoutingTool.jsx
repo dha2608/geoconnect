@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { clearRoutingDestination } from '../../features/map/mapSlice';
 
@@ -18,6 +19,33 @@ function formatDist(meters) {
   return meters < 1000
     ? `${meters.toFixed(0)} m`
     : `${(meters / 1000).toFixed(1)} km`;
+}
+
+// OSRM maneuver type → turn icon
+const MANEUVER_ICONS = {
+  depart: '🏁', arrive: '🏁',
+  'turn-left': '↰', 'turn-right': '↱',
+  'sharp left': '↰', 'sharp right': '↱',
+  'slight left': '↰', 'slight right': '↱',
+  'turn-slight-left': '↰', 'turn-slight-right': '↱',
+  'turn-sharp-left': '↰', 'turn-sharp-right': '↱',
+  straight: '↑', 'continue': '↑',
+  'new name': '↑',
+  merge: '⤵', fork: '⑂',
+  'end of road': '↱',
+  roundabout: '↻', 'exit roundabout': '↗',
+  'rotary': '↻', 'exit rotary': '↗',
+  ramp: '↗', 'on ramp': '↗', 'off ramp': '↘',
+  notification: 'ℹ',
+};
+
+function getManeuverIcon(step) {
+  const mod = step.maneuver?.modifier?.replace(/ /g, '-') || '';
+  const type = step.maneuver?.type?.replace(/ /g, '-') || '';
+  return MANEUVER_ICONS[`${type}-${mod}`]
+    || MANEUVER_ICONS[type]
+    || MANEUVER_ICONS[mod]
+    || '→';
 }
 
 // ─── Transport modes ──────────────────────────────────────────────────────────
@@ -95,6 +123,7 @@ export default function RoutingTool({ onClose }) {
   const [routeInfo, setRouteInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('driving');
+  const [showSteps, setShowSteps] = useState(false);
   const startMarkerRef = useRef(null);
   const endMarkerRef = useRef(null);
   const routeLineRef = useRef(null);
@@ -144,7 +173,7 @@ export default function RoutingTool({ onClose }) {
       clearRoute();
 
       try {
-        const url = `https://router.project-osrm.org/route/v1/${activeMode.profile}/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+        const url = `https://router.project-osrm.org/route/v1/${activeMode.profile}/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`;
 
         const res = await fetch(url, {
           signal: controller.signal,
@@ -206,6 +235,7 @@ export default function RoutingTool({ onClose }) {
         setRouteInfo({
           distance: route.distance,
           duration: route.duration,
+          steps: route.legs?.[0]?.steps?.filter((s) => s.maneuver?.type !== 'arrive' || s.distance > 0) ?? [],
         });
 
         map.fitBounds(L.latLngBounds(coords), { padding: [40, 40] });
@@ -437,6 +467,72 @@ export default function RoutingTool({ onClose }) {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Turn-by-turn directions */}
+      {routeInfo?.steps?.length > 0 && !loading && (
+        <div className="mb-3">
+          <button
+            onClick={() => setShowSteps((s) => !s)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-surface-hover hover:bg-surface-active text-xs font-medium text-txt-secondary transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12h18M3 6h18M3 18h18" />
+              </svg>
+              Directions ({routeInfo.steps.length} steps)
+            </span>
+            <svg
+              className={`w-3.5 h-3.5 transition-transform duration-200 ${showSteps ? 'rotate-180' : ''}`}
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+
+          <AnimatePresence>
+            {showSteps && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="overflow-hidden"
+              >
+                <div className="mt-1.5 max-h-48 overflow-y-auto rounded-lg border border-surface-divider divide-y divide-surface-divider">
+                  {routeInfo.steps.map((step, i) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-2.5 px-3 py-2 text-xs hover:bg-surface-hover/50 transition-colors"
+                    >
+                      <span className="text-sm flex-shrink-0 w-5 text-center mt-0.5">
+                        {getManeuverIcon(step)}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-txt-primary leading-snug">
+                          {step.name
+                            ? `${step.maneuver?.modifier ? step.maneuver.modifier.charAt(0).toUpperCase() + step.maneuver.modifier.slice(1) : 'Continue'} on ${step.name}`
+                            : step.maneuver?.type === 'depart'
+                              ? 'Start'
+                              : step.maneuver?.type === 'arrive'
+                                ? 'Arrive at destination'
+                                : `${step.maneuver?.modifier || step.maneuver?.type || 'Continue'}`
+                          }
+                        </p>
+                        <p className="text-txt-muted mt-0.5">
+                          {formatDist(step.distance)} · {formatDuration(step.duration)}
+                        </p>
+                      </div>
+                      <span className="text-txt-muted flex-shrink-0 tabular-nums mt-0.5">
+                        {i + 1}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
