@@ -32,9 +32,10 @@ import ImageLightbox from '../ui/ImageLightbox';
 import {
   fetchEvent,
   toggleRsvp,
+  deleteEvent,
   clearSelectedEvent,
 } from '../../features/events/eventSlice';
-import { closeModal } from '../../features/ui/uiSlice';
+import { closeModal, openModal } from '../../features/ui/uiSlice';
 import useRequireAuth from '../../hooks/useRequireAuth';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -119,6 +120,28 @@ export default function EventDetailPanel() {
     } catch (err) {
       toast.error(err?.message ?? 'Failed to update RSVP');
     }
+  };
+
+  const handleDelete = async () => {
+    if (!event) return;
+    const confirmed = window.confirm(
+      `Delete "${event.title}"? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+    try {
+      await dispatch(deleteEvent(event._id)).unwrap();
+      toast.success('Event deleted');
+      handleClose();
+    } catch (err) {
+      toast.error(err?.message ?? 'Failed to delete event');
+    }
+  };
+
+  const handleEdit = () => {
+    if (!event) return;
+    // Close detail panel and open CreateEventModal in edit mode
+    dispatch(clearSelectedEvent());
+    dispatch(openModal({ modal: 'createEvent', data: { editEvent: event } }));
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -400,10 +423,10 @@ export default function EventDetailPanel() {
                   {isOrganizer ? (
                     /* Organizer: Edit + Delete */
                     <div className="flex gap-2">
-                      <Button variant="outline" size="md" className="flex-1 gap-1.5">
+                      <Button variant="outline" size="md" className="flex-1 gap-1.5" onClick={handleEdit}>
                         ✏️ Edit Event
                       </Button>
-                      <Button variant="danger" size="md" className="flex-1 gap-1.5">
+                      <Button variant="danger" size="md" className="flex-1 gap-1.5" onClick={handleDelete}>
                         🗑 Delete
                       </Button>
                     </div>
