@@ -19,7 +19,7 @@ export default function MobileNav() {
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 glass border-t border-white/5 flex items-center justify-around h-16 px-2 lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 glass border-t border-surface-divider flex items-center justify-around h-16 px-2 lg:hidden">
 
       {/* Create-choice popup — appears above the Create button */}
       {createMenuOpen && (
@@ -29,7 +29,7 @@ export default function MobileNav() {
             className="fixed inset-0 z-[-1]"
             onClick={() => setCreateMenuOpen(false)}
           />
-          <div className="absolute bottom-[72px] left-1/2 -translate-x-1/2 flex gap-4 bg-elevated border border-white/10 rounded-2xl px-5 py-3 shadow-xl">
+           <div className="absolute bottom-[72px] left-1/2 -translate-x-1/2 flex gap-4 glass px-5 py-3 shadow-xl">
             <button
               onClick={() => {
                 setCreateMenuOpen(false);
@@ -44,7 +44,7 @@ export default function MobileNav() {
               <span className="text-[10px]">Pin</span>
             </button>
 
-            <div className="w-px bg-white/10 self-stretch" />
+            <div className="w-px bg-surface-divider self-stretch" />
 
             <button
               onClick={() => {

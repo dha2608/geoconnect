@@ -97,9 +97,9 @@ export default function LoginPage() {
 
           {/* Divider */}
           <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px bg-surface-divider" />
             <span className="text-txt-muted text-xs">or continue with</span>
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px bg-surface-divider" />
           </div>
 
           {/* OAuth */}

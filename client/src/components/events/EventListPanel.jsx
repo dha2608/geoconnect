@@ -68,14 +68,14 @@ const cardVariants = {
 
 function EventCardSkeleton() {
   return (
-    <div className="p-4 rounded-xl border border-[rgba(59,130,246,0.07)]
-                    bg-[rgba(13,17,23,0.5)] animate-pulse">
+    <div className="p-4 rounded-xl border border-[var(--glass-border)]
+                    bg-[var(--glass-bg)] animate-pulse">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-[rgba(59,130,246,0.08)] flex-shrink-0" />
+        <div className="w-10 h-10 rounded-full bg-surface-hover flex-shrink-0" />
         <div className="flex-1 space-y-2.5">
-          <div className="h-3.5 bg-[rgba(59,130,246,0.08)] rounded-md w-3/4" />
-          <div className="h-2.5 bg-[rgba(59,130,246,0.05)] rounded-md w-1/2" />
-          <div className="h-2.5 bg-[rgba(59,130,246,0.05)] rounded-md w-2/3" />
+          <div className="h-3.5 bg-surface-hover rounded-md w-3/4" />
+          <div className="h-2.5 bg-surface-hover rounded-md w-1/2" />
+          <div className="h-2.5 bg-surface-hover rounded-md w-2/3" />
         </div>
       </div>
     </div>
@@ -100,10 +100,10 @@ function EventCard({ event, onClick }) {
       whileTap={{ scale: 0.985 }}
       onClick={onClick}
       className="group relative cursor-pointer rounded-xl overflow-hidden
-                 border border-[rgba(59,130,246,0.09)]
-                 bg-[rgba(13,17,23,0.55)]
-                 hover:border-[rgba(59,130,246,0.22)]
-                 hover:bg-[rgba(15,21,32,0.75)]
+                 border border-[var(--glass-border)]
+                 bg-[var(--glass-bg)]
+                 hover:border-[var(--glass-border)]
+                 hover:bg-surface-active
                  backdrop-blur-sm
                  transition-colors duration-200"
     >
@@ -282,8 +282,8 @@ export default function EventListPanel() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   const panelClass = isMobile
-    ? 'fixed top-16 bottom-16 left-0 right-0 z-30 flex flex-col bg-[rgba(15,21,32,0.72)] backdrop-blur-[20px] saturate-[180%]'
-    : 'fixed left-[72px] top-0 h-full w-[380px] z-30 flex flex-col bg-[rgba(15,21,32,0.72)] backdrop-blur-[20px] saturate-[180%] border-r border-[rgba(59,130,246,0.12)]';
+    ? 'fixed top-16 bottom-16 left-0 right-0 z-30 flex flex-col glass'
+    : 'fixed left-[72px] top-0 h-full w-[380px] z-30 flex flex-col glass border-r border-[var(--glass-border)]';
 
   const motionProps = isMobile
     ? {
@@ -308,12 +308,11 @@ export default function EventListPanel() {
           aria-label="Events list"
           {...motionProps}
           className={panelClass}
-          style={{ boxShadow: '6px 0 32px rgba(0,0,0,0.35)' }}
         >
 
           {/* ── Header ──────────────────────────────────────────────────── */}
           <div className="flex-shrink-0 px-4 pt-5 pb-3
-                          border-b border-[rgba(59,130,246,0.08)]">
+                          border-b border-surface-divider">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-slate-100 font-[Syne] tracking-tight">
                 Events
@@ -333,7 +332,7 @@ export default function EventListPanel() {
                   aria-label="Close events panel"
                   className="w-8 h-8 rounded-full flex items-center justify-center
                              text-slate-500 hover:text-slate-300 text-xl leading-none
-                             hover:bg-[rgba(59,130,246,0.08)] transition-all duration-150"
+                             hover:bg-surface-hover transition-all duration-150"
                 >
                   ×
                 </button>
@@ -342,7 +341,7 @@ export default function EventListPanel() {
 
             {/* ── Tabs ─────────────────────────────────────────────────── */}
             <div className="flex gap-1 p-1 rounded-xl
-                            bg-[rgba(9,14,23,0.6)] border border-[rgba(59,130,246,0.07)]">
+                            bg-[var(--glass-bg)] border border-[var(--glass-border)]">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}

@@ -11,6 +11,7 @@ import PinClusterLayer from '../pins/PinClusterLayer';
 import EventLayer from '../events/EventLayer';
 import MapToolbar from './MapToolbar';
 import DestinationMarker from './DestinationMarker';
+import MapContextMenu from './MapContextMenu';
 
 const TILE_LAYERS = {
   dark: {
@@ -88,7 +89,7 @@ const MapView = memo(function MapView() {
         zoom={zoom}
         zoomControl={false}
         className="w-full h-full z-0"
-        style={{ background: '#080b12' }}
+        style={{ background: 'var(--bg-base)' }}
       >
         <TileLayer url={tile.url} attribution={tile.attribution} />
         <MapInner />
@@ -98,6 +99,7 @@ const MapView = memo(function MapView() {
         <EventLayer />
         <NearbyUsersLayer />
         <DestinationMarker />
+        <MapContextMenu />
         <MapControls />
         <MapToolbar />
       </MapContainer>

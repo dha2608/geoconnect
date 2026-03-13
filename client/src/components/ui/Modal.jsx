@@ -35,7 +35,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', c
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <motion.div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-[var(--overlay-bg)] backdrop-blur-sm"
             variants={overlayVariants}
             initial="hidden"
             animate="visible"
@@ -54,7 +54,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', c
                 <h2 className="text-xl font-heading font-bold text-txt-primary">{title}</h2>
                 <button
                   onClick={onClose}
-                  className="p-1.5 rounded-lg hover:bg-white/5 text-txt-muted hover:text-txt-primary transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-surface-hover text-txt-muted hover:text-txt-primary transition-colors"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>

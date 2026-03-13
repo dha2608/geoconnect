@@ -3,6 +3,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
+import useRequireAuth from '../../hooks/useRequireAuth';
+import ImageLightbox from '../ui/ImageLightbox';
+import ReportModal from '../ui/ReportModal';
 // ─── Inline SVG Icons ─────────────────────────────────────────────────────────
 const Heart = ({ className, size = 24, ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
@@ -34,71 +37,91 @@ import CommentSection from './CommentSection';
 // ─── Image Grid ──────────────────────────────────────────────────────────────
 
 function ImageGrid({ images }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
   if (!images || images.length === 0) return null;
 
-  if (images.length === 1) {
-    return (
-      <div className="mt-3 rounded-xl overflow-hidden">
-        <img
-          src={images[0]}
-          alt="Post"
-          className="w-full object-cover max-h-80 rounded-xl"
-          loading="lazy"
-        />
-      </div>
-    );
-  }
+  const openLightbox = (idx) => {
+    setLightboxIndex(idx);
+    setLightboxOpen(true);
+  };
 
-  if (images.length === 2) {
-    return (
-      <div className="mt-3 grid grid-cols-2 gap-1.5 rounded-xl overflow-hidden">
-        {images.map((src, i) => (
-          <img
-            key={i}
-            src={src}
-            alt={`Post image ${i + 1}`}
-            className="w-full h-48 object-cover"
-            loading="lazy"
-          />
-        ))}
-      </div>
-    );
-  }
-
-  // 3+ images: first full-width, rest in a row (up to 3 visible, overflow counted)
-  const [first, ...rest] = images;
-  const visible = rest.slice(0, 3);
-  const overflowCount = images.length - 4; // extras beyond the 4 we show
+  const imgClass = 'w-full object-cover cursor-pointer hover:brightness-90 transition-[filter] duration-150';
 
   return (
-    <div className="mt-3 space-y-1.5 rounded-xl overflow-hidden">
-      <img
-        src={first}
-        alt="Post image 1"
-        className="w-full h-52 object-cover rounded-xl"
-        loading="lazy"
-      />
-      <div className={`grid gap-1.5 ${visible.length === 1 ? 'grid-cols-1' : visible.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-        {visible.map((src, i) => (
-          <div key={i} className="relative rounded-xl overflow-hidden">
+    <>
+      {images.length === 1 && (
+        <div className="mt-3 rounded-xl overflow-hidden">
+          <img
+            src={images[0]}
+            alt="Post"
+            className={`${imgClass} max-h-80 rounded-xl`}
+            loading="lazy"
+            onClick={() => openLightbox(0)}
+          />
+        </div>
+      )}
+
+      {images.length === 2 && (
+        <div className="mt-3 grid grid-cols-2 gap-1.5 rounded-xl overflow-hidden">
+          {images.map((src, i) => (
             <img
+              key={i}
               src={src}
-              alt={`Post image ${i + 2}`}
-              className="w-full h-28 object-cover"
+              alt={`Post image ${i + 1}`}
+              className={`${imgClass} h-48`}
               loading="lazy"
+              onClick={() => openLightbox(i)}
             />
-            {/* Overflow overlay on the last visible cell */}
-            {i === visible.length - 1 && overflowCount > 0 && (
-              <div className="absolute inset-0 bg-base/70 backdrop-blur-sm flex items-center justify-center rounded-xl">
-                <span className="text-txt-primary text-xl font-semibold font-heading">
-                  +{overflowCount + 1}
-                </span>
-              </div>
-            )}
+          ))}
+        </div>
+      )}
+
+      {images.length >= 3 && (() => {
+        const [first, ...rest] = images;
+        const visible = rest.slice(0, 3);
+        const overflowCount = images.length - 4;
+
+        return (
+          <div className="mt-3 space-y-1.5 rounded-xl overflow-hidden">
+            <img
+              src={first}
+              alt="Post image 1"
+              className={`${imgClass} h-52 rounded-xl`}
+              loading="lazy"
+              onClick={() => openLightbox(0)}
+            />
+            <div className={`grid gap-1.5 ${visible.length === 1 ? 'grid-cols-1' : visible.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              {visible.map((src, i) => (
+                <div key={i} className="relative rounded-xl overflow-hidden cursor-pointer" onClick={() => openLightbox(i + 1)}>
+                  <img
+                    src={src}
+                    alt={`Post image ${i + 2}`}
+                    className={`${imgClass} h-28`}
+                    loading="lazy"
+                  />
+                  {i === visible.length - 1 && overflowCount > 0 && (
+                    <div className="absolute inset-0 bg-base/70 backdrop-blur-sm flex items-center justify-center rounded-xl">
+                      <span className="text-txt-primary text-xl font-semibold font-heading">
+                        +{overflowCount + 1}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
-    </div>
+        );
+      })()}
+
+      <ImageLightbox
+        images={images}
+        initialIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
+    </>
   );
 }
 
@@ -108,10 +131,13 @@ const CONTENT_CHAR_LIMIT = 220;
 
 const PostCard = memo(function PostCard({ post }) {
   const dispatch = useDispatch();
+  const requireAuth = useRequireAuth();
   const user = useSelector((state) => state.auth.user);
 
   const [showComments, setShowComments] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const isLiked       = user?._id ? post.likes?.includes(user._id) : false;
   const likeCount     = post.likes?.length ?? 0;
@@ -125,6 +151,7 @@ const PostCard = memo(function PostCard({ post }) {
     (post.content.length > CONTENT_CHAR_LIMIT || post.content.split('\n').length > 3);
 
   const handleLike = async () => {
+    if (!requireAuth('like posts')) return;
     const wasLiked = isLiked;
     try {
       await dispatch(togglePostLike(post._id)).unwrap();
@@ -138,7 +165,7 @@ const PostCard = memo(function PostCard({ post }) {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Post by ${post.creator.username}`,
+          title: `Post by ${post.creator.name}`,
           text: post.content?.slice(0, 80),
         });
       } catch {
@@ -153,10 +180,10 @@ const PostCard = memo(function PostCard({ post }) {
         {/* ── Header ── */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3 min-w-0">
-            <Avatar src={post.creator.avatar} name={post.creator.username} size="md" />
+            <Avatar src={post.creator.avatar} name={post.creator.name} size="md" />
             <div className="min-w-0">
               <p className="text-txt-primary font-semibold font-body text-sm leading-tight truncate">
-                {post.creator.username}
+                {post.creator.name}
               </p>
               {post.locationName && (
                 <div className="flex items-center gap-1 mt-0.5">
@@ -182,12 +209,43 @@ const PostCard = memo(function PostCard({ post }) {
                 <Pencil size={15} />
               </motion.button>
             )}
-            <button
-              aria-label="More options"
-              className="text-txt-muted hover:text-txt-secondary transition-colors p-1.5 rounded-lg hover:bg-white/5"
-            >
-              <MoreHorizontal size={17} />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                aria-label="More options"
+                className="text-txt-muted hover:text-txt-secondary transition-colors p-1.5 rounded-lg hover:bg-surface-hover"
+              >
+                <MoreHorizontal size={17} />
+              </button>
+              <AnimatePresence>
+                {showMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: -4 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute right-0 top-full mt-1 w-36 glass rounded-xl border border-surface-divider shadow-lg z-20 py-1 overflow-hidden"
+                  >
+                    {!isAuthor && (
+                      <button
+                        onClick={() => { setShowMenu(false); setReportOpen(true); }}
+                        className="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-txt-secondary hover:text-accent-danger hover:bg-surface-hover transition-colors"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                          <line x1="4" y1="22" x2="4" y2="15"/>
+                        </svg>
+                        Report
+                      </button>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {/* Close menu on outside click */}
+              {showMenu && (
+                <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+              )}
+            </div>
           </div>
         </div>
 
@@ -217,7 +275,7 @@ const PostCard = memo(function PostCard({ post }) {
 
         {/* ── Stats bar ── */}
         {(likeCount > 0 || commentCount > 0) && (
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-surface-divider">
             <span className="text-txt-muted text-xs font-body">
               {likeCount > 0 && `${likeCount} ${likeCount === 1 ? 'like' : 'likes'}`}
             </span>
@@ -233,7 +291,7 @@ const PostCard = memo(function PostCard({ post }) {
         )}
 
         {/* ── Actions bar ── */}
-        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-white/5">
+        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-surface-divider">
           {/* Like */}
           <motion.button
             whileTap={{ scale: 0.85 }}
@@ -242,7 +300,7 @@ const PostCard = memo(function PostCard({ post }) {
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body font-medium flex-1 justify-center transition-all ${
               isLiked
                 ? 'text-accent-danger bg-accent-danger/10 hover:bg-accent-danger/15'
-                : 'text-txt-secondary hover:text-txt-primary hover:bg-white/5'
+                : 'text-txt-secondary hover:text-txt-primary hover:bg-surface-hover'
             }`}
           >
             <motion.div
@@ -261,7 +319,7 @@ const PostCard = memo(function PostCard({ post }) {
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body font-medium flex-1 justify-center transition-all ${
               showComments
                 ? 'text-accent-primary bg-accent-primary/10'
-                : 'text-txt-secondary hover:text-txt-primary hover:bg-white/5'
+                : 'text-txt-secondary hover:text-txt-primary hover:bg-surface-hover'
             }`}
           >
             <MessageCircle size={16} strokeWidth={2} />
@@ -272,7 +330,7 @@ const PostCard = memo(function PostCard({ post }) {
           <button
             onClick={handleShare}
             aria-label="Share post"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body font-medium flex-1 justify-center text-txt-secondary hover:text-txt-primary hover:bg-white/5 transition-all"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body font-medium flex-1 justify-center text-txt-secondary hover:text-txt-primary hover:bg-surface-hover transition-all"
           >
             <Share2 size={16} strokeWidth={2} />
             Share
@@ -290,13 +348,20 @@ const PostCard = memo(function PostCard({ post }) {
               transition={{ duration: 0.22, ease: 'easeInOut' }}
               className="overflow-hidden"
             >
-              <div className="mt-3 pt-3 border-t border-white/5">
+              <div className="mt-3 pt-3 border-t border-surface-divider">
                 <CommentSection post={post} />
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </GlassCard>
+
+      <ReportModal
+        isOpen={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="post"
+        targetId={post._id}
+      />
     </motion.div>
   );
 });

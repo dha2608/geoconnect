@@ -10,6 +10,8 @@ import OfflineBanner from './components/ui/OfflineBanner';
 
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const MapView = lazy(() => import('./components/map/MapView'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
@@ -34,6 +36,8 @@ function App() {
               {/* Auth routes */}
               <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
               <Route path="/register" element={<PageTransition><RegisterPage /></PageTransition>} />
+              <Route path="/forgot-password" element={<PageTransition><ForgotPasswordPage /></PageTransition>} />
+              <Route path="/reset-password" element={<PageTransition><ResetPasswordPage /></PageTransition>} />
 
               {/* Protected app routes */}
               <Route

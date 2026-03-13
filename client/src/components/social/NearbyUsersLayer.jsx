@@ -47,11 +47,11 @@ const NearbyUsersLayer = memo(function NearbyUsersLayer() {
           background: ${
             user.avatar
               ? `url(${user.avatar}) center/cover no-repeat`
-              : '#0d1117'
+              : 'var(--bg-elevated)'
           };
           box-shadow: 0 0 10px rgba(6,182,212,0.3);
           display: flex; align-items: center; justify-content: center;
-          color: #f1f5f9; font-size: 11px; font-weight: 600;
+          color: var(--text-primary); font-size: 11px; font-weight: 600;
           overflow: hidden;
         ">${!user.avatar ? (user.username || user.name || '?')[0].toUpperCase() : ''}</div>`,
         iconSize:   [28, 28],

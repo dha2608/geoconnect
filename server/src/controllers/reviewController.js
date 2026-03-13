@@ -1,5 +1,6 @@
 import Review from '../models/Review.js';
 import Pin from '../models/Pin.js';
+import { createNotification } from '../utils/createNotification.js';
 
 const updatePinRating = async (pinId) => {
   const stats = await Review.aggregate([
@@ -40,6 +41,9 @@ export const createReview = async (req, res) => {
     if (existing) {
       return res.status(400).json({ message: 'You already reviewed this pin' });
     }
+
+    const pin = await Pin.findById(req.params.pinId);
+    if (!pin) return res.status(404).json({ message: 'Pin not found' });
     
     const review = await Review.create({
       pin: req.params.pinId,
@@ -50,6 +54,15 @@ export const createReview = async (req, res) => {
     });
     
     await updatePinRating(review.pin);
+
+    // Notify pin creator
+    await createNotification(req, {
+      recipientId: pin.createdBy,
+      senderId: req.user._id,
+      type: 'review',
+      data: { pinId: pin._id, pinTitle: pin.title, rating: req.body.rating },
+    });
+
     const populated = await review.populate('user', 'name avatar');
     res.status(201).json(populated);
   } catch (error) {
@@ -90,6 +103,34 @@ export const deleteReview = async (req, res) => {
     await updatePinRating(pinId);
     
     res.json({ message: 'Review deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const voteHelpful = async (req, res) => {
+  try {
+    const review = await Review.findByIdAndUpdate(
+      req.params.reviewId,
+      { $addToSet: { helpfulVotes: req.user._id } },
+      { new: true }
+    ).populate('user', 'name avatar');
+    if (!review) return res.status(404).json({ message: 'Review not found' });
+    res.json(review);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const unvoteHelpful = async (req, res) => {
+  try {
+    const review = await Review.findByIdAndUpdate(
+      req.params.reviewId,
+      { $pull: { helpfulVotes: req.user._id } },
+      { new: true }
+    ).populate('user', 'name avatar');
+    if (!review) return res.status(404).json({ message: 'Review not found' });
+    res.json(review);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

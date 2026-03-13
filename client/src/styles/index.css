@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root,
+[data-theme="dark"] {
   /* Base colors */
   --bg-base: #080b12;
   --bg-elevated: #0d1117;
@@ -21,6 +22,12 @@
   --glass-blur: 20px;
   --glass-saturate: 180%;
   --glass-border: rgba(59, 130, 246, 0.12);
+
+  /* Surfaces */
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --surface-active: rgba(255, 255, 255, 0.08);
+  --surface-divider: rgba(255, 255, 255, 0.05);
+  --overlay-bg: rgba(0, 0, 0, 0.6);
 
   /* Spacing */
   --s-1: 4px;
@@ -58,6 +65,35 @@
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ── Light theme (frosted white glass) ── */
+[data-theme="light"] {
+  --bg-base: #f0f2f5;
+  --bg-elevated: rgba(255, 255, 255, 0.82);
+  --bg-panel: rgba(255, 255, 255, 0.72);
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a5568;
+  --text-muted: #8895a7;
+
+  /* Light frosted glass */
+  --glass-bg: rgba(255, 255, 255, 0.62);
+  --glass-blur: 24px;
+  --glass-saturate: 180%;
+  --glass-border: rgba(255, 255, 255, 0.45);
+
+  /* Surfaces */
+  --surface-hover: rgba(0, 0, 0, 0.04);
+  --surface-active: rgba(0, 0, 0, 0.07);
+  --surface-divider: rgba(0, 0, 0, 0.06);
+  --overlay-bg: rgba(0, 0, 0, 0.3);
+
+  /* Shadows — softer for light mode */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 16px 64px rgba(0, 0, 0, 0.16);
+  --shadow-glow-primary: 0 0 20px rgba(59, 130, 246, 0.2);
+  --shadow-glow-secondary: 0 0 20px rgba(6, 182, 212, 0.2);
+}
+
 /* Base styles */
 * {
   margin: 0;
@@ -79,6 +115,15 @@ body {
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   border: 1px solid var(--glass-border);
   border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease, color 0.35s ease;
+}
+
+/* Light-mode glass gets a subtle inset highlight for frosted feel */
+[data-theme="light"] .glass {
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 /* Aurora background */
@@ -92,6 +137,13 @@ body {
     radial-gradient(ellipse at 50% 80%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
   background-size: 200% 200%;
   animation: aurora 18s ease infinite alternate;
+  transition: opacity 0.5s ease;
+}
+
+/* Hide aurora on light theme — map is the backdrop */
+[data-theme="light"] .aurora-bg {
+  opacity: 0;
+  pointer-events: none;
 }
 
 @keyframes aurora {
@@ -182,6 +234,7 @@ body {
   backdrop-filter: blur(var(--glass-blur)) !important;
   color: var(--text-primary) !important;
   border: 1px solid var(--glass-border) !important;
+  transition: background 0.3s ease, color 0.3s ease !important;
 }
 
 .leaflet-control-zoom a:hover {
@@ -198,29 +251,36 @@ body {
   background: transparent !important;
 }
 
-/* ── Dark Tooltip ── */
+/* ── Tooltip — adaptive ── */
 .dark-tooltip {
-  background: rgba(15, 21, 32, 0.9) !important;
-  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
   border-radius: 8px !important;
-  color: #f1f5f9 !important;
+  color: var(--text-primary) !important;
   font-family: 'DM Sans', sans-serif !important;
   font-size: 12px !important;
   padding: 4px 8px !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: var(--shadow-sm) !important;
+  backdrop-filter: blur(var(--glass-blur)) !important;
 }
 .dark-tooltip::before {
-  border-top-color: rgba(15, 21, 32, 0.9) !important;
+  border-top-color: var(--glass-bg) !important;
 }
 
-/* ── Dark Popup ── */
+/* ── Popup — adaptive ── */
 .leaflet-popup .dark-popup .leaflet-popup-content-wrapper {
-  background: rgba(15, 21, 32, 0.9);
-  border: 1px solid rgba(59, 130, 246, 0.15);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: 12px;
-  color: #f1f5f9;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(var(--glass-blur));
 }
 .leaflet-popup .dark-popup .leaflet-popup-tip {
-  background: rgba(15, 21, 32, 0.9);
+  background: var(--glass-bg);
+}
+
+/* ── Theme transition — smooth global color transitions ── */
+[data-theme] {
+  transition: background 0.4s ease, color 0.35s ease;
 }

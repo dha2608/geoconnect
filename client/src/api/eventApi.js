@@ -8,4 +8,5 @@ export const eventApi = {
   deleteEvent: (id) => API.delete(`/events/${id}`),
   toggleRsvp: (id) => API.post(`/events/${id}/rsvp`),
   getUpcoming: (limit = 12) => API.get('/events/upcoming', { params: { limit } }),
+  searchEvents: (query) => API.get('/events/search', { params: { q: query } }),
 };

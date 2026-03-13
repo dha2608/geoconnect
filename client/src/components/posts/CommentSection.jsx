@@ -10,30 +10,80 @@ const Send = ({ className, size = 24, ...props }) => (
 const MessageSquare = ({ className, size = 24, ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
 );
-import { addComment } from '../../features/posts/postSlice';
+import { addComment, deleteComment } from '../../features/posts/postSlice';
+import useRequireAuth from '../../hooks/useRequireAuth';
 import Avatar from '../ui/Avatar';
 
 // ─── Single Comment Row ───────────────────────────────────────────────────────
 
-function CommentRow({ comment, index }) {
+function CommentRow({ comment, index, postId, currentUserId, postAuthorId }) {
+  const dispatch = useDispatch();
+  const [deleting, setDeleting] = useState(false);
+
+  const isOwner = currentUserId && (
+    comment.user._id === currentUserId || comment.user === currentUserId
+  );
+  const isPostAuthor = currentUserId && postAuthorId === currentUserId;
+  const canDelete = isOwner || isPostAuthor;
+
+  const handleDelete = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await dispatch(deleteComment({ postId, commentId: comment._id })).unwrap();
+      toast.success('Comment deleted');
+    } catch {
+      toast.error('Failed to delete comment');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
       transition={{ delay: index * 0.04, duration: 0.2 }}
-      className="flex items-start gap-2.5"
+      className="flex items-start gap-2.5 group"
     >
       <Avatar
         src={comment.user.avatar}
-        name={comment.user.username}
+        name={comment.user.name || comment.user.username}
         size="sm"
       />
       <div className="flex-1 min-w-0">
-        <div className="bg-white/5 border border-white/5 rounded-2xl rounded-tl-sm px-3 py-2">
-          <span className="text-txt-primary text-xs font-semibold font-body leading-none block mb-1">
-            {comment.user.username}
-          </span>
-          <p className="text-txt-secondary text-sm font-body leading-relaxed break-words">
+        <div className="bg-surface-hover border border-surface-divider rounded-2xl rounded-tl-sm px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-txt-primary text-xs font-semibold font-body leading-none">
+              {comment.user.name || comment.user.username}
+            </span>
+            {canDelete && (
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleDelete}
+                disabled={deleting}
+                title="Delete comment"
+                className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-txt-muted hover:text-accent-danger transition-all duration-150 disabled:opacity-40"
+              >
+                {deleting ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    className="w-3 h-3 border border-accent-danger/30 border-t-accent-danger rounded-full"
+                  />
+                ) : (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                    <path d="M10 11v6m4-6v6" />
+                  </svg>
+                )}
+              </motion.button>
+            )}
+          </div>
+          <p className="text-txt-secondary text-sm font-body leading-relaxed break-words mt-1">
             {comment.text}
           </p>
         </div>
@@ -49,6 +99,7 @@ function CommentRow({ comment, index }) {
 
 export default function CommentSection({ post }) {
   const dispatch = useDispatch();
+  const requireAuth = useRequireAuth();
   const user = useSelector((state) => state.auth.user);
 
   const [text, setText] = useState('');
@@ -73,6 +124,7 @@ export default function CommentSection({ post }) {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
+    if (!requireAuth('post comments')) return;
     const trimmed = text.trim();
     if (!trimmed || submitting) return;
 
@@ -109,7 +161,7 @@ export default function CommentSection({ post }) {
           animate={{ opacity: 1 }}
           className="flex flex-col items-center justify-center py-5 gap-2"
         >
-          <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-surface-hover flex items-center justify-center">
             <MessageSquare size={18} className="text-txt-muted" />
           </div>
           <p className="text-txt-muted text-xs font-body">
@@ -124,7 +176,14 @@ export default function CommentSection({ post }) {
         >
           <AnimatePresence initial={false}>
             {post.comments.map((comment, i) => (
-              <CommentRow key={comment._id} comment={comment} index={i} />
+              <CommentRow
+                key={comment._id}
+                comment={comment}
+                index={i}
+                postId={post._id}
+                currentUserId={user?._id}
+                postAuthorId={post.author?._id || post.author}
+              />
             ))}
           </AnimatePresence>
         </div>
@@ -146,13 +205,13 @@ export default function CommentSection({ post }) {
 
       {/* ── Input row ── */}
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
-        <Avatar src={user?.avatar} name={user?.username} size="sm" />
+        <Avatar src={user?.avatar} name={user?.name} size="sm" />
 
         <div
-          className={`flex-1 flex items-center gap-2 bg-white/5 border rounded-full px-3 py-2 transition-colors ${
+          className={`flex-1 flex items-center gap-2 bg-surface-hover border rounded-full px-3 py-2 transition-colors ${
             submitting
-              ? 'border-white/5 opacity-60'
-              : 'border-white/10 focus-within:border-accent-primary/40'
+              ? 'border-surface-divider opacity-60'
+              : 'border-surface-divider focus-within:border-accent-primary/40'
           }`}
         >
           <input

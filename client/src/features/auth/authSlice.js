@@ -50,6 +50,16 @@ export const getMe = createAsyncThunk('auth/getMe', async (_, { rejectWithValue 
   }
 });
 
+export const forgotPassword = createAsyncThunk('auth/forgotPassword', async (email, { rejectWithValue }) => {
+  try { const res = await authApi.forgotPassword(email); return res.data; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
+export const resetPassword = createAsyncThunk('auth/resetPassword', async (data, { rejectWithValue }) => {
+  try { const res = await authApi.resetPassword(data); return res.data; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
 // If a token exists in localStorage on startup, we should show a loading
 // state until getMe resolves — otherwise ProtectedRoute immediately
 // redirects to /login before we can verify the token.
@@ -109,6 +119,7 @@ const authSlice = createSlice({
     builder.addCase(getMe.fulfilled, (state, action) => {
       state.loading = false; state.initialized = true;
       state.user = action.payload.user; state.isAuthenticated = true;
+      state.isGuest = !!action.payload.user?.isGuest;
     });
     builder.addCase(getMe.rejected, (state) => {
       state.loading = false; state.initialized = true;

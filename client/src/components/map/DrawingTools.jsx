@@ -226,13 +226,7 @@ export default function DrawingTools({ onClose }) {
   return (
     <div
       ref={containerRef}
-      className="rounded-xl px-4 py-3 min-w-[280px]"
-      style={{
-        background: 'rgba(15,21,32,0.9)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        border: '1px solid rgba(59,130,246,0.12)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-      }}
+      className="glass rounded-xl px-4 py-3 min-w-[280px]"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
@@ -263,7 +257,7 @@ export default function DrawingTools({ onClose }) {
             className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-lg text-xs font-medium transition-colors ${
               shapeTool === t.key
                 ? 'bg-accent-primary/20 text-accent-primary'
-                : 'bg-white/5 text-txt-muted hover:text-txt-secondary hover:bg-white/10'
+                : 'bg-surface-hover text-txt-muted hover:text-txt-secondary hover:bg-surface-active'
             }`}
           >
             <span className="text-base">{t.icon}</span>
@@ -283,7 +277,7 @@ export default function DrawingTools({ onClose }) {
 
       {/* Info */}
       {info && (
-        <div className="bg-white/5 rounded-lg px-3 py-2 mb-3 space-y-1">
+        <div className="bg-surface-hover rounded-lg px-3 py-2 mb-3 space-y-1">
           <div className="flex justify-between text-xs">
             <span className="text-txt-muted">Shape</span>
             <span className="text-txt-primary font-medium capitalize">{info.type}</span>
@@ -302,7 +296,7 @@ export default function DrawingTools({ onClose }) {
       {/* Clear All */}
       <button
         onClick={clearAll}
-        className="w-full py-1.5 text-xs font-medium text-txt-muted hover:text-accent-danger bg-white/5 hover:bg-accent-danger/10 rounded-lg transition-colors"
+        className="w-full py-1.5 text-xs font-medium text-txt-muted hover:text-accent-danger bg-surface-hover hover:bg-accent-danger/10 rounded-lg transition-colors"
       >
         Clear All
       </button>

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { toggleFollow } from '../../features/users/userSlice';
+import useRequireAuth from '../../hooks/useRequireAuth';
 import Button from '../ui/Button';
 import toast from 'react-hot-toast';
 
 export default function FollowButton({ userId, isFollowing: externalFollowing, size = 'md' }) {
   const dispatch = useDispatch();
+  const requireAuth = useRequireAuth();
   const [isFollowing, setIsFollowing] = useState(externalFollowing);
   const [loading, setLoading] = useState(false);
 
@@ -16,6 +18,7 @@ export default function FollowButton({ userId, isFollowing: externalFollowing, s
 
   const handleToggle = async () => {
     if (loading) return;
+    if (!requireAuth('follow users')) return;
     setLoading(true);
     const previousState = isFollowing;
 

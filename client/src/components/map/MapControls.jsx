@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import L from 'leaflet';
 import { setTileLayer } from '../../features/map/mapSlice';
 import useGeolocation from '../../hooks/useGeolocation';
+import useLocationSharing from '../../socket/useLocationSharing';
 
 const TILE_OPTIONS = [
   { id: 'dark',      label: 'Dark',      icon: '🌙' },
@@ -33,6 +34,7 @@ export default function MapControls() {
   // Separate hook instance with autoWatch:false so it doesn't start a duplicate watcher.
   // We only use it to imperatively trigger a one-shot locate() when the user taps the button.
   const { locate, isLocating: geoLocating } = useGeolocation({ autoWatch: false });
+  const { isSharing, startSharing, stopSharing } = useLocationSharing();
 
   // If we triggered locate() and were waiting for the first fix, fly once it arrives
   const pendingFlyRef = useRef(false);
@@ -109,6 +111,32 @@ export default function MapControls() {
         )}
       </button>
 
+      {/* ── Location Sharing ────────────────────────────────────── */}
+      <button
+        onClick={isSharing ? stopSharing : startSharing}
+        className={`w-10 h-10 rounded-xl glass flex items-center justify-center transition-colors ${
+          isSharing
+            ? 'text-accent-success ring-1 ring-accent-success/30'
+            : 'text-txt-primary hover:text-accent-primary'
+        }`}
+        title={isSharing ? 'Stop sharing location' : 'Share live location'}
+        aria-label={isSharing ? 'Stop sharing location' : 'Share live location'}
+      >
+        {isSharing ? (
+          <svg className="w-5 h-5 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="3" fill="currentColor" />
+            <path d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
+            <circle cx="12" cy="12" r="8" strokeDasharray="4 4" />
+          </svg>
+        ) : (
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
+            <circle cx="12" cy="12" r="8" strokeDasharray="4 4" />
+          </svg>
+        )}
+      </button>
+
       {/* ── Tile Layer Switcher ────────────────────────────────────── */}
       <div className="relative">
         <button
@@ -150,7 +178,7 @@ export default function MapControls() {
                   className={`w-full px-3 py-2 rounded-lg text-sm text-left flex items-center gap-2 transition-colors font-body ${
                     tileLayer === opt.id
                       ? 'bg-accent-primary/20 text-accent-primary'
-                      : 'text-txt-secondary hover:text-txt-primary hover:bg-white/5'
+                      : 'text-txt-secondary hover:text-txt-primary hover:bg-surface-hover'
                   }`}
                 >
                   <span aria-hidden="true">{opt.icon}</span>
@@ -166,7 +194,7 @@ export default function MapControls() {
       <div className="glass rounded-xl overflow-hidden flex flex-col">
         <button
           onClick={() => map.zoomIn()}
-          className="w-10 h-10 flex items-center justify-center text-txt-primary hover:text-accent-primary hover:bg-white/5 transition-colors border-b border-white/5"
+          className="w-10 h-10 flex items-center justify-center text-txt-primary hover:text-accent-primary hover:bg-surface-hover transition-colors border-b border-surface-divider"
           title="Zoom In"
           aria-label="Zoom in"
         >
@@ -184,7 +212,7 @@ export default function MapControls() {
 
         <button
           onClick={() => map.zoomOut()}
-          className="w-10 h-10 flex items-center justify-center text-txt-primary hover:text-accent-primary hover:bg-white/5 transition-colors"
+          className="w-10 h-10 flex items-center justify-center text-txt-primary hover:text-accent-primary hover:bg-surface-hover transition-colors"
           title="Zoom Out"
           aria-label="Zoom out"
         >

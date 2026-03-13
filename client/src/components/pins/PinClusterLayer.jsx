@@ -20,6 +20,44 @@ import { setSelectedPin } from '../../features/pins/pinSlice';
 import { openModal } from '../../features/ui/uiSlice';
 import { getCategoryColor, getCategoryIconSvg } from './PinCategoryIcon';
 
+// ─── Inject marker animation CSS ─────────────────────────────────────────────
+let markerCssInjected = false;
+function ensureMarkerCSS() {
+  if (markerCssInjected) return;
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes pin-pop-in {
+      0%   { transform: scale(0); opacity: 0; }
+      70%  { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .pin-marker-wrap {
+      animation: pin-pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      transition: transform 0.15s ease;
+      transform-origin: bottom center;
+    }
+    .pin-marker-wrap:hover {
+      transform: scale(1.2);
+    }
+    .dark-tooltip {
+      background: rgba(8, 11, 18, 0.92) !important;
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.1) !important;
+      border-radius: 8px !important;
+      color: #e2e8f0 !important;
+      font-family: 'DM Sans', sans-serif !important;
+      font-size: 12px !important;
+      padding: 4px 10px !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+    }
+    .dark-tooltip::before {
+      border-top-color: rgba(8, 11, 18, 0.92) !important;
+    }
+  `;
+  document.head.appendChild(style);
+  markerCssInjected = true;
+}
+
 // ─── Cluster icon factory ────────────────────────────────────────────────────
 
 /**
@@ -81,32 +119,31 @@ function createClusterIcon(cluster) {
  * @returns {L.DivIcon}
  */
 function createPinIcon(category) {
+  ensureMarkerCSS();
   const color = getCategoryColor(category);
   const iconSvg = getCategoryIconSvg(category);
 
-  // Center the 14×14 icon inside the 32×40 teardrop (circle center at cx=16, cy=14)
   const html = `
-    <svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
-      <!-- Teardrop body -->
-      <path
-        d="M16 0C7.16 0 0 7.16 0 16c0 12 16 24 16 24s16-12 16-24C32 7.16 24.84 0 16 0z"
-        fill="${color}"
-        filter="drop-shadow(0 2px 4px rgba(0,0,0,0.4))"
-      />
-      <!-- Inner circle darkening -->
-      <circle cx="16" cy="14" r="9" fill="rgba(0,0,0,0.2)"/>
-      <!-- Category icon centered at (16,14), offset by half icon size (7) -->
-      <g transform="translate(9, 7)">
-        ${iconSvg}
-      </g>
-    </svg>
+    <div class="pin-marker-wrap">
+      <svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M16 0C7.16 0 0 7.16 0 16c0 12 16 24 16 24s16-12 16-24C32 7.16 24.84 0 16 0z"
+          fill="${color}"
+          filter="drop-shadow(0 2px 4px rgba(0,0,0,0.4))"
+        />
+        <circle cx="16" cy="14" r="9" fill="rgba(0,0,0,0.2)"/>
+        <g transform="translate(9, 7)">
+          ${iconSvg}
+        </g>
+      </svg>
+    </div>
   `;
 
   return L.divIcon({
     html,
     className: '',
     iconSize: [32, 40],
-    iconAnchor: [16, 40],  // tip of the teardrop anchors to the coordinate
+    iconAnchor: [16, 40],
     tooltipAnchor: [16, -8],
   });
 }
@@ -124,6 +161,8 @@ const PinClusterLayer = memo(function PinClusterLayer() {
   const clusterGroupRef = useRef(null);
 
   useEffect(() => {
+    ensureMarkerCSS();
+
     // ── Create cluster group ─────────────────────────────────────────────────
     const clusterGroup = L.markerClusterGroup({
       iconCreateFunction: createClusterIcon,

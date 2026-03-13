@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { useMap } from 'react-leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
 import L from 'leaflet';
+import { setActiveMapTool } from '../../features/ui/uiSlice';
 import DrawingTools from './DrawingTools';
 import DistanceTool from './DistanceTool';
 import RoutingTool from './RoutingTool';
@@ -42,7 +44,8 @@ const TOOLS = [
 
 export default function MapToolbar() {
   const map = useMap();
-  const [activeTool, setActiveTool] = useState(null);
+  const dispatch = useDispatch();
+  const activeMapTool = useSelector((state) => state.ui.activeMapTool);
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -53,12 +56,12 @@ export default function MapToolbar() {
   }, []);
 
   const toggle = useCallback((key) => {
-    setActiveTool((prev) => (prev === key ? null : key));
-  }, []);
+    dispatch(setActiveMapTool(activeMapTool === key ? null : key));
+  }, [dispatch, activeMapTool]);
 
   const deactivate = useCallback(() => {
-    setActiveTool(null);
-  }, []);
+    dispatch(setActiveMapTool(null));
+  }, [dispatch]);
 
   return (
     <div
@@ -67,7 +70,7 @@ export default function MapToolbar() {
     >
       {/* Active Tool Panel */}
       <AnimatePresence mode="wait">
-        {activeTool === 'draw' && (
+        {activeMapTool === 'draw' && (
           <motion.div
             key="draw"
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -78,7 +81,7 @@ export default function MapToolbar() {
             <DrawingTools onClose={deactivate} />
           </motion.div>
         )}
-        {activeTool === 'measure' && (
+        {activeMapTool === 'measure' && (
           <motion.div
             key="measure"
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -89,7 +92,7 @@ export default function MapToolbar() {
             <DistanceTool onClose={deactivate} />
           </motion.div>
         )}
-        {activeTool === 'route' && (
+        {activeMapTool === 'route' && (
           <motion.div
             key="route"
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -107,16 +110,10 @@ export default function MapToolbar() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.1 }}
-        className="flex items-center gap-1 px-2 py-1.5 rounded-xl"
-        style={{
-          background: 'rgba(15,21,32,0.85)',
-          backdropFilter: 'blur(20px) saturate(180%)',
-          border: '1px solid rgba(59,130,246,0.12)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-        }}
+        className="flex items-center gap-1 px-2 py-1.5 glass rounded-xl"
       >
         {TOOLS.map((tool, i) => {
-          const isActive = activeTool === tool.key;
+          const isActive = activeMapTool === tool.key;
           return (
             <motion.button
               key={tool.key}

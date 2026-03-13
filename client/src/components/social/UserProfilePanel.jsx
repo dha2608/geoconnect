@@ -12,6 +12,8 @@ import LoadingSpinner from '../ui/LoadingSpinner';
 import FollowButton from './FollowButton';
 import { getUserPosts } from '../../api/postApi';
 import { getSavedPins } from '../../api/pinApi';
+import { userApi } from '../../api/userApi';
+import ReportModal from '../ui/ReportModal';
 
 // ──────────────────────────────────────────────
 // Category colour palette for saved-pin cards
@@ -51,16 +53,16 @@ function ProfileSkeleton() {
       {/* Avatar + name block */}
       <div className="glass p-5 rounded-2xl">
         <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-full bg-white/5 flex-shrink-0" />
+          <div className="w-14 h-14 rounded-full bg-surface-hover flex-shrink-0" />
           <div className="flex-1 space-y-2 pt-1">
-            <div className="h-5 bg-white/5 rounded-lg w-2/3" />
-            <div className="h-3 bg-white/5 rounded w-1/2" />
-            <div className="h-3 bg-white/5 rounded w-1/3" />
+            <div className="h-5 bg-surface-hover rounded-lg w-2/3" />
+            <div className="h-3 bg-surface-hover rounded w-1/2" />
+            <div className="h-3 bg-surface-hover rounded w-1/3" />
           </div>
         </div>
         <div className="mt-4 space-y-2">
-          <div className="h-3 bg-white/5 rounded w-full" />
-          <div className="h-3 bg-white/5 rounded w-4/5" />
+          <div className="h-3 bg-surface-hover rounded w-full" />
+          <div className="h-3 bg-surface-hover rounded w-4/5" />
         </div>
       </div>
       {/* Stats block */}
@@ -68,8 +70,8 @@ function ProfileSkeleton() {
         <div className="grid grid-cols-3 gap-4">
           {[0, 1, 2].map((i) => (
             <div key={i} className="flex flex-col items-center gap-2">
-              <div className="h-7 bg-white/5 rounded w-10" />
-              <div className="h-3 bg-white/5 rounded w-14" />
+              <div className="h-7 bg-surface-hover rounded w-10" />
+              <div className="h-3 bg-surface-hover rounded w-14" />
             </div>
           ))}
         </div>
@@ -96,7 +98,7 @@ function PostCard({ post }) {
       )}
 
       {hasImage && (
-        <div className="rounded-lg overflow-hidden h-32 bg-white/5">
+        <div className="rounded-lg overflow-hidden h-32 bg-surface-hover">
           <img
             src={post.images[0]}
             alt=""
@@ -150,7 +152,7 @@ function PinCard({ pin, onFly }) {
     <motion.button
       variants={itemVariants}
       onClick={() => onFly(pin)}
-      className="glass rounded-xl p-3.5 text-left w-full space-y-1.5 hover:bg-white/5 transition-colors cursor-pointer"
+      className="glass rounded-xl p-3.5 text-left w-full space-y-1.5 hover:bg-surface-hover transition-colors cursor-pointer"
     >
       {/* Title row */}
       <div className="flex items-start gap-2.5">
@@ -248,12 +250,42 @@ export default function UserProfilePanel({ userId }) {
   const [savedPins,  setSavedPins]  = useState([]);
   const [tabLoading, setTabLoading] = useState(false);
   const [tabError,   setTabError]   = useState(null);
+  const [isBlocked,  setIsBlocked]  = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   // ── Fetch profile on mount, clear on unmount ──
   useEffect(() => {
     if (userId) dispatch(fetchUserProfile(userId));
     return () => { dispatch(clearProfile()); };
   }, [userId, dispatch]);
+
+  // ── Check if user is blocked ──
+  useEffect(() => {
+    if (!userId || !currentUser?._id || userId === currentUser._id) return;
+    setIsBlocked(currentUser.blockedUsers?.includes(userId) || false);
+  }, [userId, currentUser]);
+
+  // ── Block/Unblock handler ──
+  const handleToggleBlock = useCallback(async () => {
+    if (!userId || blockLoading) return;
+    setBlockLoading(true);
+    try {
+      if (isBlocked) {
+        await userApi.unblockUser(userId);
+        setIsBlocked(false);
+        toast.success('User unblocked');
+      } else {
+        await userApi.blockUser(userId);
+        setIsBlocked(true);
+        toast.success('User blocked');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update block status');
+    } finally {
+      setBlockLoading(false);
+    }
+  }, [userId, isBlocked, blockLoading]);
 
   // ── Fetch tab data when the active tab or profile changes ──
   useEffect(() => {
@@ -319,20 +351,21 @@ export default function UserProfilePanel({ userId }) {
       };
 
   const panelClass = isMobile
-    ? 'fixed top-16 bottom-16 left-0 right-0 z-20 bg-base/95 backdrop-blur-xl overflow-y-auto'
-    : 'fixed top-16 bottom-0 left-[72px] w-[380px] z-20 bg-base/95 backdrop-blur-xl border-r border-accent-primary/10 overflow-y-auto';
+    ? 'fixed top-16 bottom-16 left-0 right-0 z-20 glass overflow-y-auto'
+    : 'fixed top-16 bottom-0 left-[72px] w-[380px] z-20 glass border-r border-accent-primary/10 overflow-y-auto';
 
   return (
+    <>
     <motion.div
       {...motionProps}
       className={panelClass}
     >
       {/* ── Header ── */}
-      <div className="sticky top-0 z-10 bg-base/80 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-base/80 backdrop-blur-md border-b border-surface-divider px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => dispatch(closePanel())}
           aria-label="Close profile"
-          className="w-9 h-9 rounded-lg flex items-center justify-center text-txt-muted hover:text-txt-primary hover:bg-white/5 transition-all"
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-txt-muted hover:text-txt-primary hover:bg-surface-hover transition-all"
         >
           <svg
             width="18" height="18" viewBox="0 0 24 24"
@@ -356,13 +389,13 @@ export default function UserProfilePanel({ userId }) {
               <div className="flex items-start gap-4">
                 <Avatar
                   src={profile.avatar}
-                  name={profile.username}
+                  name={profile.name}
                   size="lg"
                   online={profile.isOnline}
                 />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-heading font-bold text-txt-primary text-xl leading-tight truncate">
-                    {profile.username}
+                    {profile.name}
                   </h3>
                   {profile.email && (
                     <p className="text-txt-muted text-sm truncate mt-0.5">{profile.email}</p>
@@ -386,21 +419,47 @@ export default function UserProfilePanel({ userId }) {
               </div>
 
               {profile.bio && (
-                <p className="mt-4 text-txt-secondary text-sm leading-relaxed border-t border-white/5 pt-4">
+                <p className="mt-4 text-txt-secondary text-sm leading-relaxed border-t border-surface-divider pt-4">
                   {profile.bio}
                 </p>
               )}
 
               {!isCurrentUser && (
-                <div className="mt-4 flex">
+                <div className="mt-4 flex items-center gap-2">
                   <FollowButton userId={profile._id} isFollowing={isFollowing} size="md" />
+                  <button
+                    onClick={handleToggleBlock}
+                    disabled={blockLoading}
+                    className={`px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 border ${
+                      isBlocked
+                        ? 'border-accent-danger/30 bg-accent-danger/10 text-accent-danger hover:bg-accent-danger/20'
+                        : 'border-surface-divider text-txt-muted hover:text-accent-danger hover:border-accent-danger/30 hover:bg-accent-danger/5'
+                    } ${blockLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-1 -mt-0.5">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                    </svg>
+                    {isBlocked ? 'Unblock' : 'Block'}
+                  </button>
+                  <button
+                    onClick={() => setReportOpen(true)}
+                    className="px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 border
+                               border-surface-divider text-txt-muted hover:text-accent-warning hover:border-accent-warning/30 hover:bg-accent-warning/5"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-1 -mt-0.5">
+                      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                      <line x1="4" y1="22" x2="4" y2="15"/>
+                    </svg>
+                    Report
+                  </button>
                 </div>
               )}
             </GlassCard>
 
             {/* ── Stats row ── */}
             <GlassCard padding="p-4" animate={false}>
-              <div className="grid grid-cols-3 divide-x divide-white/5">
+              <div className="grid grid-cols-3 divide-x divide-surface-divider">
                 {[
                   { label: 'Posts',     value: profile.postsCount      ?? 0 },
                   { label: 'Followers', value: profile.followers?.length ?? 0 },
@@ -520,5 +579,16 @@ export default function UserProfilePanel({ userId }) {
         )}
       </div>
     </motion.div>
+
+    {/* ── Report modal ── */}
+    {!isCurrentUser && (
+      <ReportModal
+        isOpen={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="user"
+        targetId={userId}
+      />
+    )}
+    </>
   );
 }

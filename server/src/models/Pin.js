@@ -2,10 +2,10 @@ import mongoose from 'mongoose';
 
 const pinSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true, maxlength: 100 },
-  description: { type: String, maxlength: 500, default: '' },
+  description: { type: String, maxlength: 1000, default: '' },
   category: { 
     type: String, 
-    enum: ['food', 'nature', 'art', 'event', 'other'], 
+    enum: ['food', 'entertainment', 'shopping', 'outdoors', 'culture', 'travel', 'sports', 'health', 'education', 'other'], 
     default: 'other' 
   },
   location: {

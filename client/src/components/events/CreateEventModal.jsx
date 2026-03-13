@@ -22,12 +22,14 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
+import compressImage from '../../utils/compressImage';
 
 import Modal  from '../ui/Modal';
 import Button from '../ui/Button';
 
-import { createEvent }  from '../../features/events/eventSlice';
+import { createEvent, updateEvent }  from '../../features/events/eventSlice';
 import { closeModal }   from '../../features/ui/uiSlice';
+import useRequireAuth from '../../hooks/useRequireAuth';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -44,8 +46,7 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
 
-const schema = z
-  .object({
+const baseSchema = z.object({
     title: z
       .string()
       .min(3,   'Title must be at least 3 characters')
@@ -61,13 +62,7 @@ const schema = z
       { required_error: 'Please select a category' },
     ),
 
-    startTime: z
-      .string()
-      .min(1, 'Start time is required')
-      .refine(
-        (val) => !val || new Date(val) > new Date(),
-        { message: 'Start time must be in the future' },
-      ),
+    startTime: z.string().min(1, 'Start time is required'),
 
     endTime: z.string().min(1, 'End time is required'),
 
@@ -76,18 +71,21 @@ const schema = z
     isPublic: z.boolean().default(true),
 
     address: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.startTime && data.endTime) {
-      if (new Date(data.endTime) <= new Date(data.startTime)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'End time must be after start time',
-          path: ['endTime'],
-        });
-      }
-    }
   });
+
+const endTimeRefine = (data, ctx) => {
+  if (data.startTime && data.endTime) {
+    if (new Date(data.endTime) <= new Date(data.startTime)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'End time must be after start time',
+        path: ['endTime'],
+      });
+    }
+  }
+};
+
+const eventSchema = baseSchema.superRefine(endTimeRefine);
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -115,7 +113,7 @@ function FieldError({ message }) {
 
 const INPUT_CLS = [
   'w-full px-3 py-2.5 rounded-lg text-sm',
-  'bg-[rgba(13,17,23,0.8)] border border-[rgba(59,130,246,0.15)]',
+  'bg-[var(--glass-bg)] border border-[var(--glass-border)]',
   'text-slate-100 placeholder:text-slate-600',
   'focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25',
   'transition-colors duration-200',
@@ -128,10 +126,15 @@ const LABEL_CLS = 'block text-[11px] font-semibold tracking-widest text-slate-50
 
 export default function CreateEventModal() {
   const dispatch = useDispatch();
+  const requireAuth = useRequireAuth();
 
   const modalOpen  = useSelector((s) => s.ui.modalOpen);
+  const modalData  = useSelector((s) => s.ui.modalData);
   const mapCenter  = useSelector((s) => s.map.center);     // [lat, lng]
   const { loading } = useSelector((s) => s.events);
+
+  const editEvent = modalData?.editEvent ?? null;
+  const isEditMode = Boolean(editEvent);
 
   // Image state
   const [coverFile,    setCoverFile]    = useState(null);
@@ -149,7 +152,7 @@ export default function CreateEventModal() {
     reset,
     formState: { errors, isSubmitting },
   } = useForm({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(eventSchema),
     defaultValues: {
       title:       '',
       description: '',
@@ -163,6 +166,33 @@ export default function CreateEventModal() {
   });
 
   const selectedCategory = watch('category');
+
+  // ── Pre-populate form for edit mode ───────────────────────────────────────
+  useEffect(() => {
+    if (isOpen && isEditMode && editEvent) {
+      const toLocalDatetime = (isoStr) => {
+        if (!isoStr) return '';
+        const d = new Date(isoStr);
+        // format as YYYY-MM-DDTHH:mm for datetime-local input
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      };
+      reset({
+        title:       editEvent.title ?? '',
+        description: editEvent.description ?? '',
+        category:    editEvent.category ?? '',
+        startTime:   toLocalDatetime(editEvent.startTime),
+        endTime:     toLocalDatetime(editEvent.endTime),
+        maxCapacity: editEvent.maxCapacity ?? 0,
+        isPublic:    editEvent.isPublic ?? true,
+        address:     editEvent.address ?? '',
+      });
+      // Show existing cover image preview
+      if (editEvent.coverImage) {
+        setCoverPreview(editEvent.coverImage);
+      }
+    }
+  }, [isOpen, isEditMode, editEvent, reset]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleClose = useCallback(() => {
@@ -211,6 +241,14 @@ export default function CreateEventModal() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSubmit = async (values) => {
+    if (!requireAuth(isEditMode ? 'edit events' : 'create events')) return;
+
+    // For new events, start time must be in the future
+    if (!isEditMode && values.startTime && new Date(values.startTime) <= new Date()) {
+      toast.error('Start time must be in the future');
+      return;
+    }
+
     const fd = new FormData();
 
     fd.append('title',       values.title);
@@ -222,7 +260,10 @@ export default function CreateEventModal() {
     fd.append('isPublic',    String(values.isPublic));
 
     if (values.address) fd.append('address', values.address);
-    if (coverFile)       fd.append('coverImage', coverFile);
+    if (coverFile) {
+      const compressed = await compressImage(coverFile);
+      fd.append('coverImage', compressed);
+    }
 
     // GeoJSON Point from map centre — center is [lat, lng]
     if (mapCenter) {
@@ -231,11 +272,16 @@ export default function CreateEventModal() {
     }
 
     try {
-      await dispatch(createEvent(fd)).unwrap();
-      toast.success('Event created! 🎉');
+      if (isEditMode) {
+        await dispatch(updateEvent({ id: editEvent._id, data: fd })).unwrap();
+        toast.success('Event updated!');
+      } else {
+        await dispatch(createEvent(fd)).unwrap();
+        toast.success('Event created! 🎉');
+      }
       handleClose();
     } catch (err) {
-      toast.error(err?.message ?? 'Failed to create event. Please try again.');
+      toast.error(err?.message ?? `Failed to ${isEditMode ? 'update' : 'create'} event. Please try again.`);
     }
   };
 
@@ -243,7 +289,7 @@ export default function CreateEventModal() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Create Event">
+    <Modal isOpen={isOpen} onClose={handleClose} title={isEditMode ? 'Edit Event' : 'Create Event'}>
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="flex flex-col gap-5 max-h-[74vh] overflow-y-auto pr-0.5"
@@ -262,7 +308,7 @@ export default function CreateEventModal() {
               coverPreview ? 'h-40' : 'h-28',
               isDragging
                 ? 'border-blue-500/70 bg-blue-500/10 scale-[1.01]'
-                : 'border-[rgba(59,130,246,0.2)] hover:border-[rgba(59,130,246,0.4)] bg-[rgba(13,17,23,0.5)]',
+                : 'border-[var(--glass-border)] hover:border-[var(--glass-border)] bg-[var(--glass-bg)]',
             ].join(' ')}
           >
             {/* Hidden file input overlays the whole drop zone */}
@@ -334,10 +380,10 @@ export default function CreateEventModal() {
                       className={[
                         'relative flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl',
                         'border-2 cursor-pointer transition-all duration-200 focus:outline-none',
-                        'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1117]',
+                        'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)]',
                         active
                           ? 'shadow-lg'
-                          : 'border-[rgba(59,130,246,0.12)] bg-[rgba(13,17,23,0.5)] hover:bg-[rgba(13,17,23,0.8)] hover:border-[rgba(59,130,246,0.25)]',
+                          : 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-surface-active hover:border-[var(--glass-border)]',
                       ].join(' ')}
                       style={
                         active
@@ -454,7 +500,7 @@ export default function CreateEventModal() {
               render={({ field }) => (
                 <div
                   className="flex h-[42px] rounded-lg overflow-hidden
-                             border border-[rgba(59,130,246,0.15)] bg-[rgba(13,17,23,0.5)]"
+                             border border-[var(--glass-border)] bg-[var(--glass-bg)]"
                 >
                   {[
                     { value: true,  icon: '🌍', label: 'Public' },
@@ -484,7 +530,7 @@ export default function CreateEventModal() {
         {/* ── Location preview (read-only info) ────────────────────────── */}
         {mapCenter && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg
-                          bg-[rgba(59,130,246,0.06)] border border-[rgba(59,130,246,0.12)]">
+                          bg-surface-hover border border-[var(--glass-border)]">
             <span className="text-blue-400 text-sm">📍</span>
             <p className="text-[11px] text-slate-500">
               Location from map centre:&nbsp;
@@ -497,7 +543,7 @@ export default function CreateEventModal() {
 
         {/* ── Actions ───────────────────────────────────────────────────── */}
         <div className="flex gap-3 pt-1 pb-1 sticky bottom-0
-                        bg-gradient-to-t from-[#0f1520] via-[#0f1520]/90 to-transparent -mx-0.5 px-0.5">
+                        bg-gradient-to-t from-[var(--glass-bg)] via-[var(--glass-bg)]/90 to-transparent -mx-0.5 px-0.5">
           <Button
             type="button"
             variant="ghost"
@@ -521,10 +567,10 @@ export default function CreateEventModal() {
                   transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
                   className="inline-block w-4 h-4 border-2 border-white/20 border-t-white rounded-full"
                 />
-                Creating…
+                {isEditMode ? 'Saving…' : 'Creating…'}
               </span>
             ) : (
-              '✨ Create Event'
+              isEditMode ? '💾 Save Changes' : '✨ Create Event'
             )}
           </Button>
         </div>

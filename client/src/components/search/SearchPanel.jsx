@@ -1,35 +1,35 @@
 /**
  * SearchPanel.jsx
  * ──────────────────────────────────────────────────────────────────────────────
- * Location search side panel for GeoConnect.
- * Renders when state.ui.activePanel === 'search' (see AppLayout).
+ * Unified search panel for GeoConnect.
+ * Searches across locations, users, pins, and events in one interface.
  *
  * Layout
- *   • Spring slide-in from the right, fixed right-0 top-16 → bottom-0
- *   • Width 400 px desktop / full-screen mobile (bottom-16 for MobileNav)
- *   • Glass morphism consistent with existing panels
+ *   - Spring slide-in from the right, fixed right-0 top-16 → bottom-0
+ *   - Width 400 px desktop / full-screen mobile (bottom-16 for MobileNav)
+ *   - Glass morphism consistent with existing panels
  *
  * Features
- *   • Auto-focused search input with clear button / mini-spinner
- *   • Debounced (400 ms) Nominatim search via /api/geocode/search
- *   • Results: place name, truncated address, colour-coded type badge
- *   • Click a result → flyToLocation + close panel
- *   • Recent searches persisted in localStorage (max 5, deduplicated)
- *   • Empty / loading / no-results / error states
- *
- * Deviations from brief (auto-fixed per executor rules):
- *   [Rule 1] `searchLocation` export not found in geocodeApi.js →
- *            using `geocodeApi.search(query)` (the real export).
- *   [Rule 1] `setCenter` + `setZoom` replaced by `flyToLocation({ lat, lng, zoom })`
- *            which is the single purpose-built action for animated map fly.
+ *   - Auto-focused search input with clear button / mini-spinner
+ *   - Tab bar: All | Places | Users | Pins | Events
+ *   - Debounced (400 ms) parallel search across all categories
+ *   - Results grouped by category in "All" tab, filtered in specific tabs
+ *   - Click place → flyToLocation + close panel
+ *   - Click user → navigate to profile
+ *   - Click pin → fly to pin + open pin detail
+ *   - Click event → fly to event + open event detail
+ *   - Recent searches persisted in localStorage (max 5)
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { closePanel } from '../../features/ui/uiSlice';
+import { closePanel, openModal } from '../../features/ui/uiSlice';
 import { flyToLocation, setDestination } from '../../features/map/mapSlice';
+import { searchUsers, clearSearch } from '../../features/users/userSlice';
+import { searchPins, clearPinSearch, setSelectedPin } from '../../features/pins/pinSlice';
+import { searchEvents, clearEventSearch, setSelectedEvent } from '../../features/events/eventSlice';
 import { geocodeApi } from '../../api/geocodeApi';
 import GlassCard from '../ui/GlassCard';
 import LoadingSpinner from '../ui/LoadingSpinner';
@@ -42,6 +42,31 @@ const DEBOUNCE_MS   = 400;
 const MIN_QUERY_LEN = 2;
 
 const PANEL_SPRING = { type: 'spring', stiffness: 320, damping: 32, mass: 0.85 };
+
+const TABS = [
+  { id: 'all',    label: 'All' },
+  { id: 'places', label: 'Places' },
+  { id: 'users',  label: 'Users' },
+  { id: 'pins',   label: 'Pins' },
+  { id: 'events', label: 'Events' },
+];
+
+// ─── Category metadata ────────────────────────────────────────────────────────
+
+const CATEGORY_META = {
+  places: { color: '#3b82f6', label: 'Place' },
+  users:  { color: '#8b5cf6', label: 'User' },
+  pins:   { color: '#10b981', label: 'Pin' },
+  events: { color: '#f59e0b', label: 'Event' },
+};
+
+const PIN_CATEGORY_COLORS = {
+  food:   '#f97316',
+  nature: '#22c55e',
+  art:    '#ec4899',
+  event:  '#f59e0b',
+  other:  '#64748b',
+};
 
 // ─── Nominatim type → display metadata ────────────────────────────────────────
 
@@ -86,10 +111,11 @@ function persistRecent(list) {
 }
 
 function prependRecent(item, list) {
-  return [item, ...list.filter((r) => r.place_id !== item.place_id)].slice(0, MAX_RECENT);
+  const id = item._id || item.place_id || item.display_name;
+  return [item, ...list.filter((r) => (r._id || r.place_id || r.display_name) !== id)].slice(0, MAX_RECENT);
 }
 
-// ─── SVG icons (no lucide-react) ──────────────────────────────────────────────
+// ─── SVG icons ────────────────────────────────────────────────────────────────
 
 const IconSearch = ({ className = 'w-[17px] h-[17px]' }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none"
@@ -136,6 +162,32 @@ const IconNavDest = ({ className = 'w-[12px] h-[12px]' }) => (
   </svg>
 );
 
+const IconUser = ({ className = 'w-[14px] h-[14px]' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const IconCalendar = ({ className = 'w-[14px] h-[14px]' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+  </svg>
+);
+
+const IconMapPin = ({ className = 'w-[14px] h-[14px]' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
 const IconAlert = () => (
   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -145,7 +197,7 @@ const IconAlert = () => (
   </svg>
 );
 
-// ─── Mini spinner (Framer Motion, no global CSS needed) ───────────────────────
+// ─── Mini spinner ─────────────────────────────────────────────────────────────
 
 function MiniSpinner() {
   return (
@@ -167,20 +219,16 @@ function MiniSpinner() {
 function EmptyIllustration() {
   return (
     <svg width="128" height="128" viewBox="0 0 128 128" fill="none" aria-hidden="true">
-      {/* Outer rings */}
       <circle cx="64" cy="64" r="61" stroke="rgba(59,130,246,0.12)" strokeWidth="1.5" />
       <circle cx="64" cy="64" r="44" stroke="rgba(59,130,246,0.08)" strokeWidth="1.5" strokeDasharray="5 5" />
-      {/* Magnifier */}
       <circle cx="56" cy="56" r="22" stroke="rgba(59,130,246,0.30)" strokeWidth="2.5"
         fill="rgba(59,130,246,0.04)" />
       <line x1="71" y1="71" x2="85" y2="85" stroke="rgba(59,130,246,0.30)" strokeWidth="3" strokeLinecap="round" />
-      {/* Map pin inside magnifier */}
       <path d="M56 45c-6 0-11 5-11 11 0 8 11 18 11 18s11-10 11-18c0-6-5-11-11-11z"
         fill="rgba(6,182,212,0.16)" stroke="rgba(6,182,212,0.55)" strokeWidth="1.5" />
       <circle cx="56" cy="56" r="3.5" fill="rgba(6,182,212,0.7)" />
-      {/* Ambient dots */}
       <circle cx="95" cy="40" r="2.5" fill="rgba(59,130,246,0.28)" />
-      <circle cx="28" cy="86" r="2"   fill="rgba(6,182,212,0.28)" />
+      <circle cx="28" cy="86" r="2" fill="rgba(6,182,212,0.28)" />
       <circle cx="100" cy="79" r="1.5" fill="rgba(59,130,246,0.18)" />
     </svg>
   );
@@ -192,7 +240,6 @@ function NoResultsIllustration() {
       <circle cx="46" cy="46" r="32" stroke="rgba(59,130,246,0.20)" strokeWidth="2.5"
         fill="rgba(59,130,246,0.03)" />
       <line x1="68" y1="68" x2="88" y2="88" stroke="rgba(59,130,246,0.20)" strokeWidth="3" strokeLinecap="round" />
-      {/* X cross */}
       <line x1="35" y1="35" x2="57" y2="57" stroke="rgba(239,68,68,0.50)" strokeWidth="2.5" strokeLinecap="round" />
       <line x1="57" y1="35" x2="35" y2="57" stroke="rgba(239,68,68,0.50)" strokeWidth="2.5" strokeLinecap="round" />
       <circle cx="46" cy="46" r="20" stroke="rgba(239,68,68,0.10)" strokeWidth="1" />
@@ -200,9 +247,26 @@ function NoResultsIllustration() {
   );
 }
 
-// ─── ResultCard ───────────────────────────────────────────────────────────────
+// ─── Type badge component ─────────────────────────────────────────────────────
 
-function ResultCard({ result, onSelect, onSetDestination, index, isRecent = false }) {
+function TypeBadge({ label, color }) {
+  return (
+    <span
+      className="flex-shrink-0 font-body text-[9.5px] font-bold tracking-[0.05em] uppercase rounded-[5px] px-[6px] py-[2px]"
+      style={{
+        color,
+        background: `${color}1a`,
+        border: `1px solid ${color}33`,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+// ─── Place result card ────────────────────────────────────────────────────────
+
+function PlaceCard({ result, onSelect, onSetDestination, index, isRecent = false }) {
   const parts     = (result.display_name ?? '').split(', ');
   const placeName = parts[0] || 'Unknown place';
   const address   = parts.slice(1).join(', ');
@@ -212,104 +276,222 @@ function ResultCard({ result, onSelect, onSetDestination, index, isRecent = fals
     <motion.div
       role="option"
       aria-selected="false"
-      aria-label={`Go to ${result.display_name}`}
       tabIndex={0}
       initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.04, duration: 0.20, ease: 'easeOut' }}
-      whileHover={{ y: -1.5 }}
+      transition={{ delay: index * 0.03, duration: 0.18, ease: 'easeOut' }}
+      whileHover={{ y: -1 }}
       whileTap={{ scale: 0.975 }}
       onClick={onSelect}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); } }}
-      className={[
-        'w-full flex items-center gap-3 p-3 rounded-xl text-left',
-        'border transition-all duration-200 cursor-pointer',
-        'border-[rgba(59,130,246,0.10)] bg-[rgba(15,21,32,0.68)]',
-        'hover:bg-[rgba(15,21,32,0.88)] hover:border-[rgba(59,130,246,0.28)]',
-      ].join(' ')}
-      style={{ boxShadow: 'none' }}
-      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(59,130,246,0.10)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+      className="w-full flex items-center gap-3 p-3 rounded-xl text-left border transition-all duration-200 cursor-pointer border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-surface-active"
     >
-      {/* Icon bubble */}
       <span
-        aria-hidden="true"
         className="flex-shrink-0 flex items-center justify-center rounded-[10px]"
         style={{
-          width: 38, height: 38,
+          width: 36, height: 36,
           background: isRecent ? 'rgba(71,85,105,0.18)' : 'rgba(59,130,246,0.10)',
           border: `1px solid ${isRecent ? 'rgba(71,85,105,0.26)' : 'rgba(59,130,246,0.20)'}`,
           color: isRecent ? '#64748b' : '#3b82f6',
         }}
       >
-        {isRecent ? <IconClock className="w-[14px] h-[14px]" /> : <IconPin className="w-[14px] h-[14px]" />}
+        {isRecent ? <IconClock className="w-[13px] h-[13px]" /> : <IconMapPin className="w-[13px] h-[13px]" />}
       </span>
-
-      {/* Text */}
-      <span className="flex-1 min-w-0 flex flex-col gap-[3px]">
-        {/* Name row + type badge */}
+      <span className="flex-1 min-w-0 flex flex-col gap-[2px]">
         <span className="flex items-center gap-2">
-          <span className="font-body text-[13.5px] font-semibold text-txt-primary truncate flex-1">
-            {placeName}
-          </span>
-          <span
-            className="flex-shrink-0 font-body text-[9.5px] font-bold tracking-[0.05em] uppercase rounded-[5px] px-[6px] py-[2px]"
-            style={{
-              color,
-              background: `${color}1a`,
-              border: `1px solid ${color}33`,
-            }}
-          >
-            {label}
-          </span>
+          <span className="font-body text-[13px] font-semibold text-txt-primary truncate flex-1">{placeName}</span>
+          <TypeBadge label={label} color={color} />
         </span>
-
-        {/* Address */}
-        {address && (
-          <span className="font-body text-[11.5px] text-txt-muted truncate">
-            {address}
-          </span>
-        )}
+        {address && <span className="font-body text-[11px] text-txt-muted truncate">{address}</span>}
       </span>
-
-      {/* Destination button */}
       {onSetDestination && (
         <motion.button
           whileHover={{ scale: 1.12 }}
           whileTap={{ scale: 0.88 }}
           onClick={(e) => { e.stopPropagation(); onSetDestination(); }}
-          aria-label={`Set ${result.display_name} as destination`}
           title="Set as destination"
-          className="flex-shrink-0 flex items-center justify-center rounded-lg
-                     transition-all duration-150"
+          className="flex-shrink-0 flex items-center justify-center rounded-lg transition-all duration-150"
           style={{
             width: 26, height: 26,
             background: 'rgba(239,68,68,0.10)',
             border: '1px solid rgba(239,68,68,0.24)',
             color: '#ef4444',
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(239,68,68,0.20)';
-            e.currentTarget.style.borderColor = 'rgba(239,68,68,0.44)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(239,68,68,0.10)';
-            e.currentTarget.style.borderColor = 'rgba(239,68,68,0.24)';
-          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.20)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.10)'; }}
         >
           <IconNavDest />
         </motion.button>
       )}
-
-      {/* Chevron */}
-      <span className="flex-shrink-0 text-[#334155]">
-        <IconChevronRight />
-      </span>
+      <span className="flex-shrink-0 text-txt-muted"><IconChevronRight /></span>
     </motion.div>
   );
 }
 
-// ─── State view: Loading ──────────────────────────────────────────────────────
+// ─── User result card ─────────────────────────────────────────────────────────
+
+function UserCard({ user, onClick, index }) {
+  const avatarUrl = user.avatar || null;
+
+  return (
+    <motion.div
+      role="option"
+      tabIndex={0}
+      initial={{ opacity: 0, x: 12 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.03, duration: 0.18, ease: 'easeOut' }}
+      whileHover={{ y: -1 }}
+      whileTap={{ scale: 0.975 }}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+      className="w-full flex items-center gap-3 p-3 rounded-xl text-left border transition-all duration-200 cursor-pointer border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-surface-active"
+    >
+      <span
+        className="flex-shrink-0 flex items-center justify-center rounded-full overflow-hidden"
+        style={{
+          width: 36, height: 36,
+          background: 'rgba(139,92,246,0.10)',
+          border: '1px solid rgba(139,92,246,0.20)',
+        }}
+      >
+        {avatarUrl
+          ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+          : <IconUser className="w-[14px] h-[14px] text-[#8b5cf6]" />
+        }
+      </span>
+      <span className="flex-1 min-w-0 flex flex-col gap-[2px]">
+        <span className="flex items-center gap-2">
+          <span className="font-body text-[13px] font-semibold text-txt-primary truncate flex-1">{user.name}</span>
+          <TypeBadge label="User" color="#8b5cf6" />
+        </span>
+        {user.bio && <span className="font-body text-[11px] text-txt-muted truncate">{user.bio}</span>}
+        <span className="font-body text-[10px] text-txt-muted">
+          {user.followers?.length ?? 0} followers
+        </span>
+      </span>
+      <span className="flex-shrink-0 text-txt-muted"><IconChevronRight /></span>
+    </motion.div>
+  );
+}
+
+// ─── Pin result card ──────────────────────────────────────────────────────────
+
+function PinCard({ pin, onClick, index }) {
+  const catColor = PIN_CATEGORY_COLORS[pin.category] || '#64748b';
+  const catLabel = pin.category ? pin.category.charAt(0).toUpperCase() + pin.category.slice(1) : 'Pin';
+
+  return (
+    <motion.div
+      role="option"
+      tabIndex={0}
+      initial={{ opacity: 0, x: 12 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.03, duration: 0.18, ease: 'easeOut' }}
+      whileHover={{ y: -1 }}
+      whileTap={{ scale: 0.975 }}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+      className="w-full flex items-center gap-3 p-3 rounded-xl text-left border transition-all duration-200 cursor-pointer border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-surface-active"
+    >
+      <span
+        className="flex-shrink-0 flex items-center justify-center rounded-[10px] overflow-hidden"
+        style={{
+          width: 36, height: 36,
+          background: `${catColor}15`,
+          border: `1px solid ${catColor}30`,
+        }}
+      >
+        {pin.images?.[0]
+          ? <img src={pin.images[0]} alt="" className="w-full h-full object-cover" />
+          : <IconPin className="w-[13px] h-[13px]" style={{ color: catColor }} />
+        }
+      </span>
+      <span className="flex-1 min-w-0 flex flex-col gap-[2px]">
+        <span className="flex items-center gap-2">
+          <span className="font-body text-[13px] font-semibold text-txt-primary truncate flex-1">{pin.title}</span>
+          <TypeBadge label={catLabel} color={catColor} />
+        </span>
+        {pin.address && <span className="font-body text-[11px] text-txt-muted truncate">{pin.address}</span>}
+        <span className="font-body text-[10px] text-txt-muted flex items-center gap-2">
+          {pin.createdBy?.name && <span>by {pin.createdBy.name}</span>}
+          {pin.likes?.length > 0 && <span>{pin.likes.length} likes</span>}
+          {pin.averageRating > 0 && <span>{pin.averageRating.toFixed(1)} rating</span>}
+        </span>
+      </span>
+      <span className="flex-shrink-0 text-txt-muted"><IconChevronRight /></span>
+    </motion.div>
+  );
+}
+
+// ─── Event result card ────────────────────────────────────────────────────────
+
+function EventCard({ event, onClick, index }) {
+  const startDate = event.startTime ? new Date(event.startTime) : null;
+  const dateStr = startDate
+    ? startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '';
+  const timeStr = startDate
+    ? startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    : '';
+
+  return (
+    <motion.div
+      role="option"
+      tabIndex={0}
+      initial={{ opacity: 0, x: 12 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.03, duration: 0.18, ease: 'easeOut' }}
+      whileHover={{ y: -1 }}
+      whileTap={{ scale: 0.975 }}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+      className="w-full flex items-center gap-3 p-3 rounded-xl text-left border transition-all duration-200 cursor-pointer border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-surface-active"
+    >
+      <span
+        className="flex-shrink-0 flex items-center justify-center rounded-[10px]"
+        style={{
+          width: 36, height: 36,
+          background: 'rgba(245,158,11,0.10)',
+          border: '1px solid rgba(245,158,11,0.20)',
+          color: '#f59e0b',
+        }}
+      >
+        <IconCalendar className="w-[14px] h-[14px]" />
+      </span>
+      <span className="flex-1 min-w-0 flex flex-col gap-[2px]">
+        <span className="flex items-center gap-2">
+          <span className="font-body text-[13px] font-semibold text-txt-primary truncate flex-1">{event.title}</span>
+          <TypeBadge label="Event" color="#f59e0b" />
+        </span>
+        {event.address && <span className="font-body text-[11px] text-txt-muted truncate">{event.address}</span>}
+        <span className="font-body text-[10px] text-txt-muted flex items-center gap-2">
+          {dateStr && <span>{dateStr} {timeStr}</span>}
+          {event.attendees?.length > 0 && <span>{event.attendees.length} attending</span>}
+        </span>
+      </span>
+      <span className="flex-shrink-0 text-txt-muted"><IconChevronRight /></span>
+    </motion.div>
+  );
+}
+
+// ─── Section header for grouped results ───────────────────────────────────────
+
+function SectionHeader({ icon, label, count, color }) {
+  return (
+    <div className="flex items-center gap-2 mt-3 mb-1.5 first:mt-0">
+      <span style={{ color }} className="flex">{icon}</span>
+      <span className="font-body text-[11px] font-bold text-txt-muted uppercase tracking-[0.07em]">{label}</span>
+      <span
+        className="font-body text-[10px] font-bold rounded-full px-[6px] py-[1px]"
+        style={{ background: `${color}15`, color, border: `1px solid ${color}25` }}
+      >
+        {count}
+      </span>
+    </div>
+  );
+}
+
+// ─── State views ──────────────────────────────────────────────────────────────
 
 function ViewLoading() {
   return (
@@ -324,16 +506,13 @@ function ViewLoading() {
       aria-live="polite"
     >
       <LoadingSpinner size="md" />
-      <p className="font-body text-[13px] text-txt-muted">Searching…</p>
+      <p className="font-body text-[13px] text-txt-muted">Searching...</p>
     </motion.div>
   );
 }
 
-// ─── State view: No results ────────────────────────────────────────────────────
-
 function ViewNoResults({ query }) {
-  const display = query.length > 26 ? `${query.slice(0, 26)}…` : query;
-
+  const display = query.length > 26 ? `${query.slice(0, 26)}...` : query;
   return (
     <motion.div
       key="no-results"
@@ -349,16 +528,14 @@ function ViewNoResults({ query }) {
           No results found
         </h3>
         <p className="font-body text-[12.5px] text-txt-muted leading-relaxed">
-          No places match{' '}
-          <strong className="text-[#64748b] font-semibold">"{display}"</strong>.
+          No matches for{' '}
+          <strong className="text-txt-secondary font-semibold">"{display}"</strong>.
           Try a different term.
         </p>
       </GlassCard>
     </motion.div>
   );
 }
-
-// ─── State view: Empty (no query, no recent) ───────────────────────────────────
 
 function ViewEmpty() {
   return (
@@ -373,10 +550,10 @@ function ViewEmpty() {
       <EmptyIllustration />
       <GlassCard animate={false} padding="p-5" className="text-center max-w-[250px]">
         <h3 className="font-heading text-[15px] font-bold text-txt-secondary mb-1.5">
-          Find any place
+          Search everything
         </h3>
         <p className="font-body text-[12.5px] text-txt-muted leading-relaxed">
-          Search for cities, landmarks, addresses, or points of interest anywhere in the world.
+          Find places, people, pins, and events all in one search.
         </p>
       </GlassCard>
     </motion.div>
@@ -389,46 +566,79 @@ export default function SearchPanel() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isMobile } = useSelector((s) => s.ui);
+  const userResults  = useSelector((s) => s.users.searchResults);
+  const pinResults   = useSelector((s) => s.pins.searchResults);
+  const eventResults = useSelector((s) => s.events.searchResults);
 
-  const [query,       setQuery]       = useState('');
-  const [results,     setResults]     = useState([]);
-  const [isLoading,   setIsLoading]   = useState(false);
-  const [error,       setError]       = useState(null);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [recent,      setRecent]      = useState(loadRecent);
+  const [query,        setQuery]        = useState('');
+  const [activeTab,    setActiveTab]    = useState('all');
+  const [placeResults, setPlaceResults] = useState([]);
+  const [isLoading,    setIsLoading]    = useState(false);
+  const [error,        setError]        = useState(null);
+  const [hasSearched,  setHasSearched]  = useState(false);
+  const [recent,       setRecent]       = useState(loadRecent);
 
-  const inputRef   = useRef(null);
-  const wrapRef    = useRef(null);
-  const timerRef   = useRef(null);
+  const inputRef = useRef(null);
+  const wrapRef  = useRef(null);
+  const timerRef = useRef(null);
 
-  // ── Auto-focus after entrance animation ─────────────────────────────────────
+  // ── Auto-focus after entrance ───────────────────────────────────────────────
   useEffect(() => {
     const t = setTimeout(() => inputRef.current?.focus(), 320);
     return () => clearTimeout(t);
   }, []);
 
-  // ── Debounced search ─────────────────────────────────────────────────────────
+  // ── Cleanup on unmount ──────────────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      dispatch(clearSearch());
+      dispatch(clearPinSearch());
+      dispatch(clearEventSearch());
+    };
+  }, [dispatch]);
+
+  // ── Debounced parallel search ───────────────────────────────────────────────
   useEffect(() => {
     clearTimeout(timerRef.current);
 
     if (query.trim().length < MIN_QUERY_LEN) {
-      setResults([]);
+      setPlaceResults([]);
       setHasSearched(false);
       setError(null);
       setIsLoading(false);
+      dispatch(clearSearch());
+      dispatch(clearPinSearch());
+      dispatch(clearEventSearch());
       return;
     }
 
     timerRef.current = setTimeout(async () => {
       setIsLoading(true);
       setError(null);
+
+      const trimmed = query.trim();
+
       try {
-        const { data } = await geocodeApi.search(query.trim());
-        setResults(Array.isArray(data) ? data : []);
+        // Fire all 4 searches in parallel
+        const [placesRes] = await Promise.allSettled([
+          geocodeApi.search(trimmed),
+          dispatch(searchUsers(trimmed)),
+          dispatch(searchPins(trimmed)),
+          dispatch(searchEvents(trimmed)),
+        ]);
+
+        // Only places come back from the API call; users/pins/events go to Redux
+        if (placesRes.status === 'fulfilled') {
+          const data = placesRes.value?.data;
+          setPlaceResults(Array.isArray(data) ? data : []);
+        } else {
+          setPlaceResults([]);
+        }
+
         setHasSearched(true);
       } catch {
-        setError('Search failed — check your connection and try again.');
-        setResults([]);
+        setError('Search failed. Check your connection and try again.');
+        setPlaceResults([]);
         setHasSearched(false);
       } finally {
         setIsLoading(false);
@@ -436,31 +646,39 @@ export default function SearchPanel() {
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timerRef.current);
-  }, [query]);
+  }, [query, dispatch]);
 
-  // ── Handlers ─────────────────────────────────────────────────────────────────
+  // ── Compute total counts per category ───────────────────────────────────────
+  const counts = useMemo(() => ({
+    places: placeResults.length,
+    users:  (userResults || []).length,
+    pins:   (pinResults || []).length,
+    events: (eventResults || []).length,
+  }), [placeResults, userResults, pinResults, eventResults]);
+
+  const totalCount = counts.places + counts.users + counts.pins + counts.events;
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleClose = useCallback(() => dispatch(closePanel()), [dispatch]);
 
   const handleClear = useCallback(() => {
     setQuery('');
+    setActiveTab('all');
     inputRef.current?.focus();
   }, []);
 
-  const handleSelect = useCallback((result) => {
+  const handleSelectPlace = useCallback((result) => {
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
     if (Number.isNaN(lat) || Number.isNaN(lng)) return;
-
     navigate('/');
     dispatch(flyToLocation({ lat, lng, zoom: 15 }));
-
     setRecent((prev) => {
-      const updated = prependRecent(result, prev);
+      const updated = prependRecent({ ...result, _type: 'place' }, prev);
       persistRecent(updated);
       return updated;
     });
-
     dispatch(closePanel());
   }, [dispatch, navigate]);
 
@@ -472,7 +690,33 @@ export default function SearchPanel() {
     dispatch(setDestination({ lat, lng, name: parts[0], address: parts.slice(1).join(', ') }));
     dispatch(flyToLocation({ lat, lng, zoom: 16 }));
     navigate('/');
-    setRecent((prev) => { const updated = prependRecent(result, prev); persistRecent(updated); return updated; });
+    dispatch(closePanel());
+  }, [dispatch, navigate]);
+
+  const handleSelectUser = useCallback((user) => {
+    navigate(`/profile/${user._id}`);
+    dispatch(closePanel());
+  }, [dispatch, navigate]);
+
+  const handleSelectPin = useCallback((pin) => {
+    const [lng, lat] = pin.location?.coordinates || [];
+    if (lat != null && lng != null) {
+      navigate('/');
+      dispatch(flyToLocation({ lat, lng, zoom: 17 }));
+    }
+    dispatch(setSelectedPin(pin));
+    dispatch(openModal({ type: 'pinDetail', data: { pinId: pin._id } }));
+    dispatch(closePanel());
+  }, [dispatch, navigate]);
+
+  const handleSelectEvent = useCallback((event) => {
+    const [lng, lat] = event.location?.coordinates || [];
+    if (lat != null && lng != null) {
+      navigate('/');
+      dispatch(flyToLocation({ lat, lng, zoom: 17 }));
+    }
+    dispatch(setSelectedEvent(event));
+    dispatch(openModal({ type: 'eventDetail', data: { eventId: event._id } }));
     dispatch(closePanel());
   }, [dispatch, navigate]);
 
@@ -482,7 +726,7 @@ export default function SearchPanel() {
   }, []);
 
   // Focus ring on input wrapper
-  const focusRing   = () => {
+  const focusRing = () => {
     if (wrapRef.current) {
       wrapRef.current.style.borderColor = 'rgba(59,130,246,0.50)';
       wrapRef.current.style.boxShadow   = '0 0 0 3px rgba(59,130,246,0.10)';
@@ -495,21 +739,21 @@ export default function SearchPanel() {
     }
   };
 
-  // ── Active view ──────────────────────────────────────────────────────────────
+  // ── Active view ─────────────────────────────────────────────────────────────
 
   const activeView = (() => {
-    if (isLoading)                       return 'loading';
-    if (hasSearched && results.length)   return 'results';
-    if (hasSearched)                     return 'no-results';
-    if (recent.length)                   return 'recent';
+    if (isLoading)                          return 'loading';
+    if (hasSearched && totalCount > 0)      return 'results';
+    if (hasSearched)                        return 'no-results';
+    if (recent.length)                      return 'recent';
     return 'empty';
   })();
 
-  // ── Responsive layout ────────────────────────────────────────────────────────
+  // ── Responsive layout ───────────────────────────────────────────────────────
 
   const panelClass = isMobile
-    ? 'fixed top-16 bottom-16 left-0 right-0 z-30 flex flex-col overflow-hidden'
-    : 'fixed top-16 bottom-0 right-0 w-[400px] z-20 flex flex-col overflow-hidden';
+    ? 'fixed top-16 bottom-16 left-0 right-0 z-30 flex flex-col overflow-hidden glass'
+    : 'fixed top-16 bottom-0 right-0 w-[400px] z-20 flex flex-col overflow-hidden glass border-l border-[var(--glass-border)]';
 
   const motionProps = isMobile
     ? {
@@ -525,26 +769,177 @@ export default function SearchPanel() {
         transition: PANEL_SPRING,
       };
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // ── Render results for a given tab ──────────────────────────────────────────
+
+  function renderResults() {
+    const showPlaces = activeTab === 'all' || activeTab === 'places';
+    const showUsers  = activeTab === 'all' || activeTab === 'users';
+    const showPins   = activeTab === 'all' || activeTab === 'pins';
+    const showEvents = activeTab === 'all' || activeTab === 'events';
+
+    const isAll = activeTab === 'all';
+
+    // For specific tab with no results
+    if (!isAll) {
+      const tabCount = counts[activeTab] || 0;
+      if (tabCount === 0) {
+        return <ViewNoResults query={query.trim()} />;
+      }
+    }
+
+    return (
+      <motion.div
+        key={`results-${activeTab}`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+      >
+        {/* Places */}
+        {showPlaces && placeResults.length > 0 && (
+          <>
+            {isAll && (
+              <SectionHeader
+                icon={<IconMapPin className="w-[12px] h-[12px]" />}
+                label="Places"
+                count={counts.places}
+                color="#3b82f6"
+              />
+            )}
+            <div className="flex flex-col gap-1.5">
+              {(isAll ? placeResults.slice(0, 3) : placeResults).map((r, i) => (
+                <PlaceCard
+                  key={r.place_id ?? i}
+                  result={r}
+                  onSelect={() => handleSelectPlace(r)}
+                  onSetDestination={() => handleSetDestination(r)}
+                  index={i}
+                />
+              ))}
+            </div>
+            {isAll && placeResults.length > 3 && (
+              <button
+                onClick={() => setActiveTab('places')}
+                className="font-body text-[12px] text-accent-primary hover:underline mt-1.5 mb-1 px-1"
+              >
+                Show all {placeResults.length} places
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Users */}
+        {showUsers && (userResults || []).length > 0 && (
+          <>
+            {isAll && (
+              <SectionHeader
+                icon={<IconUser className="w-[12px] h-[12px]" />}
+                label="Users"
+                count={counts.users}
+                color="#8b5cf6"
+              />
+            )}
+            <div className="flex flex-col gap-1.5">
+              {(isAll ? (userResults || []).slice(0, 3) : (userResults || [])).map((u, i) => (
+                <UserCard
+                  key={u._id}
+                  user={u}
+                  onClick={() => handleSelectUser(u)}
+                  index={i}
+                />
+              ))}
+            </div>
+            {isAll && (userResults || []).length > 3 && (
+              <button
+                onClick={() => setActiveTab('users')}
+                className="font-body text-[12px] text-accent-primary hover:underline mt-1.5 mb-1 px-1"
+              >
+                Show all {(userResults || []).length} users
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Pins */}
+        {showPins && (pinResults || []).length > 0 && (
+          <>
+            {isAll && (
+              <SectionHeader
+                icon={<IconPin className="w-[12px] h-[12px]" />}
+                label="Pins"
+                count={counts.pins}
+                color="#10b981"
+              />
+            )}
+            <div className="flex flex-col gap-1.5">
+              {(isAll ? (pinResults || []).slice(0, 3) : (pinResults || [])).map((p, i) => (
+                <PinCard
+                  key={p._id}
+                  pin={p}
+                  onClick={() => handleSelectPin(p)}
+                  index={i}
+                />
+              ))}
+            </div>
+            {isAll && (pinResults || []).length > 3 && (
+              <button
+                onClick={() => setActiveTab('pins')}
+                className="font-body text-[12px] text-accent-primary hover:underline mt-1.5 mb-1 px-1"
+              >
+                Show all {(pinResults || []).length} pins
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Events */}
+        {showEvents && (eventResults || []).length > 0 && (
+          <>
+            {isAll && (
+              <SectionHeader
+                icon={<IconCalendar className="w-[12px] h-[12px]" />}
+                label="Events"
+                count={counts.events}
+                color="#f59e0b"
+              />
+            )}
+            <div className="flex flex-col gap-1.5">
+              {(isAll ? (eventResults || []).slice(0, 3) : (eventResults || [])).map((e, i) => (
+                <EventCard
+                  key={e._id}
+                  event={e}
+                  onClick={() => handleSelectEvent(e)}
+                  index={i}
+                />
+              ))}
+            </div>
+            {isAll && (eventResults || []).length > 3 && (
+              <button
+                onClick={() => setActiveTab('events')}
+                className="font-body text-[12px] text-accent-primary hover:underline mt-1.5 mb-1 px-1"
+              >
+                Show all {(eventResults || []).length} events
+              </button>
+            )}
+          </>
+        )}
+      </motion.div>
+    );
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <motion.aside
       key="search-panel"
       role="dialog"
       aria-modal="true"
-      aria-label="Search locations"
+      aria-label="Search"
       {...motionProps}
       className={panelClass}
-      style={{
-        background:              'rgba(8,11,18,0.94)',
-        backdropFilter:          'blur(28px) saturate(160%)',
-        WebkitBackdropFilter:    'blur(28px) saturate(160%)',
-        borderLeft:              '1px solid rgba(59,130,246,0.12)',
-        boxShadow:               '-12px 0 48px rgba(0,0,0,0.50)',
-      }}
     >
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="flex-shrink-0 flex items-center justify-between px-5 pt-5 pb-3.5 border-b border-[rgba(59,130,246,0.08)]">
+      <header className="flex-shrink-0 flex items-center justify-between px-5 pt-5 pb-3.5 border-b border-surface-divider">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-accent-primary/15 flex items-center justify-center text-accent-primary">
             <IconSearch className="w-4 h-4" />
@@ -553,15 +948,14 @@ export default function SearchPanel() {
             Search
           </h2>
         </div>
-
         <motion.button
           whileHover={{ scale: 1.07 }}
           whileTap={{ scale: 0.92 }}
           onClick={handleClose}
           aria-label="Close search panel"
           className="w-8 h-8 flex items-center justify-center rounded-lg text-txt-muted
-                     hover:text-txt-primary hover:bg-white/5 transition-all duration-150
-                     border border-[rgba(59,130,246,0.12)] hover:border-[rgba(59,130,246,0.28)]"
+                     hover:text-txt-primary hover:bg-surface-hover transition-all duration-150
+                     border border-[var(--glass-border)]"
         >
           <IconX className="w-3.5 h-3.5" />
         </motion.button>
@@ -573,20 +967,15 @@ export default function SearchPanel() {
           ref={wrapRef}
           className="relative flex items-center rounded-xl transition-all duration-200"
           style={{
-            background:           'rgba(15,21,32,0.72)',
+            background:           'var(--glass-bg)',
             backdropFilter:       'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
-            border:               '1px solid rgba(59,130,246,0.18)',
+            border:               '1px solid var(--glass-border)',
           }}
         >
-          {/* Left search icon */}
-          <span
-            aria-hidden="true"
-            className="absolute left-[13px] flex text-txt-muted pointer-events-none"
-          >
+          <span className="absolute left-[13px] flex text-txt-muted pointer-events-none">
             <IconSearch className="w-[17px] h-[17px]" />
           </span>
-
           <input
             ref={inputRef}
             type="search"
@@ -597,16 +986,12 @@ export default function SearchPanel() {
             onChange={(e) => setQuery(e.target.value)}
             onFocus={focusRing}
             onBlur={blurRing}
-            placeholder="Search cities, addresses, places…"
-            aria-label="Search for a location"
-            aria-autocomplete="list"
-            aria-haspopup="listbox"
+            placeholder="Search places, people, pins, events..."
+            aria-label="Search"
             className="w-full bg-transparent border-none outline-none font-body text-sm
                        text-txt-primary placeholder:text-txt-muted"
             style={{ padding: '13px 44px 13px 42px', caretColor: '#3b82f6' }}
           />
-
-          {/* Right: mini spinner or clear button */}
           <span className="absolute right-[12px] flex items-center">
             {isLoading ? (
               <MiniSpinner />
@@ -627,6 +1012,40 @@ export default function SearchPanel() {
         </div>
       </div>
 
+      {/* ── Tab bar (only shown when we have results) ────────────────────────── */}
+      {hasSearched && totalCount > 0 && (
+        <div className="flex-shrink-0 px-4 pb-2">
+          <div className="flex gap-1 p-1 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)]">
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.id;
+              const tabCount = tab.id === 'all' ? totalCount : (counts[tab.id] || 0);
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={[
+                    'flex-1 font-body text-[11.5px] font-semibold py-[7px] px-2 rounded-lg transition-all duration-200',
+                    isActive
+                      ? 'bg-accent-primary/15 text-accent-primary'
+                      : 'text-txt-muted hover:text-txt-primary hover:bg-surface-hover',
+                  ].join(' ')}
+                >
+                  {tab.label}
+                  {tabCount > 0 && (
+                    <span className={[
+                      'ml-1 text-[10px] font-bold',
+                      isActive ? 'text-accent-primary/70' : 'text-txt-muted/60',
+                    ].join(' ')}>
+                      {tabCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Error banner ─────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {error && (
@@ -637,7 +1056,6 @@ export default function SearchPanel() {
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.20 }}
             role="alert"
-            aria-live="assertive"
             className="flex-shrink-0 mx-4 my-1 flex items-center gap-2 px-3.5 py-[10px]
                        rounded-xl text-[13px] font-body"
             style={{
@@ -659,44 +1077,17 @@ export default function SearchPanel() {
       >
         <AnimatePresence mode="wait">
 
-          {/* Loading */}
           {activeView === 'loading' && <ViewLoading key="loading" />}
 
-          {/* Results list */}
           {activeView === 'results' && (
-            <motion.div
-              key="results"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-            >
-              <p
-                className="font-body text-[11.5px] text-txt-muted mb-2.5"
-                aria-live="polite"
-              >
-                {results.length} location{results.length !== 1 ? 's' : ''} found
+            <div key="results">
+              <p className="font-body text-[11.5px] text-txt-muted mb-2.5" aria-live="polite">
+                {totalCount} result{totalCount !== 1 ? 's' : ''} found
               </p>
-              <ul
-                role="listbox"
-                aria-label="Search results"
-                className="flex flex-col gap-1.5"
-              >
-                {results.map((r, i) => (
-                  <li key={r.place_id ?? i}>
-                    <ResultCard
-                      result={r}
-                      onSelect={() => handleSelect(r)}
-                      onSetDestination={() => handleSetDestination(r)}
-                      index={i}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
+              {renderResults()}
+            </div>
           )}
 
-          {/* No results */}
           {activeView === 'no-results' && (
             <ViewNoResults key="no-results" query={query.trim()} />
           )}
@@ -710,48 +1101,40 @@ export default function SearchPanel() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
             >
-              {/* Section header */}
               <div className="flex items-center justify-between mb-2.5">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-txt-muted flex">
-                    <IconClock className="w-[13px] h-[13px]" />
-                  </span>
-                  <span className="font-heading text-[11px] font-bold text-[#64748b] uppercase tracking-[0.07em]">
-                    Recent
-                  </span>
+                  <span className="text-txt-muted flex"><IconClock className="w-[13px] h-[13px]" /></span>
+                  <span className="font-body text-[11px] font-bold text-txt-muted uppercase tracking-[0.07em]">Recent</span>
                 </div>
                 <button
                   onClick={handleClearRecent}
-                  aria-label="Clear all recent searches"
                   className="font-body text-[12px] text-txt-muted hover:text-txt-secondary
-                             transition-colors duration-150 px-1.5 py-0.5 rounded-md
-                             hover:bg-white/5"
+                             transition-colors duration-150 px-1.5 py-0.5 rounded-md hover:bg-surface-hover"
                 >
                   Clear all
                 </button>
               </div>
-
-              <ul
-                role="list"
-                aria-label="Recent searches"
-                className="flex flex-col gap-1.5"
-              >
-                {recent.map((r, i) => (
-                  <li key={r.place_id ?? i}>
-                    <ResultCard
-                      result={r}
-                      onSelect={() => handleSelect(r)}
-                      onSetDestination={() => handleSetDestination(r)}
-                      index={i}
-                      isRecent
-                    />
-                  </li>
-                ))}
-              </ul>
+              <div className="flex flex-col gap-1.5">
+                {recent.map((r, i) => {
+                  // Recent items can be any type
+                  if (r._type === 'place' || r.place_id) {
+                    return (
+                      <PlaceCard
+                        key={r.place_id ?? i}
+                        result={r}
+                        onSelect={() => handleSelectPlace(r)}
+                        onSetDestination={() => handleSetDestination(r)}
+                        index={i}
+                        isRecent
+                      />
+                    );
+                  }
+                  return null;
+                })}
+              </div>
             </motion.div>
           )}
 
-          {/* Empty state */}
           {activeView === 'empty' && <ViewEmpty key="empty" />}
 
         </AnimatePresence>

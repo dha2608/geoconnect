@@ -24,7 +24,7 @@ const Input = forwardRef(({ label, error, icon: Icon, type = 'text', className =
             outline-none transition-all duration-150
             ${Icon ? 'pl-10' : ''}
             ${isPassword ? 'pr-10' : ''}
-            ${focused ? 'border-accent-primary/50 shadow-[0_0_20px_rgba(59,130,246,0.15)]' : 'border-white/10'}
+            ${focused ? 'border-accent-primary/50 shadow-[0_0_20px_rgba(59,130,246,0.15)]' : 'border-surface-divider'}
             ${error ? 'border-accent-danger/50' : ''}
             ${className}`}
           onFocus={() => setFocused(true)}

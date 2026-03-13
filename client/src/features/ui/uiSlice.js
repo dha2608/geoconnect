@@ -9,18 +9,30 @@ const uiSlice = createSlice({
     modalData: null,
     mapStyle: 'dark',
     isMobile: window.innerWidth < 768,
+    activeMapTool: null, // 'draw' | 'measure' | 'route' | null
   },
   reducers: {
     toggleSidebar: (state) => { state.sidebarOpen = !state.sidebarOpen; },
     setSidebarOpen: (state, action) => { state.sidebarOpen = action.payload; },
     setActivePanel: (state, action) => { state.activePanel = action.payload; state.sidebarOpen = true; },
     closePanel: (state) => { state.activePanel = null; state.sidebarOpen = false; },
-    openModal: (state, action) => { state.modalOpen = action.payload.type; state.modalData = action.payload.data || null; },
+    openModal: (state, action) => {
+      if (typeof action.payload === 'string') {
+        // openModal('createPin')
+        state.modalOpen = action.payload;
+        state.modalData = null;
+      } else {
+        // openModal({ type/modal: '...', data: {} })
+        state.modalOpen = action.payload.modal ?? action.payload.type;
+        state.modalData = action.payload.data ?? null;
+      }
+    },
     closeModal: (state) => { state.modalOpen = null; state.modalData = null; },
     setMapStyle: (state, action) => { state.mapStyle = action.payload; },
     setIsMobile: (state, action) => { state.isMobile = action.payload; },
+    setActiveMapTool: (state, action) => { state.activeMapTool = action.payload; },
   },
 });
 
-export const { toggleSidebar, setSidebarOpen, setActivePanel, closePanel, openModal, closeModal, setMapStyle, setIsMobile } = uiSlice.actions;
+export const { toggleSidebar, setSidebarOpen, setActivePanel, closePanel, openModal, closeModal, setMapStyle, setIsMobile, setActiveMapTool } = uiSlice.actions;
 export default uiSlice.reducer;

@@ -127,7 +127,7 @@ export default function FeedPanel() {
           className={panelClass}
         >
           {/* ── Header ── */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-surface-divider flex-shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-accent-primary/15 flex items-center justify-center">
                 <RssIcon />
@@ -136,7 +136,7 @@ export default function FeedPanel() {
                 Feed
               </h2>
               {posts.length > 0 && (
-                <span className="bg-white/5 text-txt-muted text-[10px] font-body font-medium px-1.5 py-0.5 rounded-full">
+                <span className="bg-surface-hover text-txt-muted text-[10px] font-body font-medium px-1.5 py-0.5 rounded-full">
                   {posts.length}
                 </span>
               )}
@@ -145,7 +145,7 @@ export default function FeedPanel() {
             <button
               onClick={() => dispatch(closePanel())}
               aria-label="Close feed"
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-txt-muted hover:text-txt-primary hover:bg-white/5 transition-all"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-txt-muted hover:text-txt-primary hover:bg-surface-hover transition-all"
             >
               <XIcon />
             </button>

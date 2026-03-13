@@ -1,0 +1,975 @@
+---
+alwaysApply: true
+---
+# 🗺️ MASTER VIBE CODING PROMPT
+## Location-Based Social Network — MERN Stack + Leaflet
+
+---
+
+> **HOW TO USE:** Copy toàn bộ prompt này, dán vào Cursor / Windsurf / Claude / ChatGPT.
+> Chỉ cần thay phần `[APP NAME]` và `[MÔ TẢ NGẮN]` ở đầu là có thể generate ngay.
+
+---
+
+```
+You are a world-class senior fullstack engineer and UI/UX designer
+specializing in modern geospatial social web applications.
+
+══════════════════════════════════════════════════════════
+  PROJECT OVERVIEW
+══════════════════════════════════════════════════════════
+
+App Name: [APP NAME]
+Description: [MÔ TẢ NGẮN — ví dụ: "A location-based social network where
+users discover people, places, and events around them in real-time"]
+
+Core concept: Users interact with each other and the world through a
+full-screen interactive map. Everything happens in space — posts have
+coordinates, friends appear on the map, events have locations, routes
+connect people.
+
+══════════════════════════════════════════════════════════
+  TECH STACK — STRICT, DO NOT DEVIATE
+══════════════════════════════════════════════════════════
+
+FRONTEND
+────────
+• React 18 + Vite
+• Redux Toolkit + RTK Query (all state & API calls)
+• React Router v6
+• Framer Motion (ALL animations — no CSS-only transitions)
+• React Leaflet + Leaflet.js (map engine)
+• Leaflet.markercluster (marker clustering)
+• Turf.js (geospatial: distance, area, buffer, bbox)
+• Socket.io-client (real-time: live location, chat, notifications)
+• React Hook Form + Zod (forms & validation)
+• Axios (HTTP — only for non-RTK calls)
+• Tailwind CSS (utility classes only — no component libraries)
+
+BACKEND
+───────
+• Node.js + Express.js
+• MongoDB + Mongoose (with 2dsphere geospatial indexes)
+• Socket.io (real-time engine)
+• JWT — access token (15min) + refresh token (7d, httpOnly cookie)
+• Passport.js — Local + Google OAuth2 + GitHub OAuth
+• bcryptjs (password hashing)
+• Multer + Cloudinary (image uploads)
+• express-validator (input validation)
+• Nominatim API (free geocoding — NO paid API key needed)
+• OSRM API (free routing — NO paid API key needed)
+• cors, helmet, morgan, dotenv, express-rate-limit
+
+DEV
+───
+• Monorepo structure: /client (Vite) + /server (Express)
+• ESLint + Prettier
+• All secrets in .env — never hardcoded
+
+══════════════════════════════════════════════════════════
+  FEATURES — IMPLEMENT ALL
+══════════════════════════════════════════════════════════
+
+━━━ 1. AUTHENTICATION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Email & Password (register / login / forgot password)
+• Google OAuth2 (one-click login)
+• GitHub OAuth (one-click login)
+• Guest / Anonymous mode (explore map without account,
+  prompt to register when trying to post/save)
+• JWT refresh flow — silent token refresh via RTK Query
+  baseQuery with re-auth, user never sees session expire
+• Protected routes via <PrivateRoute> checking Redux auth state
+• Avatar upload on register (Multer + Cloudinary)
+
+Redux auth state shape:
+{
+  user: { id, name, email, role, avatar, bio, location } | null,
+  accessToken: string | null,
+  isAuthenticated: boolean,
+  isGuest: boolean,
+  status: 'idle' | 'loading' | 'succeeded' | 'failed'
+}
+
+━━━ 2. MAP — CORE ENGINE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Map Setup:
+• React Leaflet MapContainer — fills entire viewport (position: fixed)
+• Tile layer: OpenStreetMap + dark variant toggle
+  Light: https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
+  Dark:  https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png
+• Start zoom: 13, min: 3, max: 19
+• Custom attribution (minimal, bottom-right)
+
+User Geolocation:
+• Auto-request on app load with permission prompt UI
+• On success: smooth flyTo() user position, zoom 15, duration 1.5s
+• Show animated pulsing dot marker at user position (custom SVG)
+• Show accuracy radius circle (semi-transparent blue fill)
+• "Locate Me" FAB button — bottom right — re-centers map
+• On permission denied: friendly modal with manual search fallback
+• Watch position (watchPosition) for real-time tracking when
+  live-share is active — updates every 3 seconds
+
+Redux map state shape:
+{
+  viewport: { center: [lat, lng], zoom: 13 },
+  userLocation: { lat, lng, accuracy, heading, timestamp } | null,
+  locationError: string | null,
+  selectedPin: Pin | null,
+  hoveredPinId: string | null,
+  mapStyle: 'light' | 'dark' | 'satellite',
+  measureMode: false,
+  measurePoints: [],
+  measureDistance: null,
+  activeLayers: ['pins', 'users', 'events'],
+  isLocating: boolean
+}
+
+━━━ 3. SEARCH & GEOCODING ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Floating search bar — top-center of map
+• Debounced autocomplete (300ms) via Nominatim:
+  GET https://nominatim.openstreetmap.org/search
+      ?q={query}&format=json&limit=6&addressdetails=1
+• Results in animated glass dropdown (Framer Motion)
+• Select result → map.flyTo() with smooth animation
+• Reverse geocode on long-press / right-click anywhere on map:
+  GET https://nominatim.openstreetmap.org/reverse
+      ?lat={lat}&lon={lon}&format=json
+• Show address + coordinates in floating info chip
+• Server proxies all Nominatim requests (hide from client)
+• Recent searches saved to Redux + localStorage
+
+━━━ 4. PINS & LOCATIONS (User-Generated) ━━━━━━━━━━━━━━━
+
+Creating Pins:
+• Long-press on map (500ms) → "Create here" context menu appears
+• OR: Click "+" FAB → tap location on map
+• Pin creation form (bottom sheet on mobile, modal on desktop):
+  - Title, description, category (food/nature/art/event/other)
+  - Photo upload (up to 5 images via Cloudinary)
+  - Visibility: public / friends-only / private
+  - Tags (comma-separated)
+  - Auto-filled: coordinates + reverse-geocoded address
+
+Custom Markers (NO default Leaflet pins):
+• SVG markers colored by category
+• User's own pins: filled accent color + user avatar
+• Friends' pins: outlined with friend's avatar
+• Public pins: subtle gray with category icon
+• Hover: scale(1.2) + tooltip with name
+• Click: animated bottom sheet / side panel with full details
+• Clustering via Leaflet.markercluster for 20+ pins in viewport
+
+Viewing Pins:
+• Load only pins within current map viewport:
+  GET /api/pins?swLat=&swLng=&neLat=&neLng=&categories=
+• Re-fetch on map moveend event (debounced 400ms)
+• Pin detail panel shows:
+  - Photos carousel
+  - Creator avatar + name + follow button
+  - Full address + coordinates (click to copy)
+  - Distance from user (Turf.js haversine)
+  - Reviews list + rating stars
+  - "Get Directions" button → draws route
+
+MongoDB Pin Schema:
+{
+  title: String,
+  description: String,
+  category: { type: String, enum: ['food','nature','art','event','other'] },
+  location: {
+    type: { type: String, enum: ['Point'], required: true },
+    coordinates: [Number]  // [longitude, latitude] — NOTE: lng FIRST
+  },
+  address: String,
+  images: [String],        // Cloudinary URLs
+  createdBy: ObjectId,
+  visibility: { type: String, enum: ['public','friends','private'] },
+  tags: [String],
+  likes: [ObjectId],
+  averageRating: Number,
+  reviewCount: Number,
+  createdAt: Date
+}
+// CRITICAL: 2dsphere index
+pinSchema.index({ location: '2dsphere' });
+
+━━━ 5. SOCIAL FEATURES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Follow System:
+• Follow / Unfollow any user
+• "People near me" panel — find users within X km radius:
+  GET /api/users/nearby?lat=&lng=&radius=5000
+• Followers / Following counts on profile
+• Feed: posts from followed users sorted by recency
+
+Check-in & Posts:
+• Check in at any pin or coordinate
+• Post: text + up to 5 photos + location tag
+• Posts appear as small avatars on the map at their location
+• Like, comment on posts
+• Share post (copy link)
+• Posts feed in sidebar — infinite scroll
+
+Live Location Share:
+• Toggle "Share my location" → emits via Socket.io every 3s
+• Friends who are sharing appear as animated moving dots on map
+• Click friend dot → see their name, last updated, "Message" button
+• Auto-stops after 1 hour or on page close
+• Privacy: only mutual follows see live location by default
+
+Direct Messaging:
+• Real-time chat via Socket.io
+• Conversation list in sidebar
+• Message bubble UI — sent/received/read receipts
+• "Share location" button in chat → sends map pin in message
+• Typing indicator
+• Unread count badge on nav icon
+
+MongoDB User Schema:
+{
+  name: String,
+  email: String,
+  password: String,           // bcrypt hashed
+  googleId: String,
+  githubId: String,
+  avatar: String,             // Cloudinary URL
+  bio: String,
+  location: {                 // last known location
+    type: { type: String, enum: ['Point'] },
+    coordinates: [Number]
+  },
+  isLocationPublic: Boolean,
+  isLiveSharing: Boolean,
+  followers: [ObjectId],
+  following: [ObjectId],
+  savedPins: [ObjectId],
+  createdAt: Date
+}
+userSchema.index({ location: '2dsphere' });
+
+━━━ 6. EVENTS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Create event at specific coordinates (date, time, capacity)
+• Events shown as special markers on map (pulsing animation)
+• Event detail: attendees list, RSVP button, countdown timer
+• Filter map by upcoming events in viewport
+• Notifications 1hr before event starts (Socket.io)
+
+MongoDB Event Schema:
+{
+  title: String,
+  description: String,
+  location: { type: { type: String, enum: ['Point'] }, coordinates: [Number] },
+  address: String,
+  startTime: Date,
+  endTime: Date,
+  organizer: ObjectId,
+  attendees: [ObjectId],
+  maxCapacity: Number,
+  isPublic: Boolean,
+  coverImage: String,
+  category: String
+}
+eventSchema.index({ location: '2dsphere' });
+
+━━━ 7. MAP DRAWING TOOLS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Area Drawing:
+• Draw polygon on map (click to add points, double-click to close)
+• Drawn area shows fill + border with area in km²  (Turf.js)
+• Save area as "zone of interest" with name + color
+• Load saved zones on map
+
+Distance Measurement:
+• Measurement mode toggle in map controls
+• Click points on map to build polyline
+• Each segment shows distance, total shown in floating chip
+• Straight-line via Turf.js: turf.distance(p1, p2, {units:'kilometers'})
+
+Route / Directions:
+• Click any pin → "Get Directions" 
+• Draws route via OSRM (free routing):
+  GET http://router.project-osrm.org/route/v1/driving/
+      {userLng},{userLat};{pinLng},{pinLat}
+      ?overview=full&geometries=geojson
+• Route drawn as animated dashed polyline on map
+• Shows: distance, estimated time, turn-by-turn steps in panel
+
+━━━ 8. REVIEWS & RATINGS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• 1-5 star rating on any pin
+• Text review (max 500 chars) + photo (optional)
+• One review per user per pin
+• Average rating shown on marker and detail panel
+• Helpful / Not helpful votes on reviews
+• Sort reviews: newest / highest rated / most helpful
+
+━━━ 9. NOTIFICATIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Real-time via Socket.io:
+• New follower
+• Like / comment on your post or pin
+• Friend started live location sharing
+• New message received
+• Event starting soon
+• Someone checked in at your pin
+
+Bell icon in navbar with unread count badge
+Notification dropdown with mark-all-read
+
+══════════════════════════════════════════════════════════
+  API ROUTES
+══════════════════════════════════════════════════════════
+
+AUTH
+  POST   /api/auth/register
+  POST   /api/auth/login
+  POST   /api/auth/logout
+  POST   /api/auth/refresh
+  GET    /api/auth/google          → Passport Google OAuth
+  GET    /api/auth/google/callback
+  GET    /api/auth/github          → Passport GitHub OAuth
+  GET    /api/auth/github/callback
+
+USERS
+  GET    /api/users/me
+  PUT    /api/users/me
+  POST   /api/users/me/avatar
+  GET    /api/users/:id
+  POST   /api/users/:id/follow
+  DELETE /api/users/:id/follow
+  GET    /api/users/nearby?lat=&lng=&radius=
+  PUT    /api/users/me/location     → update live position
+
+PINS
+  GET    /api/pins?swLat=&swLng=&neLat=&neLng=&categories=
+  GET    /api/pins/nearby?lat=&lng=&radius=&limit=
+  GET    /api/pins/:id
+  POST   /api/pins
+  PUT    /api/pins/:id
+  DELETE /api/pins/:id
+  POST   /api/pins/:id/like
+  DELETE /api/pins/:id/like
+  POST   /api/pins/:id/save
+  DELETE /api/pins/:id/save
+
+REVIEWS
+  GET    /api/pins/:id/reviews
+  POST   /api/pins/:id/reviews
+  PUT    /api/pins/:pinId/reviews/:reviewId
+  DELETE /api/pins/:pinId/reviews/:reviewId
+
+POSTS
+  GET    /api/posts/feed?page=&limit=
+  GET    /api/posts/map?swLat=&swLng=&neLat=&neLng=
+  POST   /api/posts
+  DELETE /api/posts/:id
+  POST   /api/posts/:id/like
+
+EVENTS
+  GET    /api/events?swLat=&swLng=&neLat=&neLng=
+  POST   /api/events
+  GET    /api/events/:id
+  POST   /api/events/:id/rsvp
+  DELETE /api/events/:id/rsvp
+
+MESSAGES
+  GET    /api/messages/conversations
+  GET    /api/messages/:conversationId
+  POST   /api/messages/:conversationId
+
+GEOCODE (server proxies — no API key in client)
+  GET    /api/geocode/search?q=
+  GET    /api/geocode/reverse?lat=&lng=
+
+══════════════════════════════════════════════════════════
+  REAL-TIME SOCKET.IO EVENTS
+══════════════════════════════════════════════════════════
+
+Client → Server:
+  join_room         { userId }
+  location_update   { lat, lng, heading }
+  stop_sharing      {}
+  message_send      { conversationId, text, locationPin? }
+  typing_start      { conversationId }
+  typing_stop       { conversationId }
+
+Server → Client:
+  friend_location   { userId, lat, lng, heading, timestamp }
+  friend_offline    { userId }
+  new_message       { conversationId, message }
+  typing            { conversationId, userId }
+  notification      { type, data, timestamp }
+  pin_liked         { pinId, userId }
+  new_follower      { user }
+
+══════════════════════════════════════════════════════════
+  PROJECT FILE STRUCTURE
+══════════════════════════════════════════════════════════
+
+/client
+  /src
+    /app
+      store.js
+      hooks.js                 → useAppDispatch, useAppSelector
+    /features
+      /auth                    → authSlice.js, authApi.js
+      /map                     → mapSlice.js
+      /pins                    → pinsSlice.js, pinsApi.js
+      /posts                   → postsSlice.js, postsApi.js
+      /events                  → eventsSlice.js, eventsApi.js
+      /users                   → usersSlice.js, usersApi.js
+      /messages                → messagesSlice.js, messagesApi.js
+      /notifications           → notificationsSlice.js
+    /components
+      /map
+        MapContainer.jsx       → main Leaflet map wrapper
+        TileLayer.jsx          → OSM light/dark toggle
+        UserLocationMarker.jsx → pulsing SVG dot
+        PinMarker.jsx          → custom SVG markers by category
+        FriendMarker.jsx       → live friend dots
+        PostMarker.jsx         → tiny avatar dots for posts
+        EventMarker.jsx        → pulsing event markers
+        MarkerClusterGroup.jsx
+        SearchBar.jsx          → floating search + autocomplete
+        MapControls.jsx        → zoom, locate, layers, draw
+        CoordinateChip.jsx     → shows lat/lng on click
+        MeasureTool.jsx
+        DrawTool.jsx
+        RouteLayer.jsx
+        AccuracyCircle.jsx
+      /panels
+        PinDetailPanel.jsx     → slide-in on pin click
+        UserProfilePanel.jsx
+        EventDetailPanel.jsx
+        CreatePinSheet.jsx     → bottom sheet / modal
+        CreateEventSheet.jsx
+        DirectionsPanel.jsx
+      /social
+        FeedSidebar.jsx
+        PostCard.jsx
+        MessageThread.jsx
+        ConversationList.jsx
+        NotificationDropdown.jsx
+        NearbyUsers.jsx
+      /ui
+        Button.jsx             → primary / ghost / danger variants
+        Input.jsx              → floating label + focus glow
+        Modal.jsx              → glass backdrop + spring entrance
+        BottomSheet.jsx        → mobile sheet with drag handle
+        Toast.jsx              → slide-in + progress bar
+        Avatar.jsx             → with online indicator dot
+        Badge.jsx
+        StarRating.jsx
+        ImageCarousel.jsx
+        Skeleton.jsx           → shimmer loading state
+        GlassCard.jsx
+      /layout
+        Navbar.jsx
+        MobileNav.jsx
+        PageWrapper.jsx
+    /pages
+      MapPage.jsx              → full-screen map (main page)
+      AuthPage.jsx             → login / register tabs
+      ProfilePage.jsx
+      ExplorePage.jsx
+      SettingsPage.jsx
+    /hooks
+      useGeolocation.js        → navigator.geolocation wrapper
+      useSocket.js             → Socket.io connection
+      useMapBounds.js          → track viewport bounds
+      useDebounce.js
+      useReverseGeocode.js
+      useNearbyPins.js
+    /utils
+      coordinates.js           → formatDMS, formatUTM, haversine
+      mapHelpers.js            → fitBounds, clusterHelpers
+      formatters.js            → date, distance, number
+      constants.js             → MAP_STYLES, CATEGORIES, ZOOM_LEVELS
+    /styles
+      index.css                → ALL CSS variables + global styles
+  main.jsx
+  App.jsx
+
+/server
+  /src
+    /models
+      User.js
+      Pin.js
+      Post.js
+      Event.js
+      Review.js
+      Message.js
+      Conversation.js
+      Notification.js
+    /controllers
+      authController.js
+      userController.js
+      pinController.js
+      postController.js
+      eventController.js
+      reviewController.js
+      messageController.js
+      geocodeController.js     → proxies Nominatim
+    /routes
+      auth.js
+      users.js
+      pins.js
+      posts.js
+      events.js
+      reviews.js
+      messages.js
+      geocode.js
+    /middleware
+      auth.js                  → JWT verify + attach user
+      optionalAuth.js          → guest-friendly routes
+      errorHandler.js
+      validate.js
+      upload.js                → Multer config
+    /socket
+      socketHandler.js         → all Socket.io event handlers
+      locationManager.js       → in-memory live location store
+    /utils
+      generateToken.js
+      cloudinary.js
+      nominatim.js
+  server.js
+
+══════════════════════════════════════════════════════════
+  UI DESIGN SYSTEM — DARK GLASS MAP THEME
+══════════════════════════════════════════════════════════
+
+Philosophy:
+• The MAP is the canvas — all UI floats above it as glass panels
+• Dark theme by default (maps look best on dark)
+• Electric blue + teal accent palette (map/geo context)
+• Every panel: glassmorphism with backdrop-filter blur
+• ZERO hardcoded colors — CSS variables everywhere
+• Framer Motion on EVERY panel, modal, sheet, and list item
+
+─── CSS Variables (define in index.css) ─────────────────
+
+:root {
+  /* Backgrounds */
+  --bg-base: #080b12;
+  --bg-elevated: #0d1117;
+  --bg-panel: #0f1520;
+  --bg-subtle: #131a24;
+  --bg-overlay: rgba(8, 11, 18, 0.85);
+
+  /* Accent — electric blue + teal */
+  --accent-primary: #3b82f6;
+  --accent-secondary: #06b6d4;
+  --accent-success: #10b981;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+  --accent-glow: rgba(59, 130, 246, 0.30);
+  --accent-glow-teal: rgba(6, 182, 212, 0.20);
+
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+  --text-inverse: #0f172a;
+
+  /* Glass */
+  --glass-bg: rgba(15, 21, 32, 0.72);
+  --glass-border: rgba(59, 130, 246, 0.12);
+  --glass-hover: rgba(59, 130, 246, 0.07);
+  --glass-active: rgba(59, 130, 246, 0.14);
+  --glass-blur: blur(20px) saturate(180%);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #3b82f6, #06b6d4);
+  --gradient-secondary: linear-gradient(135deg, #06b6d4, #10b981);
+  --gradient-danger: linear-gradient(135deg, #ef4444, #f97316);
+  --gradient-mesh:
+    radial-gradient(ellipse 70% 70% at 15% 25%,
+      rgba(59,130,246,0.10) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 50% at 85% 80%,
+      rgba(6,182,212,0.08) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 40% at 55% 5%,
+      rgba(99,102,241,0.07) 0%, transparent 55%);
+
+  /* Shadows */
+  --shadow-sm:   0 2px 8px rgba(0,0,0,0.4);
+  --shadow-md:   0 8px 32px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.04) inset;
+  --shadow-lg:   0 16px 48px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.05) inset;
+  --shadow-glow: 0 0 40px var(--accent-glow);
+  --shadow-glow-sm: 0 0 20px var(--accent-glow);
+
+  /* Spacing (always use these — never raw px) */
+  --s-1: 4px;   --s-2: 8px;   --s-3: 12px;  --s-4: 16px;
+  --s-5: 20px;  --s-6: 24px;  --s-8: 32px;  --s-10: 40px;
+  --s-12: 48px; --s-16: 64px; --s-20: 80px; --s-24: 96px;
+
+  /* Border radius */
+  --r-sm:   8px;
+  --r-md:   14px;
+  --r-lg:   20px;
+  --r-xl:   28px;
+  --r-full: 9999px;
+
+  /* Animation easing */
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth:    cubic-bezier(0.76, 0, 0.24, 1);
+  --ease-in-expo:   cubic-bezier(0.7, 0, 0.84, 0);
+
+  /* Duration */
+  --d-instant: 80ms;
+  --d-fast:    150ms;
+  --d-normal:  300ms;
+  --d-slow:    500ms;
+  --d-enter:   700ms;
+}
+
+─── Glass Card (apply to ALL floating panels) ───────────
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+}
+.glass:hover {
+  border-color: rgba(59, 130, 246, 0.22);
+  box-shadow: var(--shadow-md), var(--shadow-glow-sm);
+}
+
+─── Aurora Background (fixed, behind map controls) ─────
+
+.aurora {
+  position: fixed; inset: 0; z-index: 0;
+  background: var(--bg-base);
+  pointer-events: none;
+}
+.aurora::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: var(--gradient-mesh);
+  animation: auroraShift 18s ease infinite alternate;
+}
+@keyframes auroraShift {
+  0%   { opacity: 0.5; transform: scale(1) rotate(0deg); }
+  50%  { opacity: 0.9; transform: scale(1.04) rotate(0.8deg); }
+  100% { opacity: 0.6; transform: scale(0.97) rotate(-0.8deg); }
+}
+
+─── User Location Marker ────────────────────────────────
+
+.user-dot {
+  width: 14px; height: 14px;
+  background: var(--accent-primary);
+  border: 2.5px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 var(--accent-glow);
+  animation: userPulse 2.2s ease-out infinite;
+}
+@keyframes userPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(59,130,246,0.7); }
+  65%  { box-shadow: 0 0 0 18px rgba(59,130,246,0); }
+  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+}
+
+─── Layout: Map as Base, UI Floats Above ────────────────
+
+/* Map: fills entire viewport */
+.map-container { position: fixed; inset: 0; z-index: 0; }
+
+/* UI overlay — pointer-events none so clicks pass to map */
+.ui-overlay {
+  position: fixed; inset: 0; z-index: 10;
+  pointer-events: none;
+}
+/* Re-enable on actual interactive panels */
+.ui-overlay > * { pointer-events: auto; }
+
+/* Panel positions */
+.panel-top-center    { top: 16px; left: 50%; transform: translateX(-50%); }
+.panel-top-left      { top: 16px; left: 16px; }
+.panel-top-right     { top: 16px; right: 16px; }
+.panel-bottom-right  { bottom: 24px; right: 16px; }
+.panel-bottom-left   { bottom: 24px; left: 16px; }
+.panel-left          { top: 0; left: 0; height: 100%; width: 360px; }
+.panel-bottom-sheet  { bottom: 0; left: 0; right: 0; /* mobile */ }
+
+══════════════════════════════════════════════════════════
+  ANIMATION SYSTEM — FRAMER MOTION
+══════════════════════════════════════════════════════════
+
+// ─── Reusable variants (put in /utils/animations.js) ───
+
+export const fadeUp = {
+  initial: { opacity: 0, y: 20, filter: 'blur(4px)' },
+  animate: { opacity: 1, y: 0, filter: 'blur(0px)',
+    transition: { duration: 0.55, ease: [0.16, 1, 0.3, 1] } },
+  exit:    { opacity: 0, y: -10,
+    transition: { duration: 0.25 } }
+};
+
+export const slideInLeft = {
+  initial: { x: '-100%', opacity: 0 },
+  animate: { x: 0, opacity: 1,
+    transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
+  exit:    { x: '-100%', opacity: 0,
+    transition: { duration: 0.3, ease: [0.7, 0, 0.84, 0] } }
+};
+
+export const slideInRight = {
+  initial: { x: '100%', opacity: 0 },
+  animate: { x: 0, opacity: 1,
+    transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
+  exit:    { x: '100%', opacity: 0,
+    transition: { duration: 0.3 } }
+};
+
+export const bottomSheet = {
+  initial: { y: '100%' },
+  animate: { y: 0,
+    transition: { type: 'spring', stiffness: 320, damping: 32 } },
+  exit:    { y: '100%',
+    transition: { duration: 0.25, ease: [0.7, 0, 0.84, 0] } }
+};
+
+export const scaleIn = {
+  initial: { opacity: 0, scale: 0.85 },
+  animate: { opacity: 1, scale: 1,
+    transition: { duration: 0.3, ease: [0.34, 1.56, 0.64, 1] } },
+  exit:    { opacity: 0, scale: 0.9,
+    transition: { duration: 0.2 } }
+};
+
+export const dropdown = {
+  initial: { opacity: 0, y: -8, scale: 0.97 },
+  animate: { opacity: 1, y: 0, scale: 1,
+    transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } },
+  exit:    { opacity: 0, y: -4, scale: 0.97,
+    transition: { duration: 0.15 } }
+};
+
+export const staggerContainer = {
+  animate: { transition: { staggerChildren: 0.07 } }
+};
+
+export const staggerItem = {
+  initial: { opacity: 0, y: 18 },
+  animate: { opacity: 1, y: 0,
+    transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } }
+};
+
+export const buttonHover = {
+  rest:  { scale: 1 },
+  hover: { scale: 1.04,
+    transition: { duration: 0.2, ease: [0.34, 1.56, 0.64, 1] } },
+  tap:   { scale: 0.96,
+    transition: { duration: 0.1 } }
+};
+
+// Marker pop-in on map
+export const markerAppear = {
+  initial: { scale: 0, opacity: 0 },
+  animate: { scale: 1, opacity: 1,
+    transition: { type: 'spring', stiffness: 420, damping: 22 } }
+};
+
+// Page transition wrapper — wrap each <Route> content
+export const pageTransition = {
+  initial: { opacity: 0, filter: 'blur(6px)' },
+  animate: { opacity: 1, filter: 'blur(0px)',
+    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
+  exit:    { opacity: 0,
+    transition: { duration: 0.25 } }
+};
+
+// Skeleton shimmer
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+.skeleton {
+  background: linear-gradient(90deg,
+    var(--glass-bg) 25%,
+    rgba(255,255,255,0.06) 50%,
+    var(--glass-bg) 75%
+  ) center / 200% auto;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: var(--r-sm);
+}
+
+══════════════════════════════════════════════════════════
+  TYPOGRAPHY
+══════════════════════════════════════════════════════════
+
+Google Fonts to import:
+  'Syne' — headings / display (weights: 600, 700, 800)
+  'DM Sans' — body / UI (weights: 300, 400, 500)
+
+Rules:
+• NEVER use Inter, Roboto, Arial, system-ui
+• Display / headings: font-family 'Syne', letter-spacing -0.03em
+• Body / UI: font-family 'DM Sans', letter-spacing -0.01em
+• Heading scale: 14 / 16 / 20 / 24 / 32 / 48 / 64px
+• Body: 14px / 16px, line-height 1.6
+• Monospace (coordinates): 'JetBrains Mono' or 'Fira Code'
+
+══════════════════════════════════════════════════════════
+  UI COMPONENTS — REQUIRED VARIANTS
+══════════════════════════════════════════════════════════
+
+<Button>
+  variants: primary (gradient fill + glow on hover)
+            ghost (glass bg, border)
+            icon (square, glass)
+            danger (red gradient)
+  sizes:    sm | md | lg
+  states:   loading (spinner inside) | disabled
+
+<Input>
+  floating label animation (label moves up on focus/fill)
+  focus: blue glow ring (box-shadow)
+  error: red border + shake animation + error message below
+  variants: default | search (with magnifier icon)
+
+<Modal>
+  glass backdrop (blur + dark overlay)
+  spring scale-in animation (Framer Motion)
+  close on backdrop click + Escape key
+  trap focus for accessibility
+
+<BottomSheet> (mobile)
+  drag handle at top
+  spring animation from bottom
+  snap to 40% and 85% screen height
+  close on swipe-down past threshold
+
+<Toast>
+  slide in from top-right
+  variants: success (green) | error (red) | info (blue) | warning (yellow)
+  auto-dismiss after 4s with animated progress bar
+  manual dismiss button
+  stack multiple toasts
+
+<Avatar>
+  sizes: xs(24) sm(32) md(40) lg(56) xl(80)
+  online indicator: green dot bottom-right
+  live-sharing indicator: pulsing blue dot
+  fallback: initials on gradient background
+
+<Badge>
+  pill shaped (border-radius: var(--r-full))
+  color variants matching categories
+
+<StarRating>
+  interactive (click to rate) or display-only
+  half-star support
+  animated fill on hover
+
+<CoordinateDisplay>
+  monospace font
+  shows: decimal degrees | DMS format
+  click-to-copy with checkmark confirmation animation
+
+══════════════════════════════════════════════════════════
+  QUALITY CHECKLIST — EVERY FEATURE MUST PASS
+══════════════════════════════════════════════════════════
+
+Map & Geo:
+  [ ] Map tiles load — OSM light + CartoDB dark toggle works
+  [ ] Geolocation auto-requests on load, graceful denial fallback
+  [ ] User dot pulses at real location with accuracy circle
+  [ ] Pins load only within viewport (bbox query), refresh on pan
+  [ ] Marker clustering activates at 20+ pins
+  [ ] All markers custom SVG — zero default Leaflet pins
+  [ ] Search debounced 300ms, keyboard navigable dropdown
+  [ ] Click anywhere → coordinates popup with copy buttons
+  [ ] Route draws via OSRM with animated polyline
+  [ ] Distance measurement works via Turf.js
+
+Social:
+  [ ] Follow/unfollow updates feed and nearby users list
+  [ ] Live location share emits via Socket.io every 3s
+  [ ] Live friends appear as moving dots on map
+  [ ] Chat messages deliver in real-time
+  [ ] Check-in creates post at exact coordinates
+  [ ] Reviews save and update average rating on pin marker
+
+Auth:
+  [ ] Email/password register + login works
+  [ ] Google OAuth flow completes successfully
+  [ ] GitHub OAuth flow completes successfully
+  [ ] Guest mode allows map browsing, prompts on action
+  [ ] JWT refresh silent — user never force-logged-out
+  [ ] Protected routes redirect to auth page
+
+UI/UX:
+  [ ] ALL panels use glass card styling
+  [ ] Framer Motion on every panel open/close
+  [ ] Staggered entrance on all lists
+  [ ] Skeleton loaders on every async fetch (no spinners alone)
+  [ ] Toast notifications on all user actions
+  [ ] Bottom sheet on mobile, side panel on desktop (responsive)
+  [ ] Mobile responsive — works at 320px minimum width
+  [ ] No hardcoded colors — CSS variables only
+  [ ] Dark map theme cohesive with UI panels
+  [ ] All interactive elements have :focus-visible ring
+
+Code Quality:
+  [ ] MongoDB 2dsphere indexes on all location fields
+  [ ] Server proxies Nominatim — no external API calls from client
+  [ ] Rate limiting on auth routes (express-rate-limit)
+  [ ] Input validation via express-validator on all POST/PUT
+  [ ] Cloudinary handles all image storage
+  [ ] Socket.io rooms per user for targeted events
+  [ ] RTK Query caches and invalidates correctly
+  [ ] .env for ALL secrets — nothing hardcoded
+
+══════════════════════════════════════════════════════════
+  OUTPUT FORMAT — FOLLOW EXACTLY
+══════════════════════════════════════════════════════════
+
+Before writing any code, output this plan:
+
+## Build Plan
+1. Architecture decisions (any deviations from spec + why)
+2. MongoDB schemas (final field list)
+3. Socket.io room strategy
+4. RTK Query endpoints + cache invalidation tags
+5. Component tree (pages → layout → features → ui)
+6. File generation order (what to build first)
+
+Then generate the complete codebase:
+• File by file, with full path as header comment
+• Each file complete — no "// TODO" or placeholder stubs
+• Working code — can be copy-pasted and run immediately
+• Start with: package.json files → .env.example → server.js
+  → models → routes → socket → Vite config → Redux store
+  → components → pages
+
+══════════════════════════════════════════════════════════
+```
+
+---
+
+## 📋 QUICK REFERENCE — Thay thế khi dùng
+
+| Placeholder | Ví dụ thay thế |
+|---|---|
+| `[APP NAME]` | GeoConnect / SpotShare / MapSocial |
+| `[MÔ TẢ NGẮN]` | "A social network where users discover people, share places, and join events around them on a live map" |
+
+## 🚀 Gợi ý mở rộng có thể thêm vào cuối prompt
+
+```
+ADDITIONAL FEATURES (optional, add if time permits):
+• Heatmap layer showing popular areas (Leaflet.heat plugin)
+• AR mode button (open phone camera with compass overlay)  
+• Offline map tiles cache (service worker + IndexedDB)
+• CSV export of user's saved pins
+• Embed map widget (shareable iframe for a pin)
+```

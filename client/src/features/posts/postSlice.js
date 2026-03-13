@@ -26,6 +26,16 @@ export const addComment = createAsyncThunk('posts/addComment', async ({ id, data
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
+export const deleteComment = createAsyncThunk('posts/deleteComment', async ({ postId, commentId }, { rejectWithValue }) => {
+  try { await postApi.deleteComment(postId, commentId); return { postId, commentId }; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
+export const deletePost = createAsyncThunk('posts/delete', async (id, { rejectWithValue }) => {
+  try { await postApi.deletePost(id); return { id }; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
 const postSlice = createSlice({
   name: 'posts',
   initialState: { posts: [], loading: false, error: null, hasMore: true, page: 1 },
@@ -52,6 +62,16 @@ const postSlice = createSlice({
       const updated = action.payload.post || action.payload;
       const idx = state.posts.findIndex(p => p._id === updated._id);
       if (idx !== -1) state.posts[idx] = updated;
+    });
+    builder.addCase(deleteComment.fulfilled, (state, action) => {
+      const { postId, commentId } = action.payload;
+      const post = state.posts.find(p => p._id === postId);
+      if (post) {
+        post.comments = post.comments.filter(c => c._id !== commentId);
+      }
+    });
+    builder.addCase(deletePost.fulfilled, (state, action) => {
+      state.posts = state.posts.filter(p => p._id !== action.payload.id);
     });
   },
 });

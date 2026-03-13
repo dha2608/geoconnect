@@ -9,4 +9,7 @@ export const authApi = {
   getMe: () => API.get('/users/me'),
   googleLogin: () => { window.location.href = '/api/auth/google'; },
   githubLogin: () => { window.location.href = '/api/auth/github'; },
+  forgotPassword: (email) => API.post('/auth/forgot-password', { email }),
+  resetPassword: (data) => API.post('/auth/reset-password', data),
+  verifyEmail: (token) => API.post('/auth/verify-email', { token }),
 };

@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { reviewApi } from '../../api/reviewApi';
+import useRequireAuth from '../../hooks/useRequireAuth';
 import StarRating from './StarRating';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
@@ -11,6 +12,8 @@ const MAX_CHARS = 600;
 
 export default function ReviewForm({ pinId, onSuccess }) {
   const user = useSelector((state) => state.auth.user);
+  const isGuest = useSelector((state) => state.auth.isGuest);
+  const requireAuth = useRequireAuth();
   const [rating, setRating] = useState(0);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,10 +29,7 @@ export default function ReviewForm({ pinId, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!user) {
-      toast.error('Please log in to write a review.');
-      return;
-    }
+    if (!requireAuth('write reviews')) return;
 
     const validationErrors = validate();
     if (Object.keys(validationErrors).length) {
@@ -59,14 +59,16 @@ export default function ReviewForm({ pinId, onSuccess }) {
     }
   };
 
-  if (!user) {
+  if (!user || isGuest) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         className="glass rounded-xl p-5 text-center space-y-2"
       >
-        <p className="text-txt-secondary text-sm">Sign in to write a review.</p>
+        <p className="text-txt-secondary text-sm">
+          {isGuest ? 'Create an account to write reviews. Guest accounts have limited access.' : 'Sign in to write a review.'}
+        </p>
       </motion.div>
     );
   }
@@ -80,10 +82,10 @@ export default function ReviewForm({ pinId, onSuccess }) {
     >
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Avatar src={user.avatar} name={user.username} size="sm" />
+        <Avatar src={user.avatar} name={user.name} size="sm" />
         <div>
           <p className="text-sm font-semibold text-txt-primary font-heading">Write a Review</p>
-          <p className="text-xs text-txt-muted">as {user.username}</p>
+          <p className="text-xs text-txt-muted">as {user.name}</p>
         </div>
       </div>
 
@@ -146,7 +148,7 @@ export default function ReviewForm({ pinId, onSuccess }) {
                 w-full bg-elevated border rounded-xl px-4 py-3 text-sm text-txt-primary
                 placeholder-txt-muted outline-none transition-all duration-150 resize-none
                 focus:border-accent-primary/50 focus:shadow-[0_0_20px_rgba(59,130,246,0.12)]
-                ${errors.text ? 'border-accent-danger/50' : 'border-white/10'}
+                ${errors.text ? 'border-accent-danger/50' : 'border-surface-divider'}
               `}
             />
             <span

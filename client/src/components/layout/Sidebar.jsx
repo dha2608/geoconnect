@@ -22,6 +22,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { sidebarOpen, activePanel, isMobile } = useSelector((state) => state.ui);
+  const { unreadCount: unreadMessages } = useSelector((state) => state.messages);
 
   const isVisible = isMobile ? sidebarOpen : true;
 
@@ -43,7 +44,7 @@ export default function Sidebar() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="fixed top-16 left-0 bottom-0 w-[72px] z-30 glass border-r border-white/5 flex flex-col items-center py-4 gap-1"
+            className="fixed top-16 left-0 bottom-0 w-[72px] z-30 glass border-r border-surface-divider flex flex-col items-center py-4 gap-1"
           >
             {navItems.map((item) => (
               <button
@@ -59,12 +60,17 @@ export default function Sidebar() {
                 className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-150 group relative
                   ${(item.path ? location.pathname === item.path : activePanel === item.id)
                     ? 'bg-accent-primary/15 text-accent-primary'
-                    : 'text-txt-muted hover:text-txt-secondary hover:bg-white/5'
+                    : 'text-txt-muted hover:text-txt-secondary hover:bg-surface-hover'
                   }`}
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d={item.icon} />
                 </svg>
+                {item.id === 'messages' && unreadMessages > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-accent-primary rounded-full text-[9px] font-bold flex items-center justify-center text-white">
+                    {unreadMessages > 9 ? '9+' : unreadMessages}
+                  </span>
+                )}
                 <span className="absolute left-full ml-3 px-2 py-1 bg-elevated text-txt-primary text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity">
                   {item.label}
                 </span>
@@ -75,7 +81,7 @@ export default function Sidebar() {
 
             <button
               onClick={() => dispatch(closePanel())}
-              className="w-12 h-12 rounded-xl flex items-center justify-center text-txt-muted hover:text-txt-secondary hover:bg-white/5 transition-all"
+              className="w-12 h-12 rounded-xl flex items-center justify-center text-txt-muted hover:text-txt-secondary hover:bg-surface-hover transition-all"
               title="Collapse"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

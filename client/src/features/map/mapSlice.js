@@ -12,6 +12,7 @@ const mapSlice = createSlice({
     locationError: null,
     flyTo: null, // { lat, lng, zoom } - triggers map fly animation, consumed after use
     destination: null, // { lat, lng, name, address } - marked destination on map
+    routingDestination: null, // { lat, lng, name } - consumed by RoutingTool to pre-set end point
     locationPermission: 'prompt', // 'prompt' | 'granted' | 'denied'
   },
   reducers: {
@@ -33,9 +34,11 @@ const mapSlice = createSlice({
     clearFlyTo: (state) => { state.flyTo = null; },
     setDestination: (state, action) => { state.destination = action.payload; },
     clearDestination: (state) => { state.destination = null; },
+    setRoutingDestination: (state, action) => { state.routingDestination = action.payload; },
+    clearRoutingDestination: (state) => { state.routingDestination = null; },
     setLocationPermission: (state, action) => { state.locationPermission = action.payload; },
   },
 });
 
-export const { setCenter, setZoom, setViewport, setTileLayer, setUserLocation, setIsLocating, setLocationError, flyToLocation, clearFlyTo, setDestination, clearDestination, setLocationPermission } = mapSlice.actions;
+export const { setCenter, setZoom, setViewport, setTileLayer, setUserLocation, setIsLocating, setLocationError, flyToLocation, clearFlyTo, setDestination, clearDestination, setRoutingDestination, clearRoutingDestination, setLocationPermission } = mapSlice.actions;
 export default mapSlice.reducer;

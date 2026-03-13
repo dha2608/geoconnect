@@ -16,7 +16,7 @@ function waypointIcon(num) {
     iconAnchor: [11, 11],
     html: `<div style="
       width:22px;height:22px;border-radius:50%;
-      background:rgba(15,21,32,0.85);
+      background:var(--glass-bg);
       border:2px solid #3b82f6;
       color:#3b82f6;font-size:11px;font-weight:700;
       display:flex;align-items:center;justify-content:center;
@@ -92,7 +92,7 @@ export default function DistanceTool({ onClose }) {
             iconSize: [80, 22],
             iconAnchor: [40, 11],
             html: `<div style="
-              background:rgba(15,21,32,0.85);
+              background:var(--glass-bg);
               backdrop-filter:blur(8px);
               border:1px solid rgba(59,130,246,0.2);
               border-radius:6px;padding:2px 6px;
@@ -155,13 +155,7 @@ export default function DistanceTool({ onClose }) {
   return (
     <div
       ref={containerRef}
-      className="rounded-xl px-4 py-3 min-w-[250px]"
-      style={{
-        background: 'rgba(15,21,32,0.9)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        border: '1px solid rgba(59,130,246,0.12)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-      }}
+      className="glass rounded-xl px-4 py-3 min-w-[250px]"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
@@ -174,7 +168,7 @@ export default function DistanceTool({ onClose }) {
       </div>
 
       {/* Total distance */}
-      <div className="bg-white/5 rounded-lg px-3 py-2.5 mb-3 text-center">
+      <div className="bg-surface-hover rounded-lg px-3 py-2.5 mb-3 text-center">
         <p className="text-xs text-txt-muted mb-0.5">Total Distance</p>
         <p className="text-lg font-mono font-bold text-accent-primary">
           {waypoints.length < 2 ? '—' : formatDist(totalDist)}
@@ -194,14 +188,14 @@ export default function DistanceTool({ onClose }) {
         <button
           onClick={undoLast}
           disabled={waypoints.length === 0}
-          className="flex-1 py-1.5 text-xs font-medium text-txt-muted hover:text-accent-warning bg-white/5 hover:bg-accent-warning/10 rounded-lg transition-colors disabled:opacity-40 disabled:pointer-events-none"
+          className="flex-1 py-1.5 text-xs font-medium text-txt-muted hover:text-accent-warning bg-surface-hover hover:bg-accent-warning/10 rounded-lg transition-colors disabled:opacity-40 disabled:pointer-events-none"
         >
           Undo Last
         </button>
         <button
           onClick={clearAll}
           disabled={waypoints.length === 0}
-          className="flex-1 py-1.5 text-xs font-medium text-txt-muted hover:text-accent-danger bg-white/5 hover:bg-accent-danger/10 rounded-lg transition-colors disabled:opacity-40 disabled:pointer-events-none"
+          className="flex-1 py-1.5 text-xs font-medium text-txt-muted hover:text-accent-danger bg-surface-hover hover:bg-accent-danger/10 rounded-lg transition-colors disabled:opacity-40 disabled:pointer-events-none"
         >
           Clear
         </button>

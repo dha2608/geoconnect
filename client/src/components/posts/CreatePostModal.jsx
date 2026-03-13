@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
+import { compressImages } from '../../utils/compressImage';
 // ─── Inline SVG Icons ─────────────────────────────────────────────────────────
 const ImagePlus = ({ className, size = 24, ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><path d="M14 4h2"/><path d="M15 3v2"/></svg>
@@ -22,6 +23,7 @@ const AlertCircle = ({ className, size = 24, ...props }) => (
 );
 import { createPost } from '../../features/posts/postSlice';
 import { closeModal } from '../../features/ui/uiSlice';
+import useRequireAuth from '../../hooks/useRequireAuth';
 import Modal from '../ui/Modal';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
@@ -65,7 +67,7 @@ function PreviewGrid({ previews, onRemove }) {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.85 }}
           transition={{ duration: 0.18 }}
-          className="relative group rounded-xl overflow-hidden bg-white/5"
+          className="relative group rounded-xl overflow-hidden bg-surface-hover"
         >
           <img
             src={item.preview}
@@ -124,6 +126,7 @@ function CharCounter({ count, max }) {
 
 export default function CreatePostModal() {
   const dispatch = useDispatch();
+  const requireAuth = useRequireAuth();
   const user = useSelector((state) => state.auth.user);
   const modalOpen = useSelector((state) => state.ui.modalOpen);
 
@@ -226,13 +229,17 @@ export default function CreatePostModal() {
   };
 
   const onSubmit = async (data) => {
+    if (!requireAuth('create posts')) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
       const formData = new FormData();
       formData.append('content', data.content);
 
-      previews.forEach(({ file }) => formData.append('images', file));
+      // Compress images before upload
+      const files = previews.map(({ file }) => file);
+      const compressed = await compressImages(files);
+      compressed.forEach((file) => formData.append('images', file));
 
       if (locationEnabled && locationData) {
         formData.append(
@@ -288,12 +295,12 @@ export default function CreatePostModal() {
             rows={5}
             placeholder="What's happening around you?"
             disabled={submitting}
-            className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-txt-primary font-body text-sm
+            className={`w-full bg-surface-hover border rounded-xl px-4 py-3 text-txt-primary font-body text-sm
               placeholder:text-txt-muted outline-none resize-none transition-colors
               disabled:opacity-60 disabled:cursor-not-allowed
               ${errors.content
                 ? 'border-accent-danger/50 focus:border-accent-danger'
-                : 'border-white/10 focus:border-accent-primary/40'
+                : 'border-surface-divider focus:border-accent-primary/40'
               }`}
           />
           {/* Char counter — bottom-right of textarea */}
@@ -347,7 +354,7 @@ export default function CreatePostModal() {
         </AnimatePresence>
 
         {/* Toolbar */}
-        <div className="flex items-center gap-1 pt-3 border-t border-white/5">
+        <div className="flex items-center gap-1 pt-3 border-t border-surface-divider">
           {/* Image upload trigger */}
           <button
             type="button"

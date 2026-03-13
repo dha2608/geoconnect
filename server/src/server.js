@@ -25,6 +25,7 @@ import eventRoutes from './routes/events.js';
 import messageRoutes from './routes/messages.js';
 import geocodeRoutes from './routes/geocode.js';
 import notificationRoutes from './routes/notifications.js';
+import reportRoutes from './routes/reports.js';
 
 dotenv.config();
 
@@ -76,7 +77,15 @@ app.use('/api', reviewRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/reports', reportRoutes);
 app.use('/api/geocode', geocodeRoutes);
+
+// 404 handler — catch all unmatched routes
+app.use((req, res) => {
+  res.status(404).json({
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+  });
+});
 
 // Error handler
 app.use((err, req, res, next) => {

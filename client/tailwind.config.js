@@ -4,9 +4,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        base: '#080b12',
-        elevated: '#0d1117',
-        panel: '#0f1520',
+        /* Adaptive — pulled from CSS variables, auto-switch with data-theme */
+        base: 'var(--bg-base)',
+        elevated: 'var(--bg-elevated)',
+        panel: 'var(--bg-panel)',
         accent: {
           primary: '#3b82f6',
           secondary: '#06b6d4',
@@ -15,9 +16,15 @@ export default {
           danger: '#ef4444',
         },
         txt: {
-          primary: '#f1f5f9',
-          secondary: '#94a3b8',
-          muted: '#475569',
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          muted: 'var(--text-muted)',
+        },
+        /* Surface tokens for hover/active/divider */
+        surface: {
+          hover: 'var(--surface-hover)',
+          active: 'var(--surface-active)',
+          divider: 'var(--surface-divider)',
         },
       },
       fontFamily: {

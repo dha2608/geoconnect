@@ -1,4 +1,6 @@
 import Event from '../models/Event.js';
+import { uploadToCloudinary } from '../middleware/upload.js';
+import { createNotification } from '../utils/createNotification.js';
 
 export const getEventsByViewport = async (req, res) => {
   try {
@@ -46,6 +48,12 @@ export const createEvent = async (req, res) => {
   try {
     const { title, description, lat, lng, address, startTime, endTime, maxCapacity, isPublic, category } = req.body;
     
+    let coverImage = '';
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.buffer, 'geoconnect/events');
+      coverImage = result.secure_url;
+    }
+
     const event = await Event.create({
       title,
       description,
@@ -57,6 +65,7 @@ export const createEvent = async (req, res) => {
       maxCapacity: maxCapacity || 0,
       isPublic: isPublic !== false,
       category,
+      coverImage,
     });
     
     const populated = await event.populate('organizer', 'name avatar');
@@ -88,6 +97,15 @@ export const rsvpEvent = async (req, res) => {
     }
     
     await Event.findByIdAndUpdate(req.params.id, { $addToSet: { attendees: req.user._id } });
+
+    // Notify event organizer
+    await createNotification(req, {
+      recipientId: event.organizer,
+      senderId: req.user._id,
+      type: 'rsvp',
+      data: { eventId: event._id, eventTitle: event.title },
+    });
+
     res.json({ message: 'RSVP successful' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -119,11 +137,41 @@ export const updateEvent = async (req, res) => {
     if (req.body.lat && req.body.lng) {
       updates.location = { type: 'Point', coordinates: [parseFloat(req.body.lng), parseFloat(req.body.lat)] };
     }
+    // Handle cover image upload on update
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.buffer, 'geoconnect/events');
+      updates.coverImage = result.secure_url;
+    }
     
     const updated = await Event.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true })
       .populate('organizer', 'name avatar')
       .populate('attendees', 'name avatar');
     res.json(updated);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const searchEvents = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 2) return res.status(400).json({ message: 'Query must be at least 2 characters' });
+
+    const regex = { $regex: q, $options: 'i' };
+    const events = await Event.find({
+      isPublic: true,
+      endTime: { $gte: new Date() },
+      $or: [
+        { title: regex },
+        { description: regex },
+        { address: regex },
+      ],
+    })
+      .populate('organizer', 'name avatar')
+      .sort({ startTime: 1 })
+      .limit(20);
+
+    res.json(events);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

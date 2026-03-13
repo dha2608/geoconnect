@@ -36,20 +36,14 @@ class ErrorBoundary extends Component {
       return (
         <div
           className="h-screen w-screen flex items-center justify-center overflow-hidden"
-          style={{ background: '#080b12' }}
+          style={{ background: 'var(--bg-base)' }}
         >
           {/* Aurora background */}
           <div className="aurora-bg" />
 
           {/* Glass card */}
           <div
-            className="relative z-10 w-full max-w-lg mx-4 rounded-2xl border p-8 flex flex-col items-center gap-6 shadow-2xl"
-            style={{
-              background: 'rgba(15,21,32,0.72)',
-              backdropFilter: 'blur(24px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-              borderColor: 'rgba(59,130,246,0.18)',
-            }}
+            className="glass relative z-10 w-full max-w-lg mx-4 rounded-2xl p-8 flex flex-col items-center gap-6 shadow-2xl"
           >
             {/* Warning icon */}
             <div

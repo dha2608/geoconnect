@@ -1,8 +1,9 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, lazy, Suspense, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Outlet } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { setIsMobile } from '../../features/ui/uiSlice';
+import { fetchUnreadCount } from '../../features/messages/messageSlice';
 import useSocket from '../../socket/useSocket';
 import useGeolocation from '../../hooks/useGeolocation';
 import Header from './Header';
@@ -27,10 +28,22 @@ const NotificationPanel = lazy(() => import('../notifications/NotificationPanel'
 const MessagesPanel     = lazy(() => import('../messages/MessagesPanel'));
 const SearchPanel       = lazy(() => import('../search/SearchPanel'));
 
+/** Derive UI theme from the active map tile layer */
+const LIGHT_TILES = new Set(['street', 'light', 'satellite']);
+
 export default function AppLayout() {
   const dispatch = useDispatch();
   const { isMobile, activePanel, modalData } = useSelector((state) => state.ui);
   const { user } = useSelector((state) => state.auth);
+  const { tileLayer } = useSelector((state) => state.map);
+
+  // Derive theme: dark map → dark UI, light/street/satellite → light frosted glass
+  const theme = useMemo(() => LIGHT_TILES.has(tileLayer) ? 'light' : 'dark', [tileLayer]);
+
+  // Apply data-theme to document root for CSS variable cascade
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // Initialize persistent socket connection for this session
   useSocket();
@@ -39,6 +52,11 @@ export default function AppLayout() {
   const { locationError } = useGeolocation({ autoWatch: true }); // eslint-disable-line no-unused-vars
 
   // NOTE: getMe() is called by ProtectedRoute — no need to call it here
+
+  // Fetch unread message count on mount
+  useEffect(() => {
+    if (user?._id) dispatch(fetchUnreadCount());
+  }, [dispatch, user?._id]);
 
   useEffect(() => {
     const handleResize = () => {

@@ -116,7 +116,7 @@ export default function SearchBar() {
             {results.map((result, i) => (
               <div
                 key={result.place_id || i}
-                className="flex items-center border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors group"
+                className="flex items-center border-b border-surface-divider last:border-0 hover:bg-surface-hover transition-colors group"
               >
                 {/* Main area — click to fly to location */}
                 <button
