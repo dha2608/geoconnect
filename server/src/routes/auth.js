@@ -6,6 +6,7 @@ import {
 } from '../controllers/authController.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
 import { authenticate } from '../middleware/auth.js';
+import { upload } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
 import {
   validateRegister, validateLogin, validateChangePassword,
@@ -14,7 +15,7 @@ import {
 
 const router = Router();
 
-router.post('/register', authLimiter, validateRegister, validate, register);
+router.post('/register', authLimiter, upload.single('avatar'), validateRegister, validate, register);
 router.post('/login', authLimiter, validateLogin, validate, login);
 router.post('/logout', logout);
 router.post('/refresh', refresh);
