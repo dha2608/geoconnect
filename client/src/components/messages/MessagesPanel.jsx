@@ -30,6 +30,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
 import {
   fetchConversations,
   fetchMessages,
@@ -38,9 +39,12 @@ import {
   createConversation,
   markConversationRead,
   fetchUnreadCount,
+  removeMessage,
 } from '../../features/messages/messageSlice';
 import { closePanel } from '../../features/ui/uiSlice';
+import { messageApi } from '../../api/messageApi';
 import { userApi } from '../../api/userApi';
+import useRequireAuth from '../../hooks/useRequireAuth';
 import { formatDistanceToNow, format, isToday, isYesterday, isSameDay } from 'date-fns';
 import Avatar from '../ui/Avatar';
 
@@ -106,6 +110,15 @@ const SearchIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
     <circle cx="11" cy="11" r="8" />
     <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+    <path d="M10 11v6M14 11v6" />
+    <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
   </svg>
 );
 
@@ -271,7 +284,7 @@ const DoubleCheckIcon = ({ read }) => (
 
 // ─── Single message bubble ────────────────────────────────────────────────────
 
-function MessageBubble({ message, isOwn, otherParticipantId }) {
+function MessageBubble({ message, isOwn, otherParticipantId, onDelete }) {
   const time = message.createdAt
     ? format(new Date(message.createdAt), 'h:mm a')
     : '';
@@ -290,8 +303,21 @@ function MessageBubble({ message, isOwn, otherParticipantId }) {
       initial={{ opacity: 0, y: 8, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}
-      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+      className={`flex items-end gap-1.5 ${isOwn ? 'justify-end' : 'justify-start'} group`}
     >
+      {/* Delete button — own messages only, slides in on hover */}
+      {isOwn && onDelete && (
+        <button
+          onClick={onDelete}
+          aria-label="Delete message"
+          className="opacity-0 group-hover:opacity-100 transition-opacity duration-150
+                     w-6 h-6 flex items-center justify-center rounded-lg flex-shrink-0
+                     text-txt-muted hover:text-accent-danger hover:bg-surface-hover"
+        >
+          <TrashIcon />
+        </button>
+      )}
+
       <div className={`max-w-[75%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
         {/* Bubble */}
         {isLocation ? (
@@ -707,6 +733,7 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation, on
 
 function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
   const dispatch = useDispatch();
+  const requireAuth = useRequireAuth();
   const { messages, loading, typingUsers } = useSelector((s) => s.messages);
 
   const { joinConversation, sendMessage: socketSend, startTyping, stopTyping } =
@@ -781,6 +808,7 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
   );
 
   const handleSend = useCallback(async () => {
+    if (!requireAuth('send messages')) return;
     const text = inputText.trim();
     if (!text || isSending) return;
 
@@ -813,6 +841,19 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
       }
     },
     [handleSend],
+  );
+
+  const handleDeleteMessage = useCallback(
+    async (messageId) => {
+      try {
+        await messageApi.deleteMessage(convId, messageId);
+        dispatch(removeMessage(messageId));
+        toast.success('Message deleted');
+      } catch {
+        toast.error('Failed to delete message');
+      }
+    },
+    [convId, dispatch],
   );
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -899,7 +940,13 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
             const isOwn = (msg.sender?._id ?? msg.sender) === currentUserId;
 
             return (
-              <MessageBubble key={item.key} message={msg} isOwn={isOwn} otherParticipantId={other?._id} />
+              <MessageBubble
+                key={item.key}
+                message={msg}
+                isOwn={isOwn}
+                otherParticipantId={other?._id}
+                onDelete={isOwn ? () => handleDeleteMessage(msg._id) : undefined}
+              />
             );
           })}
         </AnimatePresence>

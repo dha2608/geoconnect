@@ -29,6 +29,7 @@ import Button from '../ui/Button';
 
 import { createEvent }  from '../../features/events/eventSlice';
 import { closeModal }   from '../../features/ui/uiSlice';
+import useRequireAuth from '../../hooks/useRequireAuth';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -129,6 +130,7 @@ const LABEL_CLS = 'block text-[11px] font-semibold tracking-widest text-slate-50
 
 export default function CreateEventModal() {
   const dispatch = useDispatch();
+  const requireAuth = useRequireAuth();
 
   const modalOpen  = useSelector((s) => s.ui.modalOpen);
   const mapCenter  = useSelector((s) => s.map.center);     // [lat, lng]
@@ -212,6 +214,7 @@ export default function CreateEventModal() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSubmit = async (values) => {
+    if (!requireAuth('create events')) return;
     const fd = new FormData();
 
     fd.append('title',       values.title);

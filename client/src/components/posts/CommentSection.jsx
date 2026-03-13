@@ -11,6 +11,7 @@ const MessageSquare = ({ className, size = 24, ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
 );
 import { addComment, deleteComment } from '../../features/posts/postSlice';
+import useRequireAuth from '../../hooks/useRequireAuth';
 import Avatar from '../ui/Avatar';
 
 // ─── Single Comment Row ───────────────────────────────────────────────────────
@@ -98,6 +99,7 @@ function CommentRow({ comment, index, postId, currentUserId, postAuthorId }) {
 
 export default function CommentSection({ post }) {
   const dispatch = useDispatch();
+  const requireAuth = useRequireAuth();
   const user = useSelector((state) => state.auth.user);
 
   const [text, setText] = useState('');
@@ -122,6 +124,7 @@ export default function CommentSection({ post }) {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
+    if (!requireAuth('post comments')) return;
     const trimmed = text.trim();
     if (!trimmed || submitting) return;
 

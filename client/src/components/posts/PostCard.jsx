@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
+import useRequireAuth from '../../hooks/useRequireAuth';
 import ImageLightbox from '../ui/ImageLightbox';
 import ReportModal from '../ui/ReportModal';
 // ─── Inline SVG Icons ─────────────────────────────────────────────────────────
@@ -130,6 +131,7 @@ const CONTENT_CHAR_LIMIT = 220;
 
 const PostCard = memo(function PostCard({ post }) {
   const dispatch = useDispatch();
+  const requireAuth = useRequireAuth();
   const user = useSelector((state) => state.auth.user);
 
   const [showComments, setShowComments] = useState(false);
@@ -149,6 +151,7 @@ const PostCard = memo(function PostCard({ post }) {
     (post.content.length > CONTENT_CHAR_LIMIT || post.content.split('\n').length > 3);
 
   const handleLike = async () => {
+    if (!requireAuth('like posts')) return;
     const wasLiked = isLiked;
     try {
       await dispatch(togglePostLike(post._id)).unwrap();

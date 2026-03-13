@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { createPin } from '../../features/pins/pinSlice';
 import { closeModal } from '../../features/ui/uiSlice';
+import useRequireAuth from '../../hooks/useRequireAuth';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { compressImages } from '../../utils/compressImage';
@@ -116,6 +117,7 @@ function ImagePreview({ url, index, onRemove }) {
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function CreatePinModal() {
   const dispatch   = useDispatch();
+  const requireAuth = useRequireAuth();
   const modalOpen  = useSelector((state) => state.ui.modalOpen);
   const mapCenter  = useSelector((state) => state.map.center); // [lat, lng]
   const pinLoading = useSelector((state) => state.pins.loading);
@@ -208,6 +210,7 @@ export default function CreatePinModal() {
   };
 
   const onSubmit = async (data) => {
+    if (!requireAuth('create pins')) return;
     const formData = new FormData();
     formData.append('title',       data.title);
     formData.append('description', data.description);

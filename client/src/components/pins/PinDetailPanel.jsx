@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { togglePinLike, togglePinSave, clearSelectedPin, fetchPin } from '../../features/pins/pinSlice';
 import { closeModal, openModal } from '../../features/ui/uiSlice';
+import useRequireAuth from '../../hooks/useRequireAuth';
 import Modal from '../ui/Modal';
 import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
@@ -198,6 +199,7 @@ async function sharePin(pin) {
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function PinDetailPanel() {
   const dispatch    = useDispatch();
+  const requireAuth = useRequireAuth();
   const modalOpen   = useSelector((state) => state.ui.modalOpen);
   const modalData   = useSelector((state) => state.ui.modalData);
   const selectedPin = useSelector((state) => state.pins.selectedPin);
@@ -251,7 +253,7 @@ export default function PinDetailPanel() {
   }, [dispatch, pin]);
 
   const handleLike = async () => {
-    if (!user) { toast.error('Please log in to like pins.'); return; }
+    if (!requireAuth('like pins')) return;
     if (!pin) return;
     setLikeLoading(true);
     const wasLiked = isLiked;
@@ -266,7 +268,7 @@ export default function PinDetailPanel() {
   };
 
   const handleSave = async () => {
-    if (!user) { toast.error('Please log in to save pins.'); return; }
+    if (!requireAuth('save pins')) return;
     if (!pin) return;
     const next = !isSaved;
     setLocalSaved(next);

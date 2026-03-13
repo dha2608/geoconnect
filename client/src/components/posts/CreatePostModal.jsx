@@ -23,6 +23,7 @@ const AlertCircle = ({ className, size = 24, ...props }) => (
 );
 import { createPost } from '../../features/posts/postSlice';
 import { closeModal } from '../../features/ui/uiSlice';
+import useRequireAuth from '../../hooks/useRequireAuth';
 import Modal from '../ui/Modal';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
@@ -125,6 +126,7 @@ function CharCounter({ count, max }) {
 
 export default function CreatePostModal() {
   const dispatch = useDispatch();
+  const requireAuth = useRequireAuth();
   const user = useSelector((state) => state.auth.user);
   const modalOpen = useSelector((state) => state.ui.modalOpen);
 
@@ -227,6 +229,7 @@ export default function CreatePostModal() {
   };
 
   const onSubmit = async (data) => {
+    if (!requireAuth('create posts')) return;
     setSubmitting(true);
     setSubmitError(null);
     try {

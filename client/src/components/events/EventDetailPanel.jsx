@@ -35,6 +35,7 @@ import {
   clearSelectedEvent,
 } from '../../features/events/eventSlice';
 import { closeModal } from '../../features/ui/uiSlice';
+import useRequireAuth from '../../hooks/useRequireAuth';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,7 @@ function SectionLabel({ children }) {
 
 export default function EventDetailPanel() {
   const dispatch = useDispatch();
+  const requireAuth = useRequireAuth();
   const [coverLightbox, setCoverLightbox] = useState(false);
 
   const modalOpen    = useSelector((s) => s.ui.modalOpen);
@@ -109,6 +111,7 @@ export default function EventDetailPanel() {
   };
 
   const handleRsvp = async () => {
+    if (!requireAuth('RSVP to events')) return;
     if (!event) return;
     try {
       await dispatch(toggleRsvp(event._id)).unwrap();
