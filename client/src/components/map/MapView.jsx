@@ -11,6 +11,9 @@ import PinClusterLayer from '../pins/PinClusterLayer';
 import EventLayer from '../events/EventLayer';
 import MapToolbar from './MapToolbar';
 import DestinationMarker from './DestinationMarker';
+import FriendMarker from './FriendMarker';
+import PostMarker from './PostMarker';
+import CoordinateDisplay from './CoordinateDisplay';
 import MapContextMenu from './MapContextMenu';
 
 const TILE_LAYERS = {
@@ -98,8 +101,11 @@ const MapView = memo(function MapView() {
         <PinClusterLayer />
         <EventLayer />
         <NearbyUsersLayer />
+        <FriendMarker />
+        <PostMarker />
         <DestinationMarker />
         <MapContextMenu />
+        <CoordinateDisplay />
         <MapControls />
         <MapToolbar />
       </MapContainer>

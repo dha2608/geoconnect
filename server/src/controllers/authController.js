@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import User from '../models/User.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken, hashToken } from '../utils/jwt.js';
 import { sendPasswordResetEmail, sendEmailVerification } from '../utils/email.js';
+import { uploadToCloudinary } from '../middleware/upload.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -36,7 +37,19 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    const user = await User.create({ name, email, password });
+    // Upload avatar to Cloudinary if provided
+    let avatarUrl = '';
+    if (req.file) {
+      try {
+        const result = await uploadToCloudinary(req.file.buffer, 'geoconnect/avatars');
+        avatarUrl = result.secure_url;
+      } catch (uploadErr) {
+        console.error('[register] Avatar upload failed:', uploadErr.message);
+        // Continue without avatar — not a blocker
+      }
+    }
+
+    const user = await User.create({ name, email, password, avatar: avatarUrl });
 
     // Generate email verification token
     const verifyToken = user.createToken('emailVerification');

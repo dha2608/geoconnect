@@ -162,14 +162,23 @@ const PostCard = memo(function PostCard({ post }) {
   };
 
   const handleShare = async () => {
+    const postUrl = `${window.location.origin}/?post=${post._id}`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Post by ${post.creator.name}`,
+          title: `Post by ${post.creator?.name ?? 'User'}`,
           text: post.content?.slice(0, 80),
+          url: postUrl,
         });
       } catch {
-        // user cancelled
+        // user cancelled — ignore
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(postUrl);
+        toast.success('Link copied to clipboard!', { duration: 1500 });
+      } catch {
+        toast.error('Failed to copy link');
       }
     }
   };

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { togglePinLike, togglePinSave, clearSelectedPin, fetchPin } from '../../features/pins/pinSlice';
+import { togglePinLike, togglePinSave, clearSelectedPin, fetchPin, checkInPin } from '../../features/pins/pinSlice';
 import { closeModal, openModal, setActiveMapTool } from '../../features/ui/uiSlice';
 import { setRoutingDestination } from '../../features/map/mapSlice';
 import * as turf from '@turf/turf';
@@ -217,12 +217,20 @@ export default function PinDetailPanel() {
   const [localSaved,    setLocalSaved]    = useState(null);
   const [likeLoading,   setLikeLoading]   = useState(false);
   const [saveLoading,   setSaveLoading]   = useState(false);
+  const [checkInLoading, setCheckInLoading] = useState(false);
   const [latestReview,  setLatestReview]  = useState(null);
   const [fetchError,    setFetchError]    = useState(null);
 
   // Derived interaction state
   const isLiked = pin?.likes?.includes(user?._id) ?? false;
   const isSaved = localSaved !== null ? localSaved : (pin?.saves?.includes(user?._id) ?? false);
+
+  // Check-in: user has checked in within the last 24h
+  const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+  const isCheckedIn = pin?.checkIns?.some(
+    (ci) => (ci.user?._id ?? ci.user) === user?._id && new Date(ci.checkedInAt).getTime() > dayAgo
+  ) ?? false;
+  const checkInCount = pin?.checkIns?.length ?? 0;
 
   const category = pin?.category ? CATEGORY_MAP[pin.category] ?? CATEGORY_MAP.other : null;
 
@@ -298,6 +306,20 @@ export default function PinDetailPanel() {
       toast.error('Failed to save pin.');
     } finally {
       setSaveLoading(false);
+    }
+  };
+
+  const handleCheckIn = async () => {
+    if (!requireAuth('check in at places')) return;
+    if (!pin) return;
+    setCheckInLoading(true);
+    try {
+      await dispatch(checkInPin({ id: pin._id, undo: isCheckedIn })).unwrap();
+      toast.success(isCheckedIn ? 'Check-in removed' : 'Checked in! 📍');
+    } catch (err) {
+      toast.error(err?.message ?? 'Failed to check in.');
+    } finally {
+      setCheckInLoading(false);
     }
   };
 
@@ -529,6 +551,49 @@ export default function PinDetailPanel() {
                     </motion.svg>
                     <span className="text-xs font-medium">
                       {isSaved ? 'Saved' : 'Save'}
+                    </span>
+                  </motion.button>
+
+                  {/* Check-in */}
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.93 }}
+                    onClick={handleCheckIn}
+                    disabled={checkInLoading}
+                    className={`
+                      flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border
+                      transition-all duration-150 disabled:opacity-60
+                       ${isCheckedIn
+                        ? 'border-green-500/30 bg-green-500/10 text-green-400'
+                        : 'border-surface-divider bg-elevated text-txt-secondary hover:text-txt-primary hover:border-surface-divider'
+                      }
+                    `}
+                    aria-label={isCheckedIn ? 'Undo check-in' : 'Check in'}
+                  >
+                    <motion.svg
+                      width="20" height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      animate={isCheckedIn ? { scale: [1, 1.3, 1] } : {}}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {isCheckedIn ? (
+                        <>
+                          <path d="M20 6 9 17l-5-5" />
+                        </>
+                      ) : (
+                        <>
+                          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                          <circle cx="12" cy="10" r="3" />
+                        </>
+                      )}
+                    </motion.svg>
+                    <span className="text-xs font-medium">
+                      {checkInCount > 0 ? `${checkInCount} ` : ''}{isCheckedIn ? 'Checked in' : 'Check in'}
                     </span>
                   </motion.button>
 

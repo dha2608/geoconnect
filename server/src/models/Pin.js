@@ -18,6 +18,10 @@ const pinSchema = new mongoose.Schema({
   visibility: { type: String, enum: ['public', 'friends', 'private'], default: 'public' },
   tags: [{ type: String, trim: true }],
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  checkIns: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    checkedInAt: { type: Date, default: Date.now },
+  }],
   averageRating: { type: Number, default: 0, min: 0, max: 5 },
   reviewCount: { type: Number, default: 0 },
 }, { timestamps: true });

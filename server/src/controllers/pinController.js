@@ -283,3 +283,61 @@ export const getSavedPins = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch saved pins' });
   }
 };
+
+export const checkIn = async (req, res) => {
+  try {
+    const pin = await Pin.findById(req.params.id);
+    if (!pin) return res.status(404).json({ message: 'Pin not found' });
+
+    // Prevent duplicate check-in within the last 24 hours
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const alreadyCheckedIn = pin.checkIns.some(
+      (ci) => ci.user.toString() === req.user._id.toString() && ci.checkedInAt > dayAgo
+    );
+    if (alreadyCheckedIn) {
+      return res.status(400).json({ message: 'Already checked in within 24 hours' });
+    }
+
+    pin.checkIns.push({ user: req.user._id });
+    await pin.save();
+
+    // Notify pin creator
+    if (pin.createdBy.toString() !== req.user._id.toString()) {
+      await createNotification(req, {
+        recipientId: pin.createdBy,
+        senderId: req.user._id,
+        type: 'checkin',
+        data: { pinId: pin._id, pinTitle: pin.title },
+      });
+    }
+
+    res.json({ checkIns: pin.checkIns, checkInCount: pin.checkIns.length });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const undoCheckIn = async (req, res) => {
+  try {
+    const pin = await Pin.findById(req.params.id);
+    if (!pin) return res.status(404).json({ message: 'Pin not found' });
+
+    // Remove the most recent check-in by this user
+    const idx = [...pin.checkIns]
+      .reverse()
+      .findIndex((ci) => ci.user.toString() === req.user._id.toString());
+
+    if (idx === -1) {
+      return res.status(400).json({ message: 'No check-in to undo' });
+    }
+
+    // idx is from reversed array, convert to real index
+    const realIdx = pin.checkIns.length - 1 - idx;
+    pin.checkIns.splice(realIdx, 1);
+    await pin.save();
+
+    res.json({ checkIns: pin.checkIns, checkInCount: pin.checkIns.length });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};

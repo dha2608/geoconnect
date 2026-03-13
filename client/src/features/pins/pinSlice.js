@@ -41,6 +41,13 @@ export const searchPins = createAsyncThunk('pins/search', async (query, { reject
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
+export const checkInPin = createAsyncThunk('pins/checkIn', async ({ id, undo }, { rejectWithValue }) => {
+  try {
+    const res = undo ? await pinApi.undoCheckIn(id) : await pinApi.checkIn(id);
+    return { pinId: id, ...res.data };
+  } catch (err) { return rejectWithValue(err.response?.data); }
+});
+
 const pinSlice = createSlice({
   name: 'pins',
   initialState: {
@@ -77,6 +84,20 @@ const pinSlice = createSlice({
       if (state.selectedPin?._id === updated._id) state.selectedPin = updated;
     });
     builder.addCase(searchPins.fulfilled, (state, action) => { state.searchResults = action.payload.pins || action.payload; });
+    builder.addCase(checkInPin.fulfilled, (state, action) => {
+      const { pinId, checkIns, checkInCount } = action.payload;
+      // Update selectedPin checkIns
+      if (state.selectedPin?._id === pinId) {
+        state.selectedPin.checkIns = checkIns;
+        state.selectedPin.checkInCount = checkInCount;
+      }
+      // Update in pins array
+      const idx = state.pins.findIndex(p => p._id === pinId);
+      if (idx !== -1) {
+        state.pins[idx].checkIns = checkIns;
+        state.pins[idx].checkInCount = checkInCount;
+      }
+    });
   },
 });
 
