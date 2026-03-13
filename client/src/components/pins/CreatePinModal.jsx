@@ -195,9 +195,9 @@ export default function CreatePinModal() {
       try {
         const res = await geocodeApi.reverse(lat, lng);
         setAddress(
-          res.data?.address       ||
           res.data?.display_name  ||
           res.data?.formatted     ||
+          (typeof res.data?.address === 'string' ? res.data.address : '') ||
           ''
         );
       } catch {
@@ -306,9 +306,9 @@ export default function CreatePinModal() {
     try {
       const res = await geocodeApi.reverse(lat, lng);
       setAddress(
-        res.data?.address       ||
         res.data?.display_name  ||
         res.data?.formatted     ||
+        (typeof res.data?.address === 'string' ? res.data.address : '') ||
         ''
       );
     } catch {

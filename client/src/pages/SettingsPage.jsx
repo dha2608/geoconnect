@@ -343,6 +343,7 @@ export default function SettingsPage() {
   };
 
   const handleLogout = async () => {
+    if (!window.confirm('Are you sure you want to log out?')) return;
     setLogoutLoading(true);
     await dispatch(logout());
     navigate('/login', { replace: true });
@@ -535,6 +536,9 @@ export default function SettingsPage() {
               description="Choose what you want to hear about"
             />
             <div className="divide-y divide-white/6">
+              <div className="pb-2 pt-1">
+                <p className="text-[10px] font-bold tracking-widest text-txt-muted uppercase mb-1 px-1">General</p>
+              </div>
               <ToggleRow
                 label="Push notifications"
                 description="Receive real-time alerts in your browser"
@@ -548,6 +552,9 @@ export default function SettingsPage() {
                 onChange={() => toggleNotif('email')}
                 disabled={isGuest}
               />
+              <div className="pb-2 pt-3">
+                <p className="text-[10px] font-bold tracking-widest text-txt-muted uppercase mb-1 px-1">Activity</p>
+              </div>
               <ToggleRow
                 label="New follower alerts"
                 description="Notify you when someone follows your profile"

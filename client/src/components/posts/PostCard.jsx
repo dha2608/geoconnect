@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
@@ -222,6 +222,8 @@ const PostCard = memo(function PostCard({ post }) {
               <button
                 onClick={() => setShowMenu(!showMenu)}
                 aria-label="More options"
+                aria-haspopup="true"
+                aria-expanded={showMenu}
                 className="text-txt-muted hover:text-txt-secondary transition-colors p-1.5 rounded-lg hover:bg-surface-hover"
               >
                 <MoreHorizontal size={17} />
@@ -229,14 +231,28 @@ const PostCard = memo(function PostCard({ post }) {
               <AnimatePresence>
                 {showMenu && (
                   <motion.div
+                    role="menu"
                     initial={{ opacity: 0, scale: 0.9, y: -4 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9, y: -4 }}
                     transition={{ duration: 0.12 }}
                     className="absolute right-0 top-full mt-1 w-36 glass rounded-xl border border-surface-divider shadow-lg z-20 py-1 overflow-hidden"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') { e.stopPropagation(); setShowMenu(false); }
+                      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const items = e.currentTarget.querySelectorAll('[role="menuitem"]');
+                        const idx = Array.from(items).indexOf(document.activeElement);
+                        const next = e.key === 'ArrowDown' ? (idx + 1) % items.length : (idx - 1 + items.length) % items.length;
+                        items[next]?.focus();
+                      }
+                    }}
+                    ref={(el) => { if (el) { const first = el.querySelector('[role="menuitem"]'); first?.focus(); } }}
                   >
                     {!isAuthor && (
                       <button
+                        role="menuitem"
+                        tabIndex={0}
                         onClick={() => { setShowMenu(false); setReportOpen(true); }}
                         className="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-txt-secondary hover:text-accent-danger hover:bg-surface-hover transition-colors"
                       >

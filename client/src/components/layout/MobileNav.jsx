@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { setActivePanel, openModal } from '../../features/ui/uiSlice';
@@ -17,6 +17,28 @@ export default function MobileNav() {
   const location = useLocation();
   const { activePanel } = useSelector((state) => state.ui);
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  // Keyboard nav + Escape for create menu
+  useEffect(() => {
+    if (!createMenuOpen) return;
+    const el = menuRef.current;
+    if (!el) return;
+    const buttons = el.querySelectorAll('button');
+    if (buttons.length) buttons[0].focus();
+
+    const handleKey = (e) => {
+      if (e.key === 'Escape') { setCreateMenuOpen(false); return; }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const idx = Array.from(buttons).indexOf(document.activeElement);
+        const next = e.key === 'ArrowRight' ? (idx + 1) % buttons.length : (idx - 1 + buttons.length) % buttons.length;
+        buttons[next]?.focus();
+      }
+    };
+    el.addEventListener('keydown', handleKey);
+    return () => el.removeEventListener('keydown', handleKey);
+  }, [createMenuOpen]);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 glass border-t border-surface-divider flex items-center justify-around h-16 px-2 lg:hidden">
@@ -29,7 +51,7 @@ export default function MobileNav() {
             className="fixed inset-0 z-[-1]"
             onClick={() => setCreateMenuOpen(false)}
           />
-           <div className="absolute bottom-[72px] left-1/2 -translate-x-1/2 flex gap-4 glass px-5 py-3 shadow-xl">
+           <div ref={menuRef} role="menu" aria-label="Create options" className="absolute bottom-[72px] left-1/2 -translate-x-1/2 flex gap-4 glass px-5 py-3 shadow-xl">
             <button
               onClick={() => {
                 setCreateMenuOpen(false);
