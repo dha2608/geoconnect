@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { fetchFeed, clearPosts } from '../../features/posts/postSlice';
 import { closePanel } from '../../features/ui/uiSlice';
 import PostCard from './PostCard';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import { PostCardSkeleton, EmptyState } from '../ui';
 
 // ─── Pull-to-refresh constants ────────────────────────────────────────────────
 
@@ -25,40 +25,11 @@ const RssIcon = () => (
     <circle cx="5" cy="19" r="1"/>
   </svg>
 );
-const InboxIcon = () => (
-  <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-    <path d="M22 12h-6l-2 3H10l-2-3H2"/>
-    <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/>
-  </svg>
-);
 
 // ─── Spring config ────────────────────────────────────────────────────────────
 
 const SPRING = { type: 'spring', damping: 26, stiffness: 210 };
 const SCROLL_THRESHOLD = 150; // px from bottom to trigger next page
-
-// ─── Empty State ──────────────────────────────────────────────────────────────
-
-function EmptyFeed() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.15 }}
-      className="flex flex-col items-center justify-center h-full py-20 px-6 text-center"
-    >
-      <div className="w-16 h-16 rounded-2xl bg-accent-primary/10 border border-accent-primary/15 flex items-center justify-center mb-5">
-        <InboxIcon />
-      </div>
-      <p className="text-txt-primary font-heading font-semibold text-base mb-1">
-        Nothing here yet
-      </p>
-      <p className="text-txt-muted font-body text-sm leading-relaxed max-w-[200px]">
-        Be the first to share something with your community!
-      </p>
-    </motion.div>
-  );
-}
 
 // ─── FeedPanel ────────────────────────────────────────────────────────────────
 
@@ -264,7 +235,13 @@ export default function FeedPanel() {
             )}
 
             {/* Empty state (only when not loading, no error, and no posts) */}
-            {!loading && !error && posts.length === 0 && <EmptyFeed />}
+            {!loading && !error && posts.length === 0 && (
+              <EmptyState
+                icon="posts"
+                title="No posts yet"
+                description="Follow people or create your first post to see content here"
+              />
+            )}
 
             {/* Post list */}
             <AnimatePresence mode="popLayout">
@@ -287,8 +264,10 @@ export default function FeedPanel() {
 
             {/* Loading indicator (first load or paginating) */}
             {loading && (
-              <div className="flex justify-center py-6">
-                <LoadingSpinner />
+              <div className="space-y-3">
+                <PostCardSkeleton />
+                <PostCardSkeleton />
+                <PostCardSkeleton />
               </div>
             )}
 

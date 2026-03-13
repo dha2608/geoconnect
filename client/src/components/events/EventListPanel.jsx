@@ -26,7 +26,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format, isPast, isFuture } from 'date-fns';
 
 import Button        from '../ui/Button';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import { EmptyState } from '../ui';
 
 import { fetchViewportEvents }    from '../../features/events/eventSlice';
 import { openModal, closePanel }  from '../../features/ui/uiSlice';
@@ -174,31 +174,6 @@ function EventCard({ event, onClick }) {
         </div>
       </div>
     </motion.article>
-  );
-}
-
-// ─── Empty state ──────────────────────────────────────────────────────────────
-
-const EMPTY_STATES = {
-  upcoming: { emoji: '🗓', title: 'No upcoming events', body: 'Create one and invite your friends!' },
-  nearby:   { emoji: '📍', title: 'No events nearby',   body: 'Move the map or zoom out to see more.' },
-  mine:     { emoji: '✨', title: 'No events yet',       body: "Events you create or RSVP to will appear here." },
-};
-
-function EmptyState({ tab }) {
-  const { emoji, title, body } = EMPTY_STATES[tab] ?? EMPTY_STATES.upcoming;
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center py-16 px-6 text-center"
-    >
-      <div className="w-16 h-16 rounded-2xl bg-accent-primary/10 border border-accent-primary/15 flex items-center justify-center mb-4">
-        <span className="text-2xl">{emoji}</span>
-      </div>
-      <p className="text-txt-primary font-heading font-semibold text-sm mb-1">{title}</p>
-      <p className="text-txt-muted text-xs max-w-[220px] leading-relaxed">{body}</p>
-    </motion.div>
   );
 }
 
@@ -390,7 +365,11 @@ export default function EventListPanel() {
 
             {/* Empty state */}
             {!loading && filteredEvents.length === 0 && (
-              <EmptyState tab={activeTab} />
+              <EmptyState
+                icon="events"
+                title="No events found"
+                description="Create an event or change filters to see more"
+              />
             )}
 
             {/* Event cards */}
