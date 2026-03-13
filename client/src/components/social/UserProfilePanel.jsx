@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
@@ -83,7 +83,7 @@ function ProfileSkeleton() {
 // ──────────────────────────────────────────────
 // Compact post card
 // ──────────────────────────────────────────────
-function PostCard({ post }) {
+const PostCard = memo(function PostCard({ post }) {
   const date = post.createdAt
     ? format(new Date(post.createdAt), 'MMM d, yyyy')
     : '';
@@ -137,12 +137,12 @@ function PostCard({ post }) {
       </div>
     </motion.div>
   );
-}
+});
 
 // ──────────────────────────────────────────────
 // Compact saved-pin card
 // ──────────────────────────────────────────────
-function PinCard({ pin, onFly }) {
+const PinCard = memo(function PinCard({ pin, onFly }) {
   const color  = CATEGORY_COLORS[pin.category] ?? CATEGORY_COLORS.other;
   const rating = typeof pin.averageRating === 'number'
     ? pin.averageRating.toFixed(1)
@@ -187,7 +187,7 @@ function PinCard({ pin, onFly }) {
       </div>
     </motion.button>
   );
-}
+});
 
 // ──────────────────────────────────────────────
 // Empty state shown when a tab has no data

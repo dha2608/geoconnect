@@ -580,7 +580,7 @@ function NewConversationView({ currentUserId, onClose, onBack, onStartChat }) {
 
 function ConversationListView({ currentUserId, onClose, onSelectConversation, onCompose }) {
   const dispatch = useDispatch();
-  const { conversations, loading } = useSelector((s) => s.messages);
+  const { conversations, loading, error } = useSelector((s) => s.messages);
 
   useEffect(() => {
     dispatch(fetchConversations());
@@ -647,8 +647,31 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation, on
           </div>
         )}
 
+        {/* Error */}
+        {!loading && error && conversations.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-16 px-6 text-center"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-accent-danger/10 border border-accent-danger/15 flex items-center justify-center mb-4 text-accent-danger">
+              <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />
+              </svg>
+            </div>
+            <p className="text-txt-primary font-heading font-semibold text-base mb-1">Failed to load messages</p>
+            <p className="text-txt-muted font-body text-sm mb-4">{typeof error === 'string' ? error : 'Please check your connection and try again.'}</p>
+            <button
+              onClick={() => dispatch(fetchConversations())}
+              className="px-4 py-2 rounded-xl bg-accent-primary/15 text-accent-primary text-sm font-medium hover:bg-accent-primary/25 transition-colors"
+            >
+              Try Again
+            </button>
+          </motion.div>
+        )}
+
         {/* Empty */}
-        {!loading && conversations.length === 0 && <EmptyConversations />}
+        {!loading && !error && conversations.length === 0 && <EmptyConversations />}
 
         {/* Conversation rows */}
         {conversations.length > 0 && (

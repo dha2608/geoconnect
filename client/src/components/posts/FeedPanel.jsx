@@ -58,7 +58,7 @@ function EmptyFeed() {
 
 export default function FeedPanel() {
   const dispatch = useDispatch();
-  const { posts, loading, hasMore, page } = useSelector((state) => state.posts);
+  const { posts, loading, hasMore, page, error } = useSelector((state) => state.posts);
   const { activePanel, isMobile } = useSelector((state) => state.ui);
 
   const scrollRef = useRef(null);
@@ -157,8 +157,37 @@ export default function FeedPanel() {
             className="flex-1 overflow-y-auto px-3 pt-3 pb-4"
             style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}
           >
-            {/* Empty state (only when not loading and no posts) */}
-            {!loading && posts.length === 0 && <EmptyFeed />}
+            {/* Error state */}
+            {!loading && error && posts.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center py-20 px-6 text-center"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-accent-danger/10 border border-accent-danger/15 flex items-center justify-center mb-5 text-accent-danger">
+                  <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                </div>
+                <p className="text-txt-primary font-heading font-semibold text-base mb-1">
+                  Failed to load feed
+                </p>
+                <p className="text-txt-muted font-body text-sm leading-relaxed max-w-[220px] mb-4">
+                  {error || 'Something went wrong. Please try again.'}
+                </p>
+                <button
+                  onClick={() => { dispatch(clearPosts()); dispatch(fetchFeed({ page: 1 })); }}
+                  className="px-4 py-2 rounded-xl bg-accent-primary/15 text-accent-primary text-sm font-medium hover:bg-accent-primary/25 transition-colors"
+                >
+                  Try Again
+                </button>
+              </motion.div>
+            )}
+
+            {/* Empty state (only when not loading, no error, and no posts) */}
+            {!loading && !error && posts.length === 0 && <EmptyFeed />}
 
             {/* Post list */}
             <AnimatePresence mode="popLayout">

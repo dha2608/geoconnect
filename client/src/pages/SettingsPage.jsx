@@ -343,6 +343,7 @@ export default function SettingsPage() {
   };
 
   const handleLogout = async () => {
+    if (!window.confirm('Are you sure you want to log out?')) return;
     setLogoutLoading(true);
     await dispatch(logout());
     navigate('/login', { replace: true });
