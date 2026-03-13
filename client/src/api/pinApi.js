@@ -9,6 +9,8 @@ export const pinApi = {
   deletePin: (id) => API.delete(`/pins/${id}`),
   toggleLike: (id) => API.post(`/pins/${id}/like`),
   toggleSave: (id) => API.post(`/pins/${id}/save`),
+  checkIn: (id) => API.post(`/pins/${id}/checkin`),
+  undoCheckIn: (id) => API.delete(`/pins/${id}/checkin`),
   getTrending: () => API.get('/pins/trending'),
   searchPins: (query) => API.get('/pins/search', { params: { q: query } }),
 };
