@@ -14,7 +14,8 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import { clearDestination } from '../../features/map/mapSlice';
+import { clearDestination, setRoutingDestination } from '../../features/map/mapSlice';
+import { setActiveMapTool } from '../../features/ui/uiSlice';
 
 // ─── Inline CSS injected once into <head> ─────────────────────────────────────
 
@@ -140,8 +141,8 @@ export default function DestinationMarker() {
   };
 
   const handleGetDirections = () => {
-    // TODO: activate routing tool with this destination
-    console.info('[DestinationMarker] Get directions to:', { lat, lng, name });
+    dispatch(setRoutingDestination({ lat, lng, name }));
+    dispatch(setActiveMapTool('route'));
     dispatch(clearDestination());
   };
 

@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import toast from 'react-hot-toast';
+import { clearRoutingDestination } from '../../features/map/mapSlice';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -85,6 +87,8 @@ const endIcon = L.divIcon({
 
 export default function RoutingTool({ onClose }) {
   const map = useMap();
+  const dispatch = useDispatch();
+  const routingDestination = useSelector((state) => state.map.routingDestination);
   const [startPoint, setStartPoint] = useState(null);
   const [endPoint, setEndPoint] = useState(null);
   const [settingPoint, setSettingPoint] = useState('start'); // 'start' | 'end'
@@ -105,6 +109,19 @@ export default function RoutingTool({ onClose }) {
       L.DomEvent.disableScrollPropagation(containerRef.current);
     }
   }, []);
+
+  // Consume routingDestination from Redux — pre-sets the end point when
+  // the user clicks "Get directions" on a DestinationMarker popup.
+  useEffect(() => {
+    if (!routingDestination) return;
+    if (endMarkerRef.current) endMarkerRef.current.remove();
+    const latlng = L.latLng(routingDestination.lat, routingDestination.lng);
+    const marker = L.marker(latlng, { icon: endIcon }).addTo(map);
+    endMarkerRef.current = marker;
+    setEndPoint(latlng);
+    setSettingPoint('start');
+    dispatch(clearRoutingDestination());
+  }, [routingDestination, map, dispatch]);
 
   const clearRoute = useCallback(() => {
     if (routeLineRef.current) {
