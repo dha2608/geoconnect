@@ -1,16 +1,20 @@
 import { Router } from 'express';
-import { getEventsByViewport, getUpcomingEvents, createEvent, getEvent, rsvpEvent, cancelRsvp, updateEvent, deleteEvent } from '../controllers/eventController.js';
+import { getEventsByViewport, getUpcomingEvents, searchEvents, createEvent, getEvent, rsvpEvent, cancelRsvp, updateEvent, deleteEvent } from '../controllers/eventController.js';
 import { authenticate, optionalAuth } from '../middleware/auth.js';
+import { upload } from '../middleware/upload.js';
+import { validate } from '../middleware/validate.js';
+import { validateCreateEvent, validateUpdateEvent, validateEventId, validateSearchQuery } from '../validators/index.js';
 
 const router = Router();
 
 router.get('/', optionalAuth, getEventsByViewport);
 router.get('/upcoming', optionalAuth, getUpcomingEvents);
-router.post('/', authenticate, createEvent);
-router.get('/:id', optionalAuth, getEvent);
-router.put('/:id', authenticate, updateEvent);
-router.delete('/:id', authenticate, deleteEvent);
-router.post('/:id/rsvp', authenticate, rsvpEvent);
-router.delete('/:id/rsvp', authenticate, cancelRsvp);
+router.get('/search', optionalAuth, validateSearchQuery, validate, searchEvents);
+router.post('/', authenticate, upload.single('coverImage'), validateCreateEvent, validate, createEvent);
+router.get('/:id', optionalAuth, validateEventId, validate, getEvent);
+router.put('/:id', authenticate, upload.single('coverImage'), validateUpdateEvent, validate, updateEvent);
+router.delete('/:id', authenticate, validateEventId, validate, deleteEvent);
+router.post('/:id/rsvp', authenticate, validateEventId, validate, rsvpEvent);
+router.delete('/:id/rsvp', authenticate, validateEventId, validate, cancelRsvp);
 
 export default router;

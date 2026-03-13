@@ -2,6 +2,7 @@ import Pin from '../models/Pin.js';
 import Review from '../models/Review.js';
 import User from '../models/User.js';
 import { uploadToCloudinary } from '../middleware/upload.js';
+import { createNotification } from '../utils/createNotification.js';
 
 export const getPinsByViewport = async (req, res) => {
   try {
@@ -111,6 +112,29 @@ export const updatePin = async (req, res) => {
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     }
+
+    // Handle new image uploads
+    if (req.files && req.files.length > 0) {
+      const uploadPromises = req.files.map(file => uploadToCloudinary(file.buffer, 'geoconnect/pins'));
+      const results = await Promise.all(uploadPromises);
+      const newImages = results.map(r => r.secure_url);
+      // Keep existing images that weren't removed, add new ones
+      const keepImages = req.body.keepImages ? JSON.parse(req.body.keepImages) : pin.images;
+      updates.images = [...keepImages, ...newImages].slice(0, 5); // max 5 images
+    } else if (req.body.keepImages) {
+      // No new uploads, but user removed some existing images
+      updates.images = JSON.parse(req.body.keepImages);
+    }
+
+    // Handle location update
+    if (req.body.lat && req.body.lng) {
+      updates.location = { type: 'Point', coordinates: [parseFloat(req.body.lng), parseFloat(req.body.lat)] };
+    }
+
+    // Handle tags as comma-separated string
+    if (typeof updates.tags === 'string') {
+      updates.tags = updates.tags.split(',').map(t => t.trim()).filter(Boolean);
+    }
     
     const updated = await Pin.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true })
       .populate('createdBy', 'name avatar');
@@ -144,6 +168,15 @@ export const likePin = async (req, res) => {
       { new: true }
     );
     if (!pin) return res.status(404).json({ message: 'Pin not found' });
+
+    // Notify pin creator
+    await createNotification(req, {
+      recipientId: pin.createdBy,
+      senderId: req.user._id,
+      type: 'like',
+      data: { pinId: pin._id, pinTitle: pin.title },
+    });
+
     res.json({ likes: pin.likes });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -210,6 +243,31 @@ export const getTrendingPins = async (req, res) => {
     res.json(pins);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch trending pins' });
+  }
+};
+
+export const searchPins = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 2) return res.status(400).json({ message: 'Query must be at least 2 characters' });
+
+    const regex = { $regex: q, $options: 'i' };
+    const pins = await Pin.find({
+      visibility: 'public',
+      $or: [
+        { title: regex },
+        { description: regex },
+        { address: regex },
+        { tags: regex },
+      ],
+    })
+      .populate('createdBy', 'name avatar')
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    res.json(pins);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
