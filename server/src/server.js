@@ -14,6 +14,7 @@ import connectDB from './config/db.js';
 import passport from './config/passport.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import { setupSocket } from './socket/handler.js';
+import { startEventReminderJob } from './jobs/eventReminder.js';
 
 // Routes
 import authRoutes from './routes/auth.js';
@@ -43,6 +44,9 @@ connectDB();
 
 // Setup Socket.io
 setupSocket(io);
+
+// Start cron jobs
+startEventReminderJob(io);
 
 // Make io accessible in routes
 app.set('io', io);
