@@ -1,5 +1,6 @@
 import Post from '../models/Post.js';
 import { createNotification } from '../utils/createNotification.js';
+import { uploadToCloudinary } from '../middleware/upload.js';
 
 export const getFeed = async (req, res) => {
   try {
@@ -50,15 +51,46 @@ export const getMapPosts = async (req, res) => {
 
 export const createPost = async (req, res) => {
   try {
-    const { text, lat, lng, address } = req.body;
-    
+    // Accept both 'content' (client FormData) and 'text' (API compat)
+    const text = (req.body.content || req.body.text || '').trim();
+    if (!text) {
+      return res.status(400).json({ message: 'Post text is required' });
+    }
+
+    // Parse location — client sends JSON string or separate lat/lng
+    let location;
+    let address = req.body.address || req.body.locationName || '';
+
+    if (req.body.location) {
+      try {
+        const loc = JSON.parse(req.body.location);
+        if (loc.type === 'Point' && Array.isArray(loc.coordinates) && loc.coordinates.length === 2) {
+          location = loc;
+        }
+      } catch {
+        // Ignore JSON parse error — treat as no location
+      }
+    } else if (req.body.lat && req.body.lng) {
+      location = { type: 'Point', coordinates: [parseFloat(req.body.lng), parseFloat(req.body.lat)] };
+    }
+
+    // Upload images to Cloudinary (multer populates req.files)
+    const images = [];
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const result = await uploadToCloudinary(file.buffer, 'geoconnect/posts');
+        images.push(result.secure_url);
+      }
+    }
+
     const post = await Post.create({
       author: req.user._id,
       text,
-      location: lat && lng ? { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] } : undefined,
+      images,
+      location,
       address,
     });
-    
+
     const populated = await post.populate('author', 'name avatar');
     res.status(201).json(populated);
   } catch (error) {

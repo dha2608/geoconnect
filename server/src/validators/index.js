@@ -74,10 +74,17 @@ export const validateDeleteAccount = [
 // ─── Posts ────────────────────────────────────────────────────────────────────
 
 export const validateCreatePost = [
+  // Accept both 'text' (API) and 'content' (client FormData) — controller resolves
   body('text')
+    .optional()
     .trim()
     .isString().withMessage('Text must be a string')
     .isLength({ min: 1, max: 500 }).withMessage('Text must be between 1 and 500 characters'),
+  body('content')
+    .optional()
+    .trim()
+    .isString().withMessage('Content must be a string')
+    .isLength({ min: 1, max: 500 }).withMessage('Content must be between 1 and 500 characters'),
   body('lat')
     .optional()
     .isFloat().withMessage('lat must be a float'),
@@ -88,6 +95,13 @@ export const validateCreatePost = [
     .optional()
     .trim()
     .isString().withMessage('Address must be a string'),
+  body('location')
+    .optional()
+    .isString().withMessage('Location must be a JSON string'),
+  body('locationName')
+    .optional()
+    .trim()
+    .isString().withMessage('Location name must be a string'),
 ];
 
 export const validateUpdatePost = [
