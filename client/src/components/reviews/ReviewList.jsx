@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
+import useRequireAuth from '../../hooks/useRequireAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -55,9 +56,11 @@ function EmptyReviews() {
 }
 
 /* ─── Single Review Card ────────────────────────────────────────────────── */
-function ReviewCard({ review, currentUserId, onDelete }) {
+function ReviewCard({ review, currentUserId, onDelete, onVoteHelpful }) {
   const [deleting, setDeleting] = useState(false);
   const isOwner = currentUserId && review.user?._id === currentUserId;
+  const hasVoted = !!(currentUserId && review.helpfulVotes?.includes(currentUserId));
+  const voteCount = review.helpfulVotes?.length || 0;
 
   const handleDelete = async () => {
     if (!window.confirm('Delete your review?')) return;
@@ -169,6 +172,25 @@ function ReviewCard({ review, currentUserId, onDelete }) {
 
       {/* Review text */}
       <p className="text-sm text-txt-secondary leading-relaxed pl-11">{review.text}</p>
+
+      {/* Footer: helpful vote */}
+      <div className="flex items-center pl-11 pt-1">
+        <button
+          onClick={() => onVoteHelpful(review)}
+          title={hasVoted ? 'Remove helpful vote' : 'Mark as helpful'}
+          className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${
+            hasVoted
+              ? 'text-accent-primary bg-accent-primary/10'
+              : 'text-txt-muted hover:text-txt-secondary hover:bg-surface-hover'
+          }`}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+          </svg>
+          {voteCount > 0 && <span>{voteCount}</span>}
+          <span>Helpful</span>
+        </button>
+      </div>
     </motion.article>
   );
 }
@@ -237,6 +259,38 @@ export default function ReviewList({ pinId, newReview }) {
     }
   };
 
+  const requireAuth = useRequireAuth();
+  const handleVoteHelpful = useCallback(
+    async (review) => {
+      if (!requireAuth('vote on reviews')) return;
+      const hasVoted = review.helpfulVotes?.includes(user?._id);
+      // Optimistic update
+      setReviews((prev) =>
+        prev.map((r) => {
+          if (r._id !== review._id) return r;
+          const votes = hasVoted
+            ? (r.helpfulVotes || []).filter((id) => id !== user._id)
+            : [...(r.helpfulVotes || []), user._id];
+          return { ...r, helpfulVotes: votes };
+        }),
+      );
+      try {
+        if (hasVoted) {
+          await reviewApi.unvoteHelpful(pinId, review._id);
+        } else {
+          await reviewApi.voteHelpful(pinId, review._id);
+        }
+      } catch {
+        toast.error('Failed to update vote.');
+        // Revert optimistic update
+        setReviews((prev) =>
+          prev.map((r) => (r._id === review._id ? review : r)),
+        );
+      }
+    },
+    [pinId, user, requireAuth],
+  );
+
   /* ── Render ── */
   if (loading) {
     return (
@@ -285,6 +339,7 @@ export default function ReviewList({ pinId, newReview }) {
             review={review}
             currentUserId={user?._id}
             onDelete={handleDelete}
+            onVoteHelpful={handleVoteHelpful}
           />
         ))}
       </AnimatePresence>

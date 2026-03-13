@@ -28,6 +28,14 @@ const fadeVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: 'easeOut' } },
   exit: { opacity: 0, y: -8, transition: { duration: 0.18 } },
 };
+const statsContainerVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.06, delayChildren: 0.1 } },
+};
+const statCardVariants = {
+  hidden: { opacity: 0, y: 14, scale: 0.95 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.38, ease: [0.16, 1, 0.3, 1] } },
+};
 
 /* ─────────────────────────── validation schema ───────────────────────────── */
 const editSchema = z.object({
@@ -205,6 +213,104 @@ function FollowListModal({ isOpen, title, users, onClose }) {
   );
 }
 
+/* ─────────────────────── user stats mini-cards ──────────────────────────── */
+const STAT_DEFINITIONS = [
+  {
+    key: 'pins',
+    label: 'Pins',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'posts',
+    label: 'Posts',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'events',
+    label: 'Events',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'reviews',
+    label: 'Reviews',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'followers',
+    label: 'Followers',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'following',
+    label: 'Following',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+      </svg>
+    ),
+  },
+];
+
+function UserStatsSection({ stats, loading }) {
+  if (!loading && !stats) return null;
+
+  return (
+    <motion.div
+      variants={statsContainerVariants}
+      initial="hidden"
+      animate="visible"
+      className="grid grid-cols-3 sm:grid-cols-6 gap-2 px-2 mt-5"
+    >
+      {loading
+        ? Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="glass rounded-xl p-3 flex flex-col items-center gap-1.5 animate-pulse"
+            >
+              <div className="w-5 h-5 rounded-md bg-surface-hover" />
+              <div className="h-4 w-8 rounded bg-surface-hover" />
+              <div className="h-2.5 w-12 rounded bg-surface-hover" />
+            </div>
+          ))
+        : STAT_DEFINITIONS.map(({ key, label, icon }) => (
+            <motion.div
+              key={key}
+              variants={statCardVariants}
+              className="glass rounded-xl p-3 flex flex-col items-center gap-1 border border-surface-divider/50 hover:border-accent-primary/25 hover:shadow-[0_0_12px_rgba(59,130,246,0.08)] transition-all duration-200 cursor-default"
+            >
+              <span className="text-accent-primary opacity-80">{icon}</span>
+              <span className="text-sm font-heading font-bold text-txt-primary tabular-nums leading-tight">
+                {(stats[key] ?? 0).toLocaleString()}
+              </span>
+              <span className="text-[10px] text-txt-muted font-medium tracking-wide uppercase leading-none">
+                {label}
+              </span>
+            </motion.div>
+          ))}
+    </motion.div>
+  );
+}
+
 /* ─────────────────────────── main component ─────────────────────────────── */
 export default function ProfilePage() {
   const { userId } = useParams();
@@ -225,6 +331,8 @@ export default function ProfilePage() {
   const [saveError, setSaveError] = useState(null);
   const [followLoading, setFollowLoading] = useState(false);
   const [statsModal, setStatsModal] = useState(null); // 'followers' | 'following'
+  const [userStats, setUserStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   const fileInputRef = useRef();
 
@@ -248,6 +356,17 @@ export default function ProfilePage() {
       setAvatarFile(null);
     }
   }, [profile, reset]);
+
+  /* ── fetch user stats ── */
+  useEffect(() => {
+    if (!profileId) return;
+    setStatsLoading(true);
+    setUserStats(null);
+    userApi.getUserStats(profileId)
+      .then((res) => setUserStats(res.data))
+      .catch(() => {}) // silently fail — stats section hides on error
+      .finally(() => setStatsLoading(false));
+  }, [profileId]);
 
   /* ── derived ── */
   const isFollowing = currentUser?.following?.some(
@@ -560,9 +679,16 @@ export default function ProfilePage() {
                   </div>
                 </motion.div>
               )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
+          </AnimatePresence>
+        </div>
+      </motion.div>
+
+        {/* ── User Stats Cards ── */}
+        {!editMode && (
+          <motion.div variants={itemVariants}>
+            <UserStatsSection stats={userStats} loading={statsLoading} />
+          </motion.div>
+        )}
 
         {/* ── Tabs ── */}
         {!editMode && (

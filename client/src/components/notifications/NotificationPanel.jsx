@@ -25,6 +25,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchNotifications,
   markAsRead,
+  markAllAsRead,
+  deleteNotification,
+  clearAllNotifications,
 } from '../../features/notifications/notificationSlice';
 import { closePanel } from '../../features/ui/uiSlice';
 import { formatDistanceToNow } from 'date-fns';
@@ -163,7 +166,7 @@ function EmptyState() {
 
 // ─── Notification item ────────────────────────────────────────────────────────
 
-function NotificationItem({ notification, onRead }) {
+function NotificationItem({ notification, onRead, onDelete }) {
   const { _id, type = 'comment', message, actor, read, createdAt, targetType, targetId } = notification;
   const { color, bg, Icon } = getTypeConfig(type);
 
@@ -188,7 +191,7 @@ function NotificationItem({ notification, onRead }) {
   }
 
   return (
-    <motion.button
+    <motion.div
       layout
       initial={{ opacity: 0, x: -12 }}
       animate={{ opacity: 1, x: 0 }}
@@ -196,8 +199,11 @@ function NotificationItem({ notification, onRead }) {
       whileHover={{ scale: 1.012, x: 2 }}
       whileTap={{ scale: 0.985 }}
       onClick={() => onRead(_id, targetType, targetId)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && onRead(_id, targetType, targetId)}
       className={[
-        'w-full flex items-start gap-3 p-3.5 rounded-xl text-left',
+        'group w-full flex items-start gap-3 p-3.5 rounded-xl text-left',
         'border transition-all duration-200 cursor-pointer',
         read
           ? 'border-[var(--glass-border)] bg-surface-hover hover:bg-surface-active'
@@ -227,18 +233,25 @@ function NotificationItem({ notification, onRead }) {
         )}
       </div>
 
-      {/* Unread indicator */}
-      <div className="flex-shrink-0 mt-2">
-        {!read ? (
+      {/* Unread dot + per-item delete button (shown on hover) */}
+      <div className="flex-shrink-0 mt-1.5 relative flex items-center justify-center w-5 h-5">
+        {!read && (
           <span
-            className="w-2 h-2 rounded-full block"
+            className="w-2 h-2 rounded-full block group-hover:opacity-0 transition-opacity duration-150"
             style={{ backgroundColor: '#3b82f6', boxShadow: '0 0 6px rgba(59,130,246,0.6)' }}
           />
-        ) : (
-          <span className="w-2 h-2 block" />
         )}
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(_id); }}
+          aria-label="Delete notification"
+          className="absolute inset-0 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 text-txt-muted hover:text-accent-danger transition-all duration-150"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
       </div>
-    </motion.button>
+    </motion.div>
   );
 }
 
@@ -267,11 +280,16 @@ export default function NotificationPanel() {
   );
 
   // Mark all unread notifications as read
-  const handleMarkAllRead = useCallback(() => {
-    items
-      .filter((n) => !n.read)
-      .forEach((n) => dispatch(markAsRead(n._id)));
-  }, [items, dispatch]);
+  const handleMarkAllRead = useCallback(
+    () => dispatch(markAllAsRead()),
+    [dispatch],
+  );
+
+  // Delete a single notification
+  const handleDelete = useCallback(
+    (_id) => dispatch(deleteNotification(_id)),
+    [dispatch],
+  );
 
   const handleClose = useCallback(() => dispatch(closePanel()), [dispatch]);
 
@@ -347,6 +365,19 @@ export default function NotificationPanel() {
                     Mark all read
                   </motion.button>
                 )}
+                {items.length > 0 && (
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => dispatch(clearAllNotifications())}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px]
+                               font-medium text-accent-danger hover:bg-accent-danger/10
+                               transition-colors duration-150 font-body"
+                    aria-label="Clear all notifications"
+                  >
+                    Clear all
+                  </motion.button>
+                )}
                 <button
                   onClick={handleClose}
                   aria-label="Close notifications"
@@ -396,6 +427,7 @@ export default function NotificationPanel() {
                       <NotificationItem
                         notification={notification}
                         onRead={handleRead}
+                        onDelete={handleDelete}
                       />
                     </motion.div>
                   ))}
