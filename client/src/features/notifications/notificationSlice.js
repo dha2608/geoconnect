@@ -28,13 +28,19 @@ export const clearAllNotifications = createAsyncThunk('notifications/clearAll', 
 
 const notificationSlice = createSlice({
   name: 'notifications',
-  initialState: { items: [], unreadCount: 0, loading: false },
+  initialState: { items: [], unreadCount: 0, loading: false, latestNotification: null },
   reducers: {
     addNotification: (state, action) => {
       state.items.unshift(action.payload);
       state.unreadCount += 1;
     },
     clearNotifications: (state) => { state.items = []; state.unreadCount = 0; },
+    setLatestNotification: (state, action) => {
+      state.latestNotification = action.payload;
+    },
+    clearLatestNotification: (state) => {
+      state.latestNotification = null;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchNotifications.fulfilled, (state, action) => {
@@ -65,5 +71,10 @@ const notificationSlice = createSlice({
   },
 });
 
-export const { addNotification, clearNotifications } = notificationSlice.actions;
+export const {
+  addNotification,
+  clearNotifications,
+  setLatestNotification,
+  clearLatestNotification,
+} = notificationSlice.actions;
 export default notificationSlice.reducer;

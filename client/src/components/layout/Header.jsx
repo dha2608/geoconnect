@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleSidebar, setActivePanel } from '../../features/ui/uiSlice';
 import Avatar from '../ui/Avatar';
+import LiveIndicator from '../ui/LiveIndicator';
 
 export default function Header() {
   const dispatch = useDispatch();
@@ -27,6 +28,7 @@ export default function Header() {
         <h1 className="text-xl font-heading font-bold bg-gradient-to-r from-accent-primary to-accent-secondary bg-clip-text text-transparent">
           GeoConnect
         </h1>
+        <LiveIndicator className="hidden sm:flex" />
       </div>
 
       <div className="flex items-center gap-2">

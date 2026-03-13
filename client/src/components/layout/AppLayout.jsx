@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense, useMemo, useCallback } from 'react';
+import { useEffect, useState, lazy, Suspense, useMemo, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Outlet } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -23,6 +23,11 @@ import CreateEventModal from '../events/CreateEventModal';
 import EventDetailPanel from '../events/EventDetailPanel';
 import SectionErrorBoundary from '../SectionErrorBoundary';
 import LocationPermissionPrompt from '../map/LocationPermissionPrompt';
+import CommandPalette from '../ui/CommandPalette';
+import NotificationToast from '../ui/NotificationToast';
+import LiveIndicator from '../ui/LiveIndicator';
+import OnboardingTour from '../ui/OnboardingTour';
+import WelcomeChecklist from '../ui/WelcomeChecklist';
 
 // Heavy panels — lazy-loaded so they don't block the initial map render
 const FeedPanel         = lazy(() => import('../posts/FeedPanel'));
@@ -41,6 +46,9 @@ export default function AppLayout() {
 
   // Keyboard shortcuts — exposes help overlay state
   const { showShortcutHelp, setShowShortcutHelp } = useKeyboardShortcuts();
+
+  // Onboarding tour — delayed show after login, only once per user
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Derive theme: dark map → dark UI, light/street/satellite → light frosted glass
   const theme = useMemo(() => LIGHT_TILES.has(tileLayer) ? 'light' : 'dark', [tileLayer]);
@@ -62,6 +70,15 @@ export default function AppLayout() {
   useEffect(() => {
     if (user?._id) dispatch(fetchUnreadCount());
   }, [dispatch, user?._id]);
+
+  // Show onboarding tour once, 2 s after auth, if not already completed
+  useEffect(() => {
+    const done = localStorage.getItem('geoconnect_onboarding_complete');
+    if (!done && user?._id) {
+      const timer = setTimeout(() => setShowOnboarding(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [user?._id]);
 
   useEffect(() => {
     const handleResize = () => dispatch(setDeviceSize(window.innerWidth));
@@ -191,6 +208,22 @@ export default function AppLayout() {
       {isMobile && <MobileNav />}
       <LocationPermissionPrompt />
       <ToastProvider />
+
+      {/* ── Command Palette (Cmd+K) ── */}
+      <CommandPalette />
+
+      {/* ── Real-time notification toasts ── */}
+      <NotificationToast />
+
+      {/* ── Onboarding tour (shown once after first login) ── */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <OnboardingTour onComplete={() => setShowOnboarding(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* ── Getting-started checklist (persistent until dismissed/complete) ── */}
+      <WelcomeChecklist />
 
       {/* ── Keyboard shortcuts help overlay ── */}
       <AnimatePresence>
