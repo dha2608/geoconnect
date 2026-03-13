@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 export const generateAccessToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_ACCESS_SECRET, {
@@ -14,4 +15,9 @@ export const generateRefreshToken = (userId) => {
 
 export const verifyRefreshToken = (token) => {
   return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+};
+
+// Hash a refresh token for DB storage (prevents stolen DB dump → session hijack)
+export const hashToken = (token) => {
+  return crypto.createHash('sha256').update(token).digest('hex');
 };

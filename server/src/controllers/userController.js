@@ -1,5 +1,7 @@
 import User from '../models/User.js';
 import { uploadToCloudinary } from '../middleware/upload.js';
+import { createNotification } from '../utils/createNotification.js';
+import { sendAccountDeletedEmail } from '../utils/email.js';
 
 export const getMe = async (req, res) => {
   try {
@@ -69,6 +71,14 @@ export const followUser = async (req, res) => {
     
     await User.findByIdAndUpdate(req.params.id, { $addToSet: { followers: req.user._id } });
     await User.findByIdAndUpdate(req.user._id, { $addToSet: { following: req.params.id } });
+
+    // Notify the followed user
+    await createNotification(req, {
+      recipientId: req.params.id,
+      senderId: req.user._id,
+      type: 'follow',
+      data: {},
+    });
     
     res.json({ message: 'Followed successfully' });
   } catch (error) {
@@ -91,9 +101,14 @@ export const getNearbyUsers = async (req, res) => {
   try {
     const { lat, lng, radius = 10 } = req.query;
     if (!lat || !lng) return res.status(400).json({ message: 'lat and lng required' });
-    
+
+    // Get blocked users to exclude them
+    const currentUser = await User.findById(req.user._id).select('blockedUsers');
+    const blockedIds = currentUser?.blockedUsers || [];
+
     const users = await User.find({
-      _id: { $ne: req.user._id },
+      _id: { $ne: req.user._id, $nin: blockedIds },
+      blockedUsers: { $nin: [req.user._id] },
       isLocationPublic: true,
       location: {
         $near: {
@@ -129,8 +144,14 @@ export const searchUsers = async (req, res) => {
   try {
     const { q } = req.query;
     if (!q || q.length < 2) return res.status(400).json({ message: 'Query must be at least 2 characters' });
-    
+
+    // Get blocked users to exclude from search
+    const currentUser = await User.findById(req.user._id).select('blockedUsers');
+    const blockedIds = currentUser?.blockedUsers || [];
+
     const users = await User.find({
+      _id: { $nin: blockedIds },
+      blockedUsers: { $nin: [req.user._id] },
       $or: [
         { name: { $regex: q, $options: 'i' } },
         { email: { $regex: q, $options: 'i' } },
@@ -195,3 +216,174 @@ function getDefaultSettings() {
     appearance: { mapStyle: 'dark', distanceUnit: 'km' },
   };
 }
+
+// POST /api/users/:id/block
+export const blockUser = async (req, res) => {
+  try {
+    const targetId = req.params.id;
+    if (targetId === req.user._id.toString()) {
+      return res.status(400).json({ message: 'Cannot block yourself' });
+    }
+
+    const target = await User.findById(targetId);
+    if (!target) return res.status(404).json({ message: 'User not found' });
+
+    const user = await User.findById(req.user._id);
+
+    // Add to blocked list if not already blocked
+    if (!user.blockedUsers.includes(targetId)) {
+      user.blockedUsers.push(targetId);
+    }
+
+    // Also unfollow in both directions
+    user.following = user.following.filter(id => id.toString() !== targetId);
+    user.followers = user.followers.filter(id => id.toString() !== targetId);
+    await user.save();
+
+    // Remove from target's followers/following too
+    target.following = target.following.filter(id => id.toString() !== req.user._id.toString());
+    target.followers = target.followers.filter(id => id.toString() !== req.user._id.toString());
+    await target.save();
+
+    res.json({ message: 'User blocked', blockedUsers: user.blockedUsers });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// DELETE /api/users/:id/block
+export const unblockUser = async (req, res) => {
+  try {
+    const targetId = req.params.id;
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $pull: { blockedUsers: targetId } },
+      { new: true },
+    ).select('blockedUsers');
+
+    res.json({ message: 'User unblocked', blockedUsers: user.blockedUsers });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// GET /api/users/me/blocked
+export const getBlockedUsers = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .populate('blockedUsers', 'name avatar bio');
+    res.json(user.blockedUsers || []);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// GET /api/users/:id/stats — activity/content counts
+export const getUserStats = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const [Pin, Post, Event, Review] = await Promise.all([
+      import('../models/Pin.js').then(m => m.default),
+      import('../models/Post.js').then(m => m.default),
+      import('../models/Event.js').then(m => m.default),
+      import('../models/Review.js').then(m => m.default),
+    ]);
+
+    const [pinCount, postCount, eventCount, reviewCount] = await Promise.all([
+      Pin.countDocuments({ createdBy: userId }),
+      Post.countDocuments({ author: userId }),
+      Event.countDocuments({ organizer: userId }),
+      Review.countDocuments({ user: userId }),
+    ]);
+
+    res.json({
+      pins: pinCount,
+      posts: postCount,
+      events: eventCount,
+      reviews: reviewCount,
+      followers: user.followers?.length || 0,
+      following: user.following?.length || 0,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// DELETE /api/users/me — permanently delete account and cascade related data
+export const deleteAccount = async (req, res) => {
+  try {
+    const { password } = req.body;
+    const user = await User.findById(req.user._id).select('+password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // OAuth-only users don't have a password — skip check for them
+    if (user.password) {
+      if (!password) {
+        return res.status(400).json({ message: 'Password is required to delete your account' });
+      }
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Incorrect password' });
+      }
+    }
+
+    const userId = user._id;
+
+    // Lazy-import models to avoid circular dependency issues
+    const [Pin, Post, Event, Review, Message, Conversation, Notification] = await Promise.all([
+      import('../models/Pin.js').then(m => m.default),
+      import('../models/Post.js').then(m => m.default),
+      import('../models/Event.js').then(m => m.default),
+      import('../models/Review.js').then(m => m.default),
+      import('../models/Message.js').then(m => m.default),
+      import('../models/Conversation.js').then(m => m.default),
+      import('../models/Notification.js').then(m => m.default),
+    ]);
+
+    // Cascade delete all user-created content
+    await Promise.all([
+      Pin.deleteMany({ creator: userId }),
+      Post.deleteMany({ author: userId }),
+      Event.deleteMany({ creator: userId }),
+      Review.deleteMany({ user: userId }),
+      Message.deleteMany({ sender: userId }),
+      Notification.deleteMany({ $or: [{ recipient: userId }, { sender: userId }] }),
+    ]);
+
+    // Remove user from conversations
+    await Conversation.updateMany(
+      { participants: userId },
+      { $pull: { participants: userId } },
+    );
+
+    // Remove from other users' followers / following lists
+    await User.updateMany(
+      { $or: [{ followers: userId }, { following: userId }] },
+      { $pull: { followers: userId, following: userId } },
+    );
+
+    // Remove from saved pins lists
+    await User.updateMany(
+      { savedPins: userId },
+      { $pull: { savedPins: userId } },
+    );
+
+    const { email, name } = user;
+
+    // Finally delete the user
+    await User.findByIdAndDelete(userId);
+
+    // Clear auth cookie
+    res.clearCookie('refreshToken');
+
+    // Send confirmation email (best-effort)
+    sendAccountDeletedEmail(email, name).catch(() => {});
+
+    res.json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to delete account', error: error.message });
+  }
+};
