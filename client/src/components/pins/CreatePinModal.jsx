@@ -11,6 +11,7 @@ import useRequireAuth from '../../hooks/useRequireAuth';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { compressImages } from '../../utils/compressImage';
+import { geocodeApi } from '../../api/geocodeApi';
 
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 const PIN_CATEGORIES = [
@@ -26,6 +27,12 @@ const PIN_CATEGORIES = [
   { value: 'other',         label: 'Other',              color: '#94a3b8', emoji: '📍' },
 ];
 
+const VISIBILITY_OPTIONS = [
+  { value: 'public',  label: 'Public',  icon: '🌍', desc: 'Everyone can see' },
+  { value: 'friends', label: 'Friends', icon: '👥', desc: 'Only followers'   },
+  { value: 'private', label: 'Private', icon: '🔒', desc: 'Only you'         },
+];
+
 const MAX_IMAGES = 5;
 
 /* ─── Validation Schema ─────────────────────────────────────────────────── */
@@ -39,6 +46,8 @@ const schema = z.object({
     .min(10,  'Description must be at least 10 characters.')
     .max(1000, 'Description is too long (max 1000 chars).'),
   category: z.string().min(1, 'Please select a category.'),
+  visibility: z.string().optional().default('public'),
+  tags: z.string().optional(),
   lat: z
     .number({ invalid_type_error: 'Latitude must be a number.' })
     .min(-90, 'Latitude must be between -90 and 90.')
@@ -116,16 +125,23 @@ function ImagePreview({ url, index, onRemove }) {
 
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function CreatePinModal() {
-  const dispatch   = useDispatch();
+  const dispatch    = useDispatch();
   const requireAuth = useRequireAuth();
-  const modalOpen  = useSelector((state) => state.ui.modalOpen);
-  const mapCenter  = useSelector((state) => state.map.center); // [lat, lng]
-  const pinLoading = useSelector((state) => state.pins.loading);
+  const modalOpen   = useSelector((state) => state.ui.modalOpen);
+  const modalData   = useSelector((state) => state.ui.modalData); // pre-filled coords from context menu
+  const mapCenter   = useSelector((state) => state.map.center); // [lat, lng]
+  const pinLoading  = useSelector((state) => state.pins.loading);
 
   const [imageFiles,    setImageFiles]    = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [imageError,    setImageError]    = useState('');
   const fileInputRef = useRef(null);
+
+  // ── New state ──────────────────────────────────────────────────────────
+  const [address,        setAddress]        = useState('');
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [tags,           setTags]           = useState([]);
+  const [tagInputValue,  setTagInputValue]  = useState('');
 
   const isOpen = modalOpen === 'createPin';
 
@@ -135,6 +151,7 @@ export default function CreatePinModal() {
     control,
     reset,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(schema),
@@ -142,18 +159,56 @@ export default function CreatePinModal() {
       title:       '',
       description: '',
       category:    '',
+      visibility:  'public',
       lat: mapCenter?.[0] ?? 10.8231,
       lng: mapCenter?.[1] ?? 106.6297,
     },
   });
 
+  const watchedLat = watch('lat');
+  const watchedLng = watch('lng');
+
   // Sync coordinates each time modal opens
+  // modalData coords (from context menu long-press) take priority over mapCenter
   useEffect(() => {
-    if (isOpen && mapCenter) {
+    if (!isOpen) return;
+    if (modalData?.lat != null && modalData?.lng != null) {
+      setValue('lat', parseFloat(Number(modalData.lat).toFixed(6)));
+      setValue('lng', parseFloat(Number(modalData.lng).toFixed(6)));
+    } else if (mapCenter) {
       setValue('lat', parseFloat(mapCenter[0].toFixed(6)));
       setValue('lng', parseFloat(mapCenter[1].toFixed(6)));
     }
-  }, [isOpen, mapCenter, setValue]);
+  }, [isOpen, mapCenter, modalData, setValue]);
+
+  // Reverse-geocode whenever modal is open + coordinates settle (debounced 800 ms)
+  useEffect(() => {
+    if (!isOpen) return;
+    const lat = watchedLat;
+    const lng = watchedLng;
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+
+    setAddressLoading(true);
+    setAddress('');
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await geocodeApi.reverse(lat, lng);
+        setAddress(
+          res.data?.address       ||
+          res.data?.display_name  ||
+          res.data?.formatted     ||
+          ''
+        );
+      } catch {
+        setAddress('');
+      } finally {
+        setAddressLoading(false);
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, watchedLat, watchedLng]);
 
   // Revoke object URLs on unmount
   useEffect(() => {
@@ -173,6 +228,10 @@ export default function CreatePinModal() {
     setImageFiles([]);
     setImagePreviews([]);
     setImageError('');
+    setAddress('');
+    setAddressLoading(false);
+    setTags([]);
+    setTagInputValue('');
   };
 
   const handleFileChange = (e) => {
@@ -209,17 +268,68 @@ export default function CreatePinModal() {
     setImageError('');
   };
 
+  /* ── Tag helpers ── */
+  const commitTag = (raw) => {
+    const tag = raw.trim().replace(/,/g, '');
+    if (tag && !tags.includes(tag)) {
+      setTags((prev) => [...prev, tag]);
+    }
+  };
+
+  const handleTagInputChange = (e) => {
+    const val = e.target.value;
+    if (val.includes(',')) {
+      const [head, ...rest] = val.split(',');
+      commitTag(head);
+      setTagInputValue(rest.join(',').trimStart());
+    } else {
+      setTagInputValue(val);
+    }
+  };
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitTag(tagInputValue);
+      setTagInputValue('');
+    } else if (e.key === 'Backspace' && !tagInputValue && tags.length > 0) {
+      setTags((prev) => prev.slice(0, -1));
+    }
+  };
+
+  const removeTag = (idx) => setTags((prev) => prev.filter((_, i) => i !== idx));
+
+  /* ── Reverse-geocode helper for "Use map center" ── */
+  const reverseGeocode = async (lat, lng) => {
+    setAddressLoading(true);
+    setAddress('');
+    try {
+      const res = await geocodeApi.reverse(lat, lng);
+      setAddress(
+        res.data?.address       ||
+        res.data?.display_name  ||
+        res.data?.formatted     ||
+        ''
+      );
+    } catch {
+      setAddress('');
+    } finally {
+      setAddressLoading(false);
+    }
+  };
+
   const onSubmit = async (data) => {
     if (!requireAuth('create pins')) return;
     const formData = new FormData();
     formData.append('title',       data.title);
     formData.append('description', data.description);
     formData.append('category',    data.category);
+    formData.append('visibility',  data.visibility || 'public');
+    formData.append('tags',        tags.join(','));
+    formData.append('address',     address);
 
-    // GeoJSON coordinates = [longitude, latitude]
-    formData.append('location[type]',            'Point');
-    formData.append('location[coordinates][0]',  String(data.lng));
-    formData.append('location[coordinates][1]',  String(data.lat));
+    formData.append('lat', String(data.lat));
+    formData.append('lng', String(data.lng));
 
     // Compress images before upload
     const compressed = await compressImages(imageFiles);
@@ -246,7 +356,7 @@ export default function CreatePinModal() {
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
 
-        {/* Title */}
+        {/* ── Title ─────────────────────────────────────────────────────── */}
         <div className="space-y-1.5">
           <SectionLabel required>Title</SectionLabel>
           <input
@@ -262,7 +372,7 @@ export default function CreatePinModal() {
           <FieldError message={errors.title?.message} />
         </div>
 
-        {/* Description */}
+        {/* ── Description ───────────────────────────────────────────────── */}
         <div className="space-y-1.5">
           <SectionLabel required>Description</SectionLabel>
           <textarea
@@ -279,7 +389,7 @@ export default function CreatePinModal() {
           <FieldError message={errors.description?.message} />
         </div>
 
-        {/* Category */}
+        {/* ── Category ──────────────────────────────────────────────────── */}
         <div className="space-y-2">
           <SectionLabel required>Category</SectionLabel>
           <Controller
@@ -307,7 +417,7 @@ export default function CreatePinModal() {
                       style={{
                         '--cat-color': cat.color,
                         ...(selected ? {
-                          background: `${cat.color}18`,
+                          background:  `${cat.color}18`,
                           borderColor: `${cat.color}55`,
                         } : {}),
                       }}
@@ -316,8 +426,8 @@ export default function CreatePinModal() {
                         className="w-2 h-2 rounded-full flex-shrink-0 transition-transform duration-150"
                         style={{
                           background: cat.color,
-                          boxShadow: selected ? `0 0 6px ${cat.color}` : 'none',
-                          transform: selected ? 'scale(1.3)' : 'scale(1)',
+                          boxShadow:  selected ? `0 0 6px ${cat.color}` : 'none',
+                          transform:  selected ? 'scale(1.3)' : 'scale(1)',
                         }}
                       />
                       <span className="truncate font-body">{cat.emoji} {cat.label}</span>
@@ -330,7 +440,110 @@ export default function CreatePinModal() {
           <FieldError message={errors.category?.message} />
         </div>
 
-        {/* Location */}
+        {/* ── Visibility ────────────────────────────────────────────────── */}
+        <div className="space-y-2">
+          <SectionLabel>Visibility</SectionLabel>
+          <Controller
+            name="visibility"
+            control={control}
+            render={({ field }) => (
+              <div className="grid grid-cols-3 gap-2">
+                {VISIBILITY_OPTIONS.map((opt) => {
+                  const selected = field.value === opt.value;
+                  return (
+                    <motion.button
+                      key={opt.value}
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => field.onChange(opt.value)}
+                      className={`
+                        flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border
+                        text-center transition-all duration-150
+                        ${selected
+                          ? 'border-accent-primary/50 bg-accent-primary/10 text-txt-primary shadow-[0_0_14px_rgba(59,130,246,0.15)]'
+                          : 'border-surface-divider bg-elevated text-txt-secondary hover:border-accent-primary/30 hover:text-txt-primary'
+                        }
+                      `}
+                    >
+                      <span className="text-xl leading-none">{opt.icon}</span>
+                      <span className="text-xs font-medium">{opt.label}</span>
+                      <span className="text-[10px] text-txt-muted leading-tight">{opt.desc}</span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            )}
+          />
+        </div>
+
+        {/* ── Tags ──────────────────────────────────────────────────────── */}
+        <div className="space-y-2">
+          <SectionLabel>Tags</SectionLabel>
+
+          {/* Input */}
+          <input
+            type="text"
+            value={tagInputValue}
+            onChange={handleTagInputChange}
+            onKeyDown={handleTagKeyDown}
+            placeholder="Type a tag and press Enter or comma…"
+            className="
+              w-full bg-elevated border border-surface-divider rounded-xl px-4 py-3
+              text-sm text-txt-primary placeholder-txt-muted outline-none
+              transition-all duration-150
+              focus:border-accent-primary/50 focus:shadow-[0_0_18px_rgba(59,130,246,0.12)]
+            "
+          />
+
+          {/* Tag chips */}
+          <AnimatePresence mode="popLayout">
+            {tags.length > 0 && (
+              <motion.div
+                layout
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex flex-wrap gap-1.5 overflow-hidden"
+              >
+                {tags.map((tag, idx) => (
+                  <motion.span
+                    key={tag + idx}
+                    layout
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="
+                      inline-flex items-center gap-1 px-2.5 py-1 rounded-full
+                      bg-accent-primary/15 border border-accent-primary/30
+                      text-xs text-accent-primary font-medium
+                    "
+                  >
+                    #{tag}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(idx)}
+                      className="ml-0.5 hover:text-accent-danger transition-colors"
+                      aria-label={`Remove tag ${tag}`}
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </motion.span>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <p className="text-[10px] text-txt-muted">
+            Press <kbd className="px-1 py-0.5 rounded bg-surface-divider text-[10px]">Enter</kbd> or{' '}
+            <kbd className="px-1 py-0.5 rounded bg-surface-divider text-[10px]">,</kbd> to add a tag
+          </p>
+        </div>
+
+        {/* ── Location ──────────────────────────────────────────────────── */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <SectionLabel required>Location</SectionLabel>
@@ -340,8 +553,11 @@ export default function CreatePinModal() {
               whileTap={{ scale: 0.98 }}
               onClick={() => {
                 if (mapCenter) {
-                  setValue('lat', parseFloat(mapCenter[0].toFixed(6)));
-                  setValue('lng', parseFloat(mapCenter[1].toFixed(6)));
+                  const newLat = parseFloat(mapCenter[0].toFixed(6));
+                  const newLng = parseFloat(mapCenter[1].toFixed(6));
+                  setValue('lat', newLat);
+                  setValue('lng', newLng);
+                  reverseGeocode(newLat, newLng);
                 }
               }}
               className="text-xs text-accent-primary hover:text-blue-400 transition-colors flex items-center gap-1"
@@ -353,6 +569,8 @@ export default function CreatePinModal() {
               Use map center
             </motion.button>
           </div>
+
+          {/* Lat / Lng inputs */}
           <div className="flex gap-3">
             {[
               { key: 'lat', label: 'LAT', placeholder: '10.8231' },
@@ -381,9 +599,34 @@ export default function CreatePinModal() {
               </div>
             ))}
           </div>
+
+          {/* Address (read-only, auto-filled) */}
+          <div className="relative">
+            {addressLoading ? (
+              <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-surface-divider bg-elevated/60">
+                {/* Spinner */}
+                <svg
+                  className="animate-spin text-accent-primary flex-shrink-0"
+                  width="14" height="14" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" strokeWidth="2.5"
+                >
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round" />
+                </svg>
+                <span className="text-xs text-txt-muted">Fetching address…</span>
+              </div>
+            ) : address ? (
+              <div className="flex items-start gap-2 px-4 py-3 rounded-xl border border-surface-divider bg-elevated/60">
+                <svg className="flex-shrink-0 mt-0.5 text-accent-primary" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span className="text-xs text-txt-secondary leading-relaxed">{address}</span>
+              </div>
+            ) : null}
+          </div>
         </div>
 
-        {/* Images */}
+        {/* ── Photos ────────────────────────────────────────────────────── */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <SectionLabel>Photos</SectionLabel>
@@ -447,8 +690,8 @@ export default function CreatePinModal() {
           </AnimatePresence>
         </div>
 
-        {/* Footer actions */}
-          <div className="flex gap-3 pt-2 border-t border-surface-divider">
+        {/* ── Footer actions ────────────────────────────────────────────── */}
+        <div className="flex gap-3 pt-2 border-t border-surface-divider">
           <Button
             type="button"
             variant="ghost"
@@ -468,6 +711,7 @@ export default function CreatePinModal() {
             {busy ? 'Dropping pin…' : '📍 Drop Pin'}
           </Button>
         </div>
+
       </form>
     </Modal>
   );
