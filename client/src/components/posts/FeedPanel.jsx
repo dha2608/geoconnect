@@ -1,10 +1,16 @@
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchFeed, clearPosts } from '../../features/posts/postSlice';
 import { closePanel } from '../../features/ui/uiSlice';
 import PostCard from './PostCard';
 import LoadingSpinner from '../ui/LoadingSpinner';
+
+// ─── Pull-to-refresh constants ────────────────────────────────────────────────
+
+const PULL_THRESHOLD = 64;   // px to pull before refresh triggers
+const PULL_MAX = 100;        // max visual pull distance
+const PULL_RESISTANCE = 0.45; // dampening factor for over-pull
 
 // ─── Inline SVG icons (lucide-react not installed) ────────────────────────────
 
@@ -63,6 +69,42 @@ export default function FeedPanel() {
 
   const scrollRef = useRef(null);
   const isOpen = activePanel === 'feed';
+
+  // ── Pull-to-refresh state ──────────────────────────────────────────────────
+  const [pullDistance, setPullDistance] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const touchStartY = useRef(0);
+  const isPulling = useRef(false);
+
+  const handleTouchStart = useCallback((e) => {
+    if (!scrollRef.current || scrollRef.current.scrollTop > 0 || refreshing) return;
+    touchStartY.current = e.touches[0].clientY;
+    isPulling.current = true;
+  }, [refreshing]);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!isPulling.current || refreshing) return;
+    const diff = e.touches[0].clientY - touchStartY.current;
+    if (diff > 0 && scrollRef.current?.scrollTop === 0) {
+      const dampened = Math.min(diff * PULL_RESISTANCE, PULL_MAX);
+      setPullDistance(dampened);
+    } else {
+      setPullDistance(0);
+    }
+  }, [refreshing]);
+
+  const handleTouchEnd = useCallback(async () => {
+    if (!isPulling.current) return;
+    isPulling.current = false;
+    if (pullDistance >= PULL_THRESHOLD && !refreshing) {
+      setRefreshing(true);
+      setPullDistance(PULL_THRESHOLD * 0.6); // Hold at small offset while loading
+      dispatch(clearPosts());
+      await dispatch(fetchFeed({ page: 1 }));
+      setRefreshing(false);
+    }
+    setPullDistance(0);
+  }, [pullDistance, refreshing, dispatch]);
 
   // Fetch first page when panel opens, clear on close
   useEffect(() => {
@@ -156,7 +198,42 @@ export default function FeedPanel() {
             ref={scrollRef}
             className="flex-1 overflow-y-auto px-3 pt-3 pb-4"
             style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}
+            onTouchStart={isMobile ? handleTouchStart : undefined}
+            onTouchMove={isMobile ? handleTouchMove : undefined}
+            onTouchEnd={isMobile ? handleTouchEnd : undefined}
           >
+            {/* Pull-to-refresh indicator */}
+            {isMobile && (pullDistance > 0 || refreshing) && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, height: pullDistance > 0 ? pullDistance : 40 }}
+                className="flex items-center justify-center overflow-hidden"
+              >
+                <motion.div
+                  animate={{ rotate: refreshing ? 360 : (pullDistance / PULL_THRESHOLD) * 180 }}
+                  transition={refreshing ? { duration: 0.8, repeat: Infinity, ease: 'linear' } : { duration: 0 }}
+                  className="w-6 h-6 flex items-center justify-center"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={pullDistance >= PULL_THRESHOLD || refreshing ? '#3b82f6' : 'rgba(255,255,255,0.3)'}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 12a9 9 0 11-6.219-8.56" />
+                  </svg>
+                </motion.div>
+                {!refreshing && pullDistance >= PULL_THRESHOLD && (
+                  <span className="text-[10px] text-accent-primary ml-2 font-body">Release to refresh</span>
+                )}
+                {refreshing && (
+                  <span className="text-[10px] text-accent-primary ml-2 font-body">Refreshing...</span>
+                )}
+              </motion.div>
+            )}
             {/* Error state */}
             {!loading && error && posts.length === 0 && (
               <motion.div
