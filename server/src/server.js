@@ -80,6 +80,13 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/geocode', geocodeRoutes);
 
+// 404 handler — catch all unmatched routes
+app.use((req, res) => {
+  res.status(404).json({
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+  });
+});
+
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
