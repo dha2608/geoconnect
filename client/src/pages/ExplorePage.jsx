@@ -258,9 +258,16 @@ function EmptyState({ emoji, title, subtitle }) {
 }
 
 /* ─────────────────────── Loading Grid ───────────────────────────── */
+const SM_GRID_COLS = {
+  1: 'sm:grid-cols-1',
+  2: 'sm:grid-cols-2',
+  3: 'sm:grid-cols-3',
+  4: 'sm:grid-cols-4',
+};
+
 function LoadingGrid({ cols = 3 }) {
   return (
-    <div className={`grid grid-cols-2 sm:grid-cols-${cols} gap-3`}>
+    <div className={`grid grid-cols-2 ${SM_GRID_COLS[cols] || 'sm:grid-cols-3'} gap-3`}>
       {Array.from({ length: cols * 2 }).map((_, i) => (
         <div key={i} className="glass rounded-2xl h-40 animate-pulse" />
       ))}
