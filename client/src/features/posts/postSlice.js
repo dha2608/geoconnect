@@ -31,6 +31,11 @@ export const deleteComment = createAsyncThunk('posts/deleteComment', async ({ po
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
+export const deletePost = createAsyncThunk('posts/delete', async (id, { rejectWithValue }) => {
+  try { await postApi.deletePost(id); return { id }; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
 const postSlice = createSlice({
   name: 'posts',
   initialState: { posts: [], loading: false, error: null, hasMore: true, page: 1 },
@@ -64,6 +69,9 @@ const postSlice = createSlice({
       if (post) {
         post.comments = post.comments.filter(c => c._id !== commentId);
       }
+    });
+    builder.addCase(deletePost.fulfilled, (state, action) => {
+      state.posts = state.posts.filter(p => p._id !== action.payload.id);
     });
   },
 });

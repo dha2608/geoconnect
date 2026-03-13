@@ -26,6 +26,16 @@ export const searchEvents = createAsyncThunk('events/search', async (query, { re
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
+export const deleteEvent = createAsyncThunk('events/delete', async (id, { rejectWithValue }) => {
+  try { await eventApi.deleteEvent(id); return { id }; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
+export const updateEvent = createAsyncThunk('events/update', async ({ id, data }, { rejectWithValue }) => {
+  try { const res = await eventApi.updateEvent(id, data); return res.data; }
+  catch (err) { return rejectWithValue(err.response?.data); }
+});
+
 const eventSlice = createSlice({
   name: 'events',
   initialState: { events: [], selectedEvent: null, searchResults: [], loading: false, error: null },
@@ -47,6 +57,16 @@ const eventSlice = createSlice({
       if (state.selectedEvent?._id === updated._id) state.selectedEvent = updated;
     });
     builder.addCase(searchEvents.fulfilled, (state, action) => { state.searchResults = action.payload.events || action.payload; });
+    builder.addCase(deleteEvent.fulfilled, (state, action) => {
+      state.events = state.events.filter(e => e._id !== action.payload.id);
+      if (state.selectedEvent?._id === action.payload.id) state.selectedEvent = null;
+    });
+    builder.addCase(updateEvent.fulfilled, (state, action) => {
+      const updated = action.payload.event || action.payload;
+      const idx = state.events.findIndex(e => e._id === updated._id);
+      if (idx !== -1) state.events[idx] = updated;
+      if (state.selectedEvent?._id === updated._id) state.selectedEvent = updated;
+    });
   },
 });
 

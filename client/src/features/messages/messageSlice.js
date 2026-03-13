@@ -58,6 +58,9 @@ const messageSlice = createSlice({
       }
     },
     incrementUnread: (state) => { state.unreadCount += 1; },
+    removeMessage: (state, action) => {
+      state.messages = state.messages.filter((m) => m._id !== action.payload);
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchConversations.fulfilled, (state, action) => { state.conversations = action.payload.conversations || action.payload; });
@@ -80,5 +83,5 @@ const messageSlice = createSlice({
   },
 });
 
-export const { setActiveConversation, addMessage, setTyping, incrementUnread } = messageSlice.actions;
+export const { setActiveConversation, addMessage, setTyping, incrementUnread, removeMessage } = messageSlice.actions;
 export default messageSlice.reducer;
