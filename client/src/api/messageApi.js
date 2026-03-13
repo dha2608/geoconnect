@@ -7,4 +7,6 @@ export const messageApi = {
   getMessages: (conversationId, params) => API.get(`/messages/${conversationId}`, { params }),
   sendMessage: (conversationId, data) => API.post(`/messages/${conversationId}`, data),
   markConversationRead: (conversationId) => API.put(`/messages/${conversationId}/read`),
+  deleteMessage: (conversationId, messageId) =>
+    API.delete(`/messages/${conversationId}/messages/${messageId}`),
 };

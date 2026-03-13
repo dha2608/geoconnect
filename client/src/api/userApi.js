@@ -21,4 +21,5 @@ export const userApi = {
   blockUser: (id) => API.post(`/users/${id}/block`),
   unblockUser: (id) => API.delete(`/users/${id}/block`),
   getBlockedUsers: () => API.get('/users/me/blocked'),
+  getUserStats: (id) => API.get(`/users/${id}/stats`),
 };
