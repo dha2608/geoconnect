@@ -6,6 +6,7 @@ import MapViewportTracker from './MapViewportTracker';
 import UserLocationMarker from './UserLocationMarker';
 import MapControls from './MapControls';
 import SearchBar from './SearchBar';
+import QuickCategories from './QuickCategories';
 import NearbyUsersLayer from '../social/NearbyUsersLayer';
 import PinClusterLayer from '../pins/PinClusterLayer';
 import EventLayer from '../events/EventLayer';
@@ -15,6 +16,7 @@ import FriendMarker from './FriendMarker';
 import PostMarker from './PostMarker';
 import CoordinateDisplay from './CoordinateDisplay';
 import MapContextMenu from './MapContextMenu';
+import ScaleBar from './ScaleBar';
 
 const TILE_LAYERS = {
   dark: {
@@ -39,6 +41,12 @@ const TILE_LAYERS = {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: '&copy; Esri',
     className: 'map-satellite',
+  },
+  terrain: {
+    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
+    className: '',
   },
 };
 
@@ -106,13 +114,15 @@ const MapView = memo(function MapView() {
         <DestinationMarker />
         <MapContextMenu />
         <CoordinateDisplay />
+        <ScaleBar />
         <MapControls />
         <MapToolbar />
       </MapContainer>
 
-      {/* SearchBar rendered above the Leaflet canvas */}
+      {/* SearchBar + QuickCategories rendered above the Leaflet canvas */}
       <div className="absolute inset-0 pointer-events-none z-[1000]">
         <SearchBar />
+        <QuickCategories />
       </div>
     </div>
   );
