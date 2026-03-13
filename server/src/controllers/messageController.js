@@ -37,13 +37,22 @@ export const createConversation = async (req, res) => {
 
 export const getConversations = async (req, res) => {
   try {
-    const conversations = await Conversation.find({
-      participants: req.user._id,
-    })
-      .populate('participants', 'name avatar isLiveSharing')
-      .sort({ updatedAt: -1 });
-    
-    res.json(conversations);
+    const { page, limit, skip } = req.pagination;
+    const filter = { participants: req.user._id };
+
+    const [conversations, total] = await Promise.all([
+      Conversation.find(filter)
+        .populate('participants', 'name avatar isLiveSharing')
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Conversation.countDocuments(filter),
+    ]);
+
+    res.json({
+      data: conversations,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -55,17 +64,23 @@ export const getMessages = async (req, res) => {
     if (!conversation || !conversation.participants.includes(req.user._id)) {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    
-    const { page = 1, limit = 50 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    
-    const messages = await Message.find({ conversation: req.params.conversationId })
-      .populate('sender', 'name avatar')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-    
-    res.json(messages.reverse());
+
+    const { page, limit, skip } = req.pagination;
+    const filter = { conversation: req.params.conversationId };
+
+    const [messages, total] = await Promise.all([
+      Message.find(filter)
+        .populate('sender', 'name avatar')
+        .sort({ createdAt: -1 })  // newest first for skip/limit
+        .skip(skip)
+        .limit(limit),
+      Message.countDocuments(filter),
+    ]);
+
+    res.json({
+      data: messages.reverse(), // return oldest-first for chat display
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

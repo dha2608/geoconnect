@@ -63,7 +63,10 @@ const messageSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(fetchConversations.fulfilled, (state, action) => { state.conversations = action.payload.conversations || action.payload; });
+    builder.addCase(fetchConversations.fulfilled, (state, action) => {
+      const items = action.payload.data || action.payload.conversations || action.payload;
+      state.conversations = Array.isArray(items) ? items : [];
+    });
     builder.addCase(createConversation.fulfilled, (state, action) => {
       const conv = action.payload;
       const exists = state.conversations.some(c => c._id === conv._id);
@@ -71,7 +74,9 @@ const messageSlice = createSlice({
     });
     builder.addCase(fetchMessages.pending, (state) => { state.loading = true; });
     builder.addCase(fetchMessages.fulfilled, (state, action) => {
-      state.loading = false; state.messages = action.payload.messages || action.payload;
+      state.loading = false;
+      const items = action.payload.data || action.payload.messages || action.payload;
+      state.messages = Array.isArray(items) ? items : [];
     });
     builder.addCase(sendMessage.fulfilled, (state, action) => {
       const msg = action.payload.message || action.payload;

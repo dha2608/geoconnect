@@ -50,6 +50,7 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 userSchema.index({ location: '2dsphere' });
+userSchema.index({ name: 'text', bio: 'text' });
 
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password') || !this.password) return next();

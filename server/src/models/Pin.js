@@ -29,5 +29,6 @@ const pinSchema = new mongoose.Schema({
 pinSchema.index({ location: '2dsphere' });
 pinSchema.index({ createdBy: 1 });
 pinSchema.index({ category: 1 });
+pinSchema.index({ title: 'text', description: 'text', tags: 'text', category: 'text' });
 
 export default mongoose.model('Pin', pinSchema);

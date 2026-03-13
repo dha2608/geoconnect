@@ -10,7 +10,7 @@ export const getPinsByViewport = async (req, res) => {
     if (!swLat || !swLng || !neLat || !neLng) {
       return res.status(400).json({ message: 'Viewport bounds required' });
     }
-    
+
     const filter = {
       location: {
         $geoWithin: {
@@ -22,15 +22,16 @@ export const getPinsByViewport = async (req, res) => {
       },
       visibility: 'public',
     };
-    
+
     if (categories) {
       filter.category = { $in: categories.split(',') };
     }
-    
+
+    // Use pagination limit (max 100 from middleware) — viewport bounds already constrain results
     const pins = await Pin.find(filter)
       .populate('createdBy', 'name avatar')
-      .limit(200);
-    
+      .limit(req.pagination.limit);
+
     res.json(pins);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -39,9 +40,9 @@ export const getPinsByViewport = async (req, res) => {
 
 export const getNearbyPins = async (req, res) => {
   try {
-    const { lat, lng, radius = 5, limit = 20 } = req.query;
+    const { lat, lng, radius = 5 } = req.query;
     if (!lat || !lng) return res.status(400).json({ message: 'lat and lng required' });
-    
+
     const pins = await Pin.find({
       visibility: 'public',
       location: {
@@ -50,8 +51,8 @@ export const getNearbyPins = async (req, res) => {
           $maxDistance: parseFloat(radius) * 1000,
         },
       },
-    }).populate('createdBy', 'name avatar').limit(parseInt(limit));
-    
+    }).populate('createdBy', 'name avatar').limit(req.pagination.limit);
+
     res.json(pins);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -217,11 +218,13 @@ export const unsavePin = async (req, res) => {
 
 export const getTrendingPins = async (req, res) => {
   try {
+    const { page, limit, skip } = req.pagination;
     const pins = await Pin.aggregate([
       { $match: { visibility: 'public' } },
       { $addFields: { likesCount: { $size: { $ifNull: ['$likes', []] } } } },
       { $sort: { likesCount: -1, createdAt: -1 } },
-      { $limit: 12 },
+      { $skip: skip },
+      { $limit: limit },
       {
         $lookup: {
           from: 'users',
@@ -251,21 +254,39 @@ export const searchPins = async (req, res) => {
     const { q } = req.query;
     if (!q || q.length < 2) return res.status(400).json({ message: 'Query must be at least 2 characters' });
 
-    const regex = { $regex: q, $options: 'i' };
-    const pins = await Pin.find({
-      visibility: 'public',
-      $or: [
-        { title: regex },
-        { description: regex },
-        { address: regex },
-        { tags: regex },
-      ],
-    })
-      .populate('createdBy', 'name avatar')
-      .sort({ createdAt: -1 })
-      .limit(20);
+    const { page, limit, skip } = req.pagination;
 
-    res.json(pins);
+    let query;
+    let projection = {};
+    let sortOpts = { createdAt: -1 };
+
+    if (q.length >= 3) {
+      // Use MongoDB text index for longer queries — faster and relevance-scored
+      query = { visibility: 'public', $text: { $search: q } };
+      projection = { score: { $meta: 'textScore' } };
+      sortOpts = { score: { $meta: 'textScore' } };
+    } else {
+      // Fallback to regex for very short queries (text index doesn't handle < 3 chars well)
+      const regex = { $regex: q, $options: 'i' };
+      query = {
+        visibility: 'public',
+        $or: [{ title: regex }, { description: regex }, { address: regex }, { tags: regex }],
+      };
+    }
+
+    const [pins, total] = await Promise.all([
+      Pin.find(query, projection)
+        .populate('createdBy', 'name avatar')
+        .sort(sortOpts)
+        .skip(skip)
+        .limit(limit),
+      Pin.countDocuments(query),
+    ]);
+
+    res.json({
+      data: pins,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

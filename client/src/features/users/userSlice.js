@@ -35,8 +35,14 @@ const userSlice = createSlice({
     builder.addCase(toggleFollow.fulfilled, (state, action) => {
       if (state.profile) state.profile = action.payload.user || action.payload;
     });
-    builder.addCase(fetchNearbyUsers.fulfilled, (state, action) => { state.nearbyUsers = action.payload.users || action.payload; });
-    builder.addCase(searchUsers.fulfilled, (state, action) => { state.searchResults = action.payload.users || action.payload; });
+    builder.addCase(fetchNearbyUsers.fulfilled, (state, action) => {
+      const items = action.payload.data || action.payload.users || action.payload;
+      state.nearbyUsers = Array.isArray(items) ? items : [];
+    });
+    builder.addCase(searchUsers.fulfilled, (state, action) => {
+      const items = action.payload.data || action.payload.users || action.payload;
+      state.searchResults = Array.isArray(items) ? items : [];
+    });
   },
 });
 

@@ -38,7 +38,8 @@ const notificationSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(fetchNotifications.fulfilled, (state, action) => {
-      state.items = action.payload.notifications || action.payload;
+      const items = action.payload.data || action.payload.notifications || action.payload;
+      state.items = Array.isArray(items) ? items : [];
       state.unreadCount = state.items.filter(n => !n.read).length;
     });
     builder.addCase(markAsRead.fulfilled, (state, action) => {

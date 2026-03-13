@@ -46,7 +46,11 @@ const eventSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(fetchViewportEvents.pending, (state) => { state.loading = true; });
-    builder.addCase(fetchViewportEvents.fulfilled, (state, action) => { state.loading = false; state.events = action.payload.events || action.payload; });
+    builder.addCase(fetchViewportEvents.fulfilled, (state, action) => {
+      state.loading = false;
+      const items = action.payload.data || action.payload.events || action.payload;
+      state.events = Array.isArray(items) ? items : [];
+    });
     builder.addCase(fetchViewportEvents.rejected, (state, action) => { state.loading = false; state.error = action.payload?.message; });
     builder.addCase(fetchEvent.fulfilled, (state, action) => { state.selectedEvent = action.payload.event || action.payload; });
     builder.addCase(createEvent.fulfilled, (state, action) => { state.events.push(action.payload.event || action.payload); });
@@ -56,7 +60,10 @@ const eventSlice = createSlice({
       if (idx !== -1) state.events[idx] = updated;
       if (state.selectedEvent?._id === updated._id) state.selectedEvent = updated;
     });
-    builder.addCase(searchEvents.fulfilled, (state, action) => { state.searchResults = action.payload.events || action.payload; });
+    builder.addCase(searchEvents.fulfilled, (state, action) => {
+      const items = action.payload.data || action.payload.events || action.payload;
+      state.searchResults = Array.isArray(items) ? items : [];
+    });
     builder.addCase(deleteEvent.fulfilled, (state, action) => {
       state.events = state.events.filter(e => e._id !== action.payload.id);
       if (state.selectedEvent?._id === action.payload.id) state.selectedEvent = null;

@@ -10,12 +10,22 @@ const normalize = (doc) => {
 // GET /api/users/notifications
 export const getNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find({ recipient: req.user._id })
-      .populate('sender', 'name avatar')
-      .sort({ createdAt: -1 })
-      .limit(50);
+    const { page, limit, skip } = req.pagination;
+    const filter = { recipient: req.user._id };
 
-    res.json({ notifications: notifications.map(normalize) });
+    const [notifications, total] = await Promise.all([
+      Notification.find(filter)
+        .populate('sender', 'name avatar')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Notification.countDocuments(filter),
+    ]);
+
+    res.json({
+      data: notifications.map(normalize),
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

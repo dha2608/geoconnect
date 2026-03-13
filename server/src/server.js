@@ -12,7 +12,7 @@ import hpp from 'hpp';
 
 import connectDB from './config/db.js';
 import passport from './config/passport.js';
-import { apiLimiter } from './middleware/rateLimiter.js';
+import { apiLimiter, writeLimiter } from './middleware/rateLimiter.js';
 import { setupSocket } from './socket/handler.js';
 import { startEventReminderJob } from './jobs/eventReminder.js';
 
@@ -67,9 +67,21 @@ app.use(cookieParser());
 app.use(passport.initialize());
 app.use(apiLimiter);
 
+// Write limiter — applies only to mutating HTTP methods on /api/
+app.use('/api/', (req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    return writeLimiter(req, res, next);
+  }
+  next();
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
 });
 
 // API Routes

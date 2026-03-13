@@ -4,12 +4,13 @@ import { authenticate, optionalAuth } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
 import { validateCreateEvent, validateUpdateEvent, validateEventId, validateSearchQuery } from '../validators/index.js';
+import { paginate } from '../middleware/pagination.js';
 
 const router = Router();
 
-router.get('/', optionalAuth, getEventsByViewport);
-router.get('/upcoming', optionalAuth, getUpcomingEvents);
-router.get('/search', optionalAuth, validateSearchQuery, validate, searchEvents);
+router.get('/', optionalAuth, paginate, getEventsByViewport);
+router.get('/upcoming', optionalAuth, paginate, getUpcomingEvents);
+router.get('/search', optionalAuth, validateSearchQuery, validate, paginate, searchEvents);
 router.post('/', authenticate, upload.single('coverImage'), validateCreateEvent, validate, createEvent);
 router.get('/:id', optionalAuth, validateEventId, validate, getEvent);
 router.put('/:id', authenticate, upload.single('coverImage'), validateUpdateEvent, validate, updateEvent);

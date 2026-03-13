@@ -20,5 +20,6 @@ const postSchema = new mongoose.Schema({
 postSchema.index({ location: '2dsphere' });
 postSchema.index({ author: 1 });
 postSchema.index({ createdAt: -1 });
+postSchema.index({ text: 'text' });
 
 export default mongoose.model('Post', postSchema);
