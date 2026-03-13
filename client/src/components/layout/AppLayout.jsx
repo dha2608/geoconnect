@@ -1,11 +1,13 @@
-import { useEffect, lazy, Suspense, useMemo } from 'react';
+import { useEffect, lazy, Suspense, useMemo, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Outlet } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
-import { setIsMobile } from '../../features/ui/uiSlice';
+import { AnimatePresence, motion } from 'framer-motion';
+import { setDeviceSize, setSidebarOpen, closePanel } from '../../features/ui/uiSlice';
 import { fetchUnreadCount } from '../../features/messages/messageSlice';
 import useSocket from '../../socket/useSocket';
 import useGeolocation from '../../hooks/useGeolocation';
+import { useKeyboardShortcuts, ShortcutHelpOverlay } from '../../hooks/useKeyboardShortcuts';
+import useSwipeGesture from '../../hooks/useSwipeGesture';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
@@ -33,9 +35,12 @@ const LIGHT_TILES = new Set(['street', 'light', 'satellite']);
 
 export default function AppLayout() {
   const dispatch = useDispatch();
-  const { isMobile, activePanel, modalData } = useSelector((state) => state.ui);
+  const { isMobile, sidebarOpen, activePanel, modalData } = useSelector((state) => state.ui);
   const { user } = useSelector((state) => state.auth);
   const { tileLayer } = useSelector((state) => state.map);
+
+  // Keyboard shortcuts — exposes help overlay state
+  const { showShortcutHelp, setShowShortcutHelp } = useKeyboardShortcuts();
 
   // Derive theme: dark map → dark UI, light/street/satellite → light frosted glass
   const theme = useMemo(() => LIGHT_TILES.has(tileLayer) ? 'light' : 'dark', [tileLayer]);
@@ -59,15 +64,30 @@ export default function AppLayout() {
   }, [dispatch, user?._id]);
 
   useEffect(() => {
-    const handleResize = () => {
-      dispatch(setIsMobile(window.innerWidth < 768));
-    };
+    const handleResize = () => dispatch(setDeviceSize(window.innerWidth));
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [dispatch]);
 
+  // ── Swipe gesture: right from left-edge → open sidebar; left → close sidebar / panel ──
+  const swipeHandlers = useSwipeGesture({
+    onSwipeRight: useCallback(() => {
+      if (!sidebarOpen && !activePanel) dispatch(setSidebarOpen(true));
+    }, [sidebarOpen, activePanel, dispatch]),
+    onSwipeLeft: useCallback(() => {
+      if (sidebarOpen)     dispatch(setSidebarOpen(false));
+      else if (activePanel) dispatch(closePanel());
+    }, [sidebarOpen, activePanel, dispatch]),
+    threshold:   50,
+    maxDuration: 300,
+    edgeWidth:   30, // right-swipe only fires when touch starts ≤ 30 px from left
+  });
+
   return (
-    <div className="h-screen w-screen overflow-hidden bg-base">
+    <div
+      className="h-screen w-screen overflow-hidden bg-base"
+      {...(isMobile ? swipeHandlers : {})}
+    >
       <div className="aurora-bg" />
       <Header />
       <Sidebar />
@@ -77,39 +97,87 @@ export default function AppLayout() {
         </SectionErrorBoundary>
       </main>
 
-      {/* ── Side panels (overlay alongside main, not inside it) ── */}
-      <AnimatePresence>
-        {activePanel === 'feed' && (
-          <SectionErrorBoundary name="Feed">
-            <Suspense fallback={null}><FeedPanel /></Suspense>
-          </SectionErrorBoundary>
-        )}
-        {activePanel === 'profile' && (
-          <SectionErrorBoundary name="Profile">
-            <UserProfilePanel userId={modalData?.userId || user?._id} />
-          </SectionErrorBoundary>
-        )}
-        {activePanel === 'events' && (
-          <SectionErrorBoundary name="Events">
-            <EventListPanel />
-          </SectionErrorBoundary>
-        )}
-        {activePanel === 'notifications' && (
-          <SectionErrorBoundary name="Notifications">
-            <Suspense fallback={null}><NotificationPanel /></Suspense>
-          </SectionErrorBoundary>
-        )}
-        {activePanel === 'messages' && (
-          <SectionErrorBoundary name="Messages">
-            <Suspense fallback={null}><MessagesPanel /></Suspense>
-          </SectionErrorBoundary>
-        )}
-        {activePanel === 'search' && (
-          <SectionErrorBoundary name="Search">
-            <Suspense fallback={null}><SearchPanel /></Suspense>
-          </SectionErrorBoundary>
-        )}
-      </AnimatePresence>
+      {/* ── Side panels ─────────────────────────────────────────────────────── */}
+      {/* Mobile: single motion wrapper slides the active panel in from the right */}
+      {isMobile ? (
+        <AnimatePresence>
+          {activePanel && (
+            <motion.div
+              key={activePanel}
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 26, stiffness: 210 }}
+              className="fixed top-16 bottom-16 left-0 right-0 z-[35] overflow-hidden"
+            >
+              {activePanel === 'feed' && (
+                <SectionErrorBoundary name="Feed">
+                  <Suspense fallback={null}><FeedPanel /></Suspense>
+                </SectionErrorBoundary>
+              )}
+              {activePanel === 'profile' && (
+                <SectionErrorBoundary name="Profile">
+                  <UserProfilePanel userId={modalData?.userId || user?._id} />
+                </SectionErrorBoundary>
+              )}
+              {activePanel === 'events' && (
+                <SectionErrorBoundary name="Events">
+                  <EventListPanel />
+                </SectionErrorBoundary>
+              )}
+              {activePanel === 'notifications' && (
+                <SectionErrorBoundary name="Notifications">
+                  <Suspense fallback={null}><NotificationPanel /></Suspense>
+                </SectionErrorBoundary>
+              )}
+              {activePanel === 'messages' && (
+                <SectionErrorBoundary name="Messages">
+                  <Suspense fallback={null}><MessagesPanel /></Suspense>
+                </SectionErrorBoundary>
+              )}
+              {activePanel === 'search' && (
+                <SectionErrorBoundary name="Search">
+                  <Suspense fallback={null}><SearchPanel /></Suspense>
+                </SectionErrorBoundary>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      ) : (
+        /* Desktop: each panel manages its own spring animation (slide from left) */
+        <AnimatePresence>
+          {activePanel === 'feed' && (
+            <SectionErrorBoundary name="Feed">
+              <Suspense fallback={null}><FeedPanel /></Suspense>
+            </SectionErrorBoundary>
+          )}
+          {activePanel === 'profile' && (
+            <SectionErrorBoundary name="Profile">
+              <UserProfilePanel userId={modalData?.userId || user?._id} />
+            </SectionErrorBoundary>
+          )}
+          {activePanel === 'events' && (
+            <SectionErrorBoundary name="Events">
+              <EventListPanel />
+            </SectionErrorBoundary>
+          )}
+          {activePanel === 'notifications' && (
+            <SectionErrorBoundary name="Notifications">
+              <Suspense fallback={null}><NotificationPanel /></Suspense>
+            </SectionErrorBoundary>
+          )}
+          {activePanel === 'messages' && (
+            <SectionErrorBoundary name="Messages">
+              <Suspense fallback={null}><MessagesPanel /></Suspense>
+            </SectionErrorBoundary>
+          )}
+          {activePanel === 'search' && (
+            <SectionErrorBoundary name="Search">
+              <Suspense fallback={null}><SearchPanel /></Suspense>
+            </SectionErrorBoundary>
+          )}
+        </AnimatePresence>
+      )}
 
       {/* ── Modals (always mounted, render conditionally from Redux state) ── */}
       <CreatePinModal />
@@ -123,6 +191,16 @@ export default function AppLayout() {
       {isMobile && <MobileNav />}
       <LocationPermissionPrompt />
       <ToastProvider />
+
+      {/* ── Keyboard shortcuts help overlay ── */}
+      <AnimatePresence>
+        {showShortcutHelp && (
+          <ShortcutHelpOverlay
+            key="shortcut-help"
+            onClose={() => setShowShortcutHelp(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
