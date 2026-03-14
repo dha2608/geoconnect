@@ -11,6 +11,7 @@ import xss from 'xss-clean';
 import hpp from 'hpp';
 
 import connectDB from './config/db.js';
+import { disconnectRedis } from './utils/redis.js';
 import mongoose from 'mongoose';
 import passport from './config/passport.js';
 import { apiLimiter, writeLimiter } from './middleware/rateLimiter.js';
@@ -156,6 +157,13 @@ const gracefulShutdown = (signal) => {
       console.log('[GeoConnect] MongoDB connection closed');
     } catch (err) {
       console.error('[GeoConnect] Error closing MongoDB:', err.message);
+    }
+
+    // Close Redis connection
+    try {
+      await disconnectRedis();
+    } catch (err) {
+      console.error('[GeoConnect] Error closing Redis:', err.message);
     }
 
     process.exit(0);

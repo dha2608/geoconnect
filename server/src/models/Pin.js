@@ -31,4 +31,8 @@ pinSchema.index({ createdBy: 1 });
 pinSchema.index({ category: 1 });
 pinSchema.index({ title: 'text', description: 'text', tags: 'text', category: 'text' });
 
+pinSchema.index({ category: 1, createdAt: -1 });         // Filter by category + sort by date
+pinSchema.index({ createdBy: 1, createdAt: -1 });         // User's pins sorted by date
+pinSchema.index({ visibility: 1, location: '2dsphere' }); // Public pins geo query
+
 export default mongoose.model('Pin', pinSchema);

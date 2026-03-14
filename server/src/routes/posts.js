@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getFeed, getMapPosts, createPost, deletePost, likePost, unlikePost, getPost, updatePost, addComment, deleteComment, getUserPosts } from '../controllers/postController.js';
+import { getFeed, getMapPosts, createPost, deletePost, likePost, unlikePost, getPost, updatePost, addComment, deleteComment, getUserPosts, getComments } from '../controllers/postController.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { upload } from '../middleware/upload.js';
@@ -17,6 +17,7 @@ router.put('/:id', authenticate, validateUpdatePost, validate, updatePost);
 router.delete('/:id', authenticate, validatePostId, validate, deletePost);
 router.post('/:id/like', authenticate, validatePostId, validate, likePost);
 router.delete('/:id/like', authenticate, validatePostId, validate, unlikePost);
+router.get('/:id/comments', authenticate, getComments);
 router.post('/:id/comments', authenticate, validateAddComment, validate, addComment);
 router.delete('/:id/comments/:commentId', authenticate, deleteComment);
 

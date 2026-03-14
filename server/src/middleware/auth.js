@@ -1,11 +1,17 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { isTokenBlacklisted } from '../utils/tokenBlacklist.js';
 
 export const authenticate = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
       return res.status(401).json({ message: 'Access token required' });
+    }
+
+    // Check blacklist (logout / password change)
+    if (await isTokenBlacklisted(token)) {
+      return res.status(401).json({ message: 'Token revoked', code: 'TOKEN_REVOKED' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
@@ -15,6 +21,7 @@ export const authenticate = async (req, res, next) => {
     }
 
     req.user = user;
+    req.token = token; // Store for potential blacklisting on logout
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
@@ -28,11 +35,14 @@ export const optionalAuth = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
     if (token) {
+      if (await isTokenBlacklisted(token)) {
+        req.user = null;
+        return next();
+      }
       const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
       req.user = await User.findById(decoded.userId);
     }
   } catch (error) {
-    // Token invalid — log and clear to prevent stale auth state
     if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
       console.warn(`[Auth] optionalAuth: invalid token (${error.name})`);
     }
