@@ -31,8 +31,12 @@ export const optionalAuth = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
       req.user = await User.findById(decoded.userId);
     }
-  } catch {
-    // Token invalid — continue as unauthenticated
+  } catch (error) {
+    // Token invalid — log and clear to prevent stale auth state
+    if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
+      console.warn(`[Auth] optionalAuth: invalid token (${error.name})`);
+    }
+    req.user = null;
   }
   next();
 };

@@ -5,6 +5,13 @@ import { body, param, query } from 'express-validator';
 const mongoId = (field, location = param) =>
   location(field).isMongoId().withMessage(`${field} must be a valid ID`);
 
+const passwordRule = (field = 'password') =>
+  body(field)
+    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+    .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
+    .matches(/[0-9]/).withMessage('Password must contain at least one number')
+    .matches(/[^A-Za-z0-9]/).withMessage('Password must contain at least one special character');
+
 const latRule = (required = true) => {
   const r = body('lat').isFloat({ min: -90, max: 90 }).withMessage('lat must be a float between -90 and 90');
   return required ? r : r.optional();
@@ -26,8 +33,7 @@ export const validateRegister = [
     .trim()
     .isEmail().withMessage('Must be a valid email address')
     .normalizeEmail(),
-  body('password')
-    .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  passwordRule('password'),
 ];
 
 export const validateLogin = [
@@ -42,8 +48,7 @@ export const validateLogin = [
 export const validateChangePassword = [
   body('currentPassword')
     .notEmpty().withMessage('Current password is required'),
-  body('newPassword')
-    .isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
+  passwordRule('newPassword'),
 ];
 
 export const validateForgotPassword = [
@@ -56,8 +61,7 @@ export const validateForgotPassword = [
 export const validateResetPassword = [
   body('token')
     .notEmpty().withMessage('Reset token is required'),
-  body('password')
-    .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  passwordRule('password'),
 ];
 
 export const validateVerifyEmail = [
@@ -131,7 +135,7 @@ export const validateUserId = [
 
 // ─── Pins ─────────────────────────────────────────────────────────────────────
 
-const PIN_CATEGORIES = ['food', 'nature', 'art', 'event', 'other'];
+const PIN_CATEGORIES = ['food', 'entertainment', 'shopping', 'outdoors', 'culture', 'travel', 'sports', 'health', 'education', 'other'];
 
 export const validateCreatePin = [
   body('title')
@@ -332,6 +336,12 @@ export const validateSendMessage = [
     .trim()
     .isString().withMessage('Text must be a string')
     .isLength({ min: 1, max: 1000 }).withMessage('Message must be between 1 and 1000 characters'),
+];
+
+export const validateCreateConversation = [
+  body('recipientId')
+    .notEmpty().withMessage('recipientId is required')
+    .isMongoId().withMessage('recipientId must be a valid ID'),
 ];
 
 export const validateConversationId = [

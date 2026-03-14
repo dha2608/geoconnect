@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Conversation from '../models/Conversation.js';
 import { updateLocation, removeLocation, startLocationManager } from './locationManager.js';
 
 const onlineUsers = new Map(); // userId -> socketId
@@ -29,27 +30,53 @@ export const setupSocket = (io) => {
     console.log(`[Socket] User connected: ${socket.userId}`);
     onlineUsers.set(socket.userId, socket.id);
 
-    // Join personal room
+    // Join personal room — only allow joining own room
     socket.on('join_room', ({ userId }) => {
+      if (userId !== socket.userId) return;
       socket.join(`user:${userId}`);
     });
 
     // Join conversation room for messaging + typing events
-    socket.on('join_conversation', ({ conversationId }) => {
+    // Security: verify user is a participant before allowing room join
+    socket.on('join_conversation', async ({ conversationId }) => {
       if (!conversationId) return;
-      socket.join(`conversation:${conversationId}`);
+      try {
+        const conversation = await Conversation.findById(conversationId);
+        if (!conversation) return;
+        const isParticipant = conversation.participants.some(
+          (p) => p.toString() === socket.userId
+        );
+        if (!isParticipant) {
+          socket.emit('error', { message: 'Not authorized to join this conversation' });
+          return;
+        }
+        socket.join(`conversation:${conversationId}`);
+      } catch (error) {
+        console.error('[Socket] join_conversation error:', error.message);
+      }
     });
 
     // Location sharing
     socket.on('location_update', async ({ lat, lng, heading }) => {
       try {
+        // Validate coordinates
+        if (typeof lat !== 'number' || typeof lng !== 'number' ||
+            lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+          return;
+        }
+
         const user = await User.findById(socket.userId);
         if (!user || !user.isLiveSharing) return;
+
+        // Respect privacy settings
+        if (!user.settings?.privacy?.shareLocation) return;
 
         // Store in memory (batched DB flush via locationManager)
         updateLocation(socket.userId, { lat, lng, heading });
 
-        // Broadcast to mutual followers
+        // Broadcast to mutual followers only if location is public
+        if (!user.isLocationPublic) return;
+
         const mutualFollowers = user.followers.filter(f =>
           user.following.some(fo => fo.toString() === f.toString())
         );
