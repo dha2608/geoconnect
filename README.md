@@ -34,9 +34,11 @@
 | Maps       | Leaflet.js, React Leaflet, OpenStreetMap, Nominatim, OSRM    |
 | Animation  | Framer Motion                                                |
 | Backend    | Node.js, Express, MongoDB, Mongoose                          |
-| Real-time  | Socket.io                                                    |
-| Auth       | JWT, Passport.js (Google, GitHub OAuth)                      |
+| Real-time  | Socket.io (with per-user rate limiting)                      |
+| Auth       | JWT (access/refresh rotation, Redis token blacklist), Passport.js (Google, GitHub OAuth) |
+| State      | Redux Toolkit (createEntityAdapter, memoized selectors)      |
 | Validation | Zod, React Hook Form                                         |
+| Security   | Helmet, CORS, HPP, mongo-sanitize, xss-clean, rate limiting  |
 | Deploy     | Vercel (frontend), Render (backend)                          |
 
 ---
@@ -102,23 +104,69 @@ geoconnect/
 └── README.md
 ```
 
+See [server/README.md](./server/README.md) and [client/README.md](./client/README.md) for detailed documentation.
+
 ---
 
 ## 🌐 API Summary
 
 Base URL: `https://geoconnect-api.onrender.com/api`
 
-| Resource    | Endpoints                                  |
-| ----------- | ------------------------------------------ |
-| Auth        | `POST /auth/register`, `POST /auth/login`  |
-| Users       | `GET /users/:id`, `PUT /users/:id`         |
-| Pins        | `GET /pins`, `POST /pins`, `DELETE /pins/:id` |
-| Posts       | `GET /posts`, `POST /posts`                |
-| Events      | `GET /events`, `POST /events`              |
-| Messages    | `GET /messages/:conversationId`            |
-| Geocoding   | `GET /geocoding/search?q=`                 |
+| Resource      | Count   | Key Endpoints                                                                 |
+| ------------- | ------- | ----------------------------------------------------------------------------- |
+| Auth          | 14      | register, login, OAuth (Google/GitHub), token refresh, password reset         |
+| Users         | 18      | profile CRUD, follow/block, nearby users, settings                            |
+| Pins          | 15      | CRUD, like/save, check-in, viewport/search/trending                           |
+| Posts         | 12      | feed, CRUD, like, comments (separate collection)                              |
+| Events        | 9       | CRUD, RSVP, viewport/search/upcoming                                          |
+| Messages      | 7       | conversations, real-time messaging                                            |
+| Notifications | 6       | list, read/clear, unread count                                                |
+| Reviews       | 6       | CRUD, helpful votes                                                           |
+| Collections   | 8       | CRUD, pin management                                                          |
+| Reports       | 7       | content reporting (admin dashboard)                                           |
+| Discover      | 4       | feed, recommendations, categories, suggested users                            |
+| Geocode       | 2       | forward/reverse geocoding                                                     |
+| **Total**     | **111** | See [server/README.md](./server/README.md) for full docs                      |
 
 All protected routes require `Authorization: Bearer <token>`.
+
+---
+
+## 🔧 Recent Improvements
+
+### Phase 1: Security & Stability
+- Socket authorization checks + location privacy validation
+- Origin-based CSRF protection, graceful shutdown handlers
+- Stronger password policy (8+ chars, uppercase, number, special)
+- Comprehensive input validation on all endpoints
+
+### Phase 2: Performance & State Management
+- Redux normalized stores with `createEntityAdapter` (pins, posts, events)
+- Memoized selectors via `createSelector` — eliminates unnecessary re-renders
+- `AbortController` on viewport-driven API calls
+- Migrated 10+ components to use exported selectors
+
+### Phase 3: Accessibility & UX
+- `prefers-reduced-motion` support across all Framer Motion animations
+- ARIA labels on all icon buttons, `focus-visible` ring styles
+- Live region announcements for toast notifications
+- Color contrast fixes (WCAG AA), tablet breakpoint support
+- OAuth loading states
+
+### Phase 4: Code Quality & DX
+- `asyncHandler` utility — removed ~108 try-catch blocks from 13 controllers
+- Consistent response format: `{ success, data, meta }`
+- `AppError` class with standardized error codes
+- Request ID tracing (`X-Request-ID`) on all responses
+- Expanded settings validator (10 specific field checks)
+
+### Phase 5: Scalability
+- Comments moved to separate MongoDB collection (was embedded in posts)
+- Redis-backed rate limiting (graceful fallback to in-memory)
+- MongoDB transactions for atomic account deletion
+- Redis token blacklist (revoke on logout/password change)
+- Per-user socket event rate limiting
+- Compound indexes for common query patterns
 
 ---
 

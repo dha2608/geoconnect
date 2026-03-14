@@ -1,51 +1,71 @@
 import { createClient } from 'redis';
 
 /**
- * Shared Redis client.
+ * Shared Redis client — optional dependency.
  *
- * Reads REDIS_URL from env (default: redis://localhost:6379).
- * Exports a singleton that auto-connects on first use.
- * Callers should `await redisClient.connect()` at startup or
- * rely on lazy-connect inside individual utilities.
+ * When Redis is not available (e.g. local dev without Redis),
+ * getRedisClient() returns null instead of throwing/retrying.
+ * Callers must handle null gracefully.
  */
 
 let client = null;
 let connecting = false;
+let unavailable = false; // Set true after first failed connect — stops retries
 
 /**
  * Get (or create) the shared Redis client.
- * Connects lazily on first call.
+ * Returns null if Redis is unavailable.
  */
 export async function getRedisClient() {
+  // Already confirmed unavailable — don't retry
+  if (unavailable) return null;
+
   if (client?.isReady) return client;
+
   if (connecting) {
-    // Wait for in-flight connection
+    // Wait for in-flight connection (max 5s)
     await new Promise((resolve) => {
+      const timeout = setTimeout(resolve, 5000);
       const check = setInterval(() => {
-        if (client?.isReady) { clearInterval(check); resolve(); }
+        if (client?.isReady || unavailable) {
+          clearInterval(check);
+          clearTimeout(timeout);
+          resolve();
+        }
       }, 50);
     });
-    return client;
+    return client?.isReady ? client : null;
   }
 
   connecting = true;
   try {
-    client = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
-
-    client.on('error', (err) => {
-      console.error('[Redis] Client error:', err.message);
+    const c = createClient({
+      url: process.env.REDIS_URL || 'redis://localhost:6379',
+      socket: { connectTimeoutMs: 3000, reconnectStrategy: false },
     });
 
-    client.on('connect', () => {
+    // Suppress repeated error spam — log once
+    let errorLogged = false;
+    c.on('error', () => {
+      if (!errorLogged) {
+        console.warn('[Redis] Not available — features using Redis will use fallbacks');
+        errorLogged = true;
+      }
+    });
+
+    c.on('connect', () => {
       console.log('[Redis] Connected');
     });
 
-    await client.connect();
+    await c.connect();
+    client = c;
     return client;
-  } catch (err) {
-    console.error('[Redis] Failed to connect:', err.message);
+  } catch {
+    // Redis not available — mark as unavailable so we don't retry
+    unavailable = true;
     client = null;
-    throw err;
+    console.warn('[Redis] Not available — running without Redis (rate limiting uses memory store, token blacklist disabled)');
+    return null;
   } finally {
     connecting = false;
   }

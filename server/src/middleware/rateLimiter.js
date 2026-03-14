@@ -14,13 +14,17 @@ async function ensureRedisStore() {
   redisInitDone = true;
   try {
     const client = await getRedisClient();
-    redisStoreInstance = new RedisStore({
-      sendCommand: (...args) => client.sendCommand(args),
-      prefix: 'rl:',
-    });
-    console.log('[RateLimiter] Using Redis store');
+    if (client) {
+      redisStoreInstance = new RedisStore({
+        sendCommand: (...args) => client.sendCommand(args),
+        prefix: 'rl:',
+      });
+      console.log('[RateLimiter] Using Redis store');
+    } else {
+      console.warn('[RateLimiter] Redis unavailable — using in-memory store');
+    }
   } catch {
-    console.warn('[RateLimiter] Redis unavailable — falling back to in-memory store');
+    console.warn('[RateLimiter] Redis error — falling back to in-memory store');
   }
   return redisStoreInstance;
 }
@@ -30,6 +34,11 @@ async function ensureRedisStore() {
  * If Redis is down, falls back to express-rate-limit's default in-memory store.
  */
 function createLimiter({ windowMs, max, message }) {
+  // In test environment, skip rate limiting entirely
+  if (process.env.NODE_ENV === 'test') {
+    return (req, res, next) => next();
+  }
+
   // Default in-memory limiter (immediate — no async needed)
   const memoryLimiter = rateLimit({
     windowMs,

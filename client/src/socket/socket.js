@@ -11,6 +11,10 @@
 
 import { io } from 'socket.io-client';
 
+const DEBUG = import.meta.env.DEV;
+const log = (...args) => DEBUG && console.log(...args);
+const logError = (...args) => DEBUG && console.error(...args);
+
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 /** @type {import('socket.io-client').Socket | null} */
@@ -49,23 +53,23 @@ export const connectSocket = (token) => {
 
   /* ── Connection lifecycle logging ── */
   socket.on('connect', () =>
-    console.log(`[Socket] Connected  id=${socket.id}`)
+    log(`[Socket] Connected  id=${socket.id}`)
   );
 
   socket.on('disconnect', (reason) =>
-    console.log(`[Socket] Disconnected  reason=${reason}`)
+    log(`[Socket] Disconnected  reason=${reason}`)
   );
 
   socket.on('connect_error', (err) =>
-    console.error(`[Socket] Connection error: ${err.message}`)
+    logError(`[Socket] Connection error: ${err.message}`)
   );
 
   socket.on('reconnect', (attempt) =>
-    console.log(`[Socket] Reconnected after ${attempt} attempt(s)`)
+    log(`[Socket] Reconnected after ${attempt} attempt(s)`)
   );
 
   socket.on('reconnect_failed', () =>
-    console.error('[Socket] Reconnection failed — giving up')
+    logError('[Socket] Reconnection failed — giving up')
   );
 
   return socket;

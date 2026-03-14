@@ -10,10 +10,11 @@ const BLACKLIST_PREFIX = 'bl:';
 export async function blacklistToken(token, ttlSeconds) {
   try {
     const client = await getRedisClient();
+    if (!client) return; // Redis unavailable — skip silently
     await client.set(`${BLACKLIST_PREFIX}${token}`, '1', { EX: Math.max(ttlSeconds, 1) });
   } catch (err) {
     // Redis down — log but don't block the logout/password-change flow
-    console.error('[TokenBlacklist] Failed to blacklist token:', err.message);
+    console.error('[TokenBlacklist] Failed to blacklist:', err.message);
   }
 }
 
@@ -25,6 +26,7 @@ export async function blacklistToken(token, ttlSeconds) {
 export async function isTokenBlacklisted(token) {
   try {
     const client = await getRedisClient();
+    if (!client) return false; // Redis unavailable — fail-open
     const result = await client.get(`${BLACKLIST_PREFIX}${token}`);
     return result !== null;
   } catch {

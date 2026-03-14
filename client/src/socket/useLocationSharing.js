@@ -16,6 +16,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSocket } from './socket';
 
+const DEBUG = import.meta.env.DEV;
+const log = (...args) => DEBUG && console.log(...args);
+const logWarn = (...args) => DEBUG && console.warn(...args);
+const logError = (...args) => DEBUG && console.error(...args);
+
 /** Geolocation options — high accuracy, allow up to 10 s cached positions */
 const GEO_OPTIONS = {
   enableHighAccuracy: true,
@@ -36,12 +41,12 @@ export default function useLocationSharing() {
     const socket = getSocket();
 
     if (!socket) {
-      console.warn('[useLocationSharing] Socket not connected — cannot start sharing');
+      logWarn('[useLocationSharing] Socket not connected — cannot start sharing');
       return;
     }
 
     if (!navigator.geolocation) {
-      console.error('[useLocationSharing] Geolocation API not available in this browser');
+      logError('[useLocationSharing] Geolocation API not available in this browser');
       return;
     }
 
@@ -59,7 +64,7 @@ export default function useLocationSharing() {
         });
       },
       (err) => {
-        console.error('[useLocationSharing] Geolocation error:', err.message);
+        logError('[useLocationSharing] Geolocation error:', err.message);
         // On permission denied, clean up gracefully
         if (err.code === err.PERMISSION_DENIED) stopSharing();
       },
@@ -67,7 +72,7 @@ export default function useLocationSharing() {
     );
 
     setIsSharing(true);
-    console.log('[useLocationSharing] Started sharing location');
+    log('[useLocationSharing] Started sharing location');
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Stop sharing ──────────────────────────────────────────────────────────
@@ -81,7 +86,7 @@ export default function useLocationSharing() {
     socket?.emit('stop_sharing');
 
     setIsSharing(false);
-    console.log('[useLocationSharing] Stopped sharing location');
+    log('[useLocationSharing] Stopped sharing location');
   }, []);
 
   // ── Listen for friend location events ────────────────────────────────────
