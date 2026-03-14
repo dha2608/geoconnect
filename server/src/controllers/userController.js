@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import { uploadToCloudinary } from '../middleware/upload.js';
 import { createNotification } from '../utils/createNotification.js';
@@ -278,9 +279,10 @@ export const deleteAccount = asyncHandler(async (req, res) => {
   }
 
   const userId = user._id;
+  const { email, name } = user;
 
   // Lazy-import models to avoid circular dependency issues
-  const [Pin, Post, Event, Review, Message, Conversation, Notification] = await Promise.all([
+  const [Pin, Post, Event, Review, Message, Conversation, Notification, Comment] = await Promise.all([
     import('../models/Pin.js').then(m => m.default),
     import('../models/Post.js').then(m => m.default),
     import('../models/Event.js').then(m => m.default),
@@ -288,40 +290,49 @@ export const deleteAccount = asyncHandler(async (req, res) => {
     import('../models/Message.js').then(m => m.default),
     import('../models/Conversation.js').then(m => m.default),
     import('../models/Notification.js').then(m => m.default),
+    import('../models/Comment.js').then(m => m.default),
   ]);
 
-  // Cascade delete all user-created content
-  await Promise.all([
-    Pin.deleteMany({ creator: userId }),
-    Post.deleteMany({ author: userId }),
-    Event.deleteMany({ creator: userId }),
-    Review.deleteMany({ user: userId }),
-    Message.deleteMany({ sender: userId }),
-    Notification.deleteMany({ $or: [{ recipient: userId }, { sender: userId }] }),
-  ]);
+  // Run all cascade deletes inside a transaction for atomicity
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      // Get user's post IDs so we can delete their comments too
+      const userPostIds = await Post.find({ author: userId }, '_id').session(session);
+      const postIds = userPostIds.map(p => p._id);
 
-  // Remove user from conversations
-  await Conversation.updateMany(
-    { participants: userId },
-    { $pull: { participants: userId } },
-  );
-
-  // Remove from other users' followers / following lists
-  await User.updateMany(
-    { $or: [{ followers: userId }, { following: userId }] },
-    { $pull: { followers: userId, following: userId } },
-  );
-
-  // Remove from saved pins lists
-  await User.updateMany(
-    { savedPins: userId },
-    { $pull: { savedPins: userId } },
-  );
-
-  const { email, name } = user;
-
-  // Finally delete the user
-  await User.findByIdAndDelete(userId);
+      await Promise.all([
+        // Delete user-created content
+        Pin.deleteMany({ creator: userId }).session(session),
+        Post.deleteMany({ author: userId }).session(session),
+        Event.deleteMany({ creator: userId }).session(session),
+        Review.deleteMany({ user: userId }).session(session),
+        Message.deleteMany({ sender: userId }).session(session),
+        Notification.deleteMany({ $or: [{ recipient: userId }, { sender: userId }] }).session(session),
+        // Delete comments by user + comments on user's posts
+        Comment.deleteMany({ $or: [{ user: userId }, { post: { $in: postIds } }] }).session(session),
+        // Remove from conversations
+        Conversation.updateMany(
+          { participants: userId },
+          { $pull: { participants: userId } },
+        ).session(session),
+        // Remove from followers/following
+        User.updateMany(
+          { $or: [{ followers: userId }, { following: userId }] },
+          { $pull: { followers: userId, following: userId } },
+        ).session(session),
+        // Remove from saved pins lists
+        User.updateMany(
+          { savedPins: userId },
+          { $pull: { savedPins: userId } },
+        ).session(session),
+        // Delete the user
+        User.findByIdAndDelete(userId).session(session),
+      ]);
+    });
+  } finally {
+    await session.endSession();
+  }
 
   // Clear auth cookie
   res.clearCookie('refreshToken');

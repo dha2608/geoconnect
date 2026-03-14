@@ -5,6 +5,37 @@ import { updateLocation, removeLocation, startLocationManager } from './location
 
 const onlineUsers = new Map(); // userId -> socketId
 
+// ─── Per-user socket event rate limiter ──────────────────────────────────────
+
+const EVENT_LIMITS = {
+  message_send:      { max: 10, windowMs: 1000 },   // 10 msgs/sec
+  typing_start:      { max: 5,  windowMs: 1000 },   // 5/sec
+  typing_stop:       { max: 5,  windowMs: 1000 },
+  location_update:   { max: 5,  windowMs: 1000 },   // 5 location pings/sec
+  join_conversation: { max: 10, windowMs: 10000 },  // 10 joins per 10s
+  join_room:         { max: 5,  windowMs: 10000 },
+  stop_sharing:      { max: 3,  windowMs: 10000 },
+};
+
+const socketRateMap = new Map(); // userId -> { eventName -> { count, resetAt } }
+
+function isSocketRateLimited(userId, eventName) {
+  const limits = EVENT_LIMITS[eventName];
+  if (!limits) return false;
+
+  const now = Date.now();
+  if (!socketRateMap.has(userId)) socketRateMap.set(userId, {});
+  const userBuckets = socketRateMap.get(userId);
+
+  if (!userBuckets[eventName] || now >= userBuckets[eventName].resetAt) {
+    userBuckets[eventName] = { count: 1, resetAt: now + limits.windowMs };
+    return false;
+  }
+
+  userBuckets[eventName].count++;
+  return userBuckets[eventName].count > limits.max;
+}
+
 export const setupSocket = (io) => {
   // Start in-memory location store background flush
   startLocationManager();
@@ -32,6 +63,7 @@ export const setupSocket = (io) => {
 
     // Join personal room — only allow joining own room
     socket.on('join_room', ({ userId }) => {
+      if (isSocketRateLimited(socket.userId, 'join_room')) return;
       if (userId !== socket.userId) return;
       socket.join(`user:${userId}`);
     });
@@ -39,6 +71,7 @@ export const setupSocket = (io) => {
     // Join conversation room for messaging + typing events
     // Security: verify user is a participant before allowing room join
     socket.on('join_conversation', async ({ conversationId }) => {
+      if (isSocketRateLimited(socket.userId, 'join_conversation')) return;
       if (!conversationId) return;
       try {
         const conversation = await Conversation.findById(conversationId);
@@ -58,6 +91,7 @@ export const setupSocket = (io) => {
 
     // Location sharing
     socket.on('location_update', async ({ lat, lng, heading }) => {
+      if (isSocketRateLimited(socket.userId, 'location_update')) return;
       try {
         // Validate coordinates
         if (typeof lat !== 'number' || typeof lng !== 'number' ||
@@ -98,6 +132,7 @@ export const setupSocket = (io) => {
 
     // Stop sharing
     socket.on('stop_sharing', async () => {
+      if (isSocketRateLimited(socket.userId, 'stop_sharing')) return;
       removeLocation(socket.userId);
       await User.findByIdAndUpdate(socket.userId, { isLiveSharing: false });
       const user = await User.findById(socket.userId);
@@ -113,6 +148,7 @@ export const setupSocket = (io) => {
 
     // Messaging
     socket.on('message_send', ({ conversationId, text, locationPin }) => {
+      if (isSocketRateLimited(socket.userId, 'message_send')) return;
       socket.to(`conversation:${conversationId}`).emit('new_message', {
         conversationId,
         text,
@@ -123,6 +159,7 @@ export const setupSocket = (io) => {
     });
 
     socket.on('typing_start', ({ conversationId }) => {
+      if (isSocketRateLimited(socket.userId, 'typing_start')) return;
       socket.to(`conversation:${conversationId}`).emit('typing', {
         userId: socket.userId,
         isTyping: true,
@@ -130,6 +167,7 @@ export const setupSocket = (io) => {
     });
 
     socket.on('typing_stop', ({ conversationId }) => {
+      if (isSocketRateLimited(socket.userId, 'typing_stop')) return;
       socket.to(`conversation:${conversationId}`).emit('typing', {
         userId: socket.userId,
         isTyping: false,
@@ -141,6 +179,7 @@ export const setupSocket = (io) => {
       console.log(`[Socket] User disconnected: ${socket.userId}`);
       onlineUsers.delete(socket.userId);
       removeLocation(socket.userId);
+      socketRateMap.delete(socket.userId);
     });
   });
 };

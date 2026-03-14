@@ -1,4 +1,5 @@
 import Post from '../models/Post.js';
+import Comment from '../models/Comment.js';
 import { createNotification } from '../utils/createNotification.js';
 import { uploadToCloudinary } from '../middleware/upload.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -14,7 +15,6 @@ export const getFeed = asyncHandler(async (req, res) => {
   const [posts, total] = await Promise.all([
     Post.find({ author: { $in: followingIds } })
       .populate('author', 'name avatar')
-      .populate('comments.user', 'name avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
@@ -97,6 +97,7 @@ export const deletePost = asyncHandler(async (req, res) => {
   }
 
   await post.deleteOne();
+  await Comment.deleteMany({ post: post._id });
   return message(res, 'Post deleted');
 });
 
@@ -121,10 +122,14 @@ export const likePost = asyncHandler(async (req, res) => {
 
 export const getPost = asyncHandler(async (req, res) => {
   const post = await Post.findById(req.params.id)
-    .populate('author', 'name avatar')
-    .populate('comments.user', 'name avatar');
+    .populate('author', 'name avatar');
   if (!post) throw new AppError(ERR.POST_NOT_FOUND);
-  return ok(res, post);
+
+  const comments = await Comment.find({ post: req.params.id })
+    .populate('user', 'name avatar')
+    .sort({ createdAt: -1 });
+
+  return ok(res, { ...post.toObject(), comments });
 });
 
 export const updatePost = asyncHandler(async (req, res) => {
@@ -149,8 +154,11 @@ export const addComment = asyncHandler(async (req, res) => {
   const { text } = req.body;
   if (!text || !text.trim()) throw AppError.badRequest('Comment text is required');
 
-  post.comments.push({ user: req.user._id, text: text.trim() });
-  await post.save();
+  const comment = await Comment.create({
+    post: post._id,
+    user: req.user._id,
+    text: text.trim(),
+  });
 
   // Notify post author
   await createNotification(req, {
@@ -160,15 +168,15 @@ export const addComment = asyncHandler(async (req, res) => {
     data: { postId: post._id, preview: text.trim().slice(0, 80) },
   });
 
-  const populated = await post.populate('comments.user', 'name avatar');
-  return ok(res, populated.comments);
+  const populated = await comment.populate('user', 'name avatar');
+  return ok(res, populated);
 });
 
 export const deleteComment = asyncHandler(async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) throw new AppError(ERR.POST_NOT_FOUND);
 
-  const comment = post.comments.id(req.params.commentId);
+  const comment = await Comment.findById(req.params.commentId);
   if (!comment) throw new AppError(ERR.COMMENT_NOT_FOUND);
 
   // Only comment author or post author can delete
@@ -178,9 +186,7 @@ export const deleteComment = asyncHandler(async (req, res) => {
     throw new AppError(ERR.FORBIDDEN, 'Not authorized to delete this comment');
   }
 
-  post.comments.pull({ _id: req.params.commentId });
-  await post.save();
-
+  await comment.deleteOne();
   return message(res, 'Comment deleted');
 });
 
@@ -208,4 +214,21 @@ export const getUserPosts = asyncHandler(async (req, res) => {
   ]);
 
   return paginated(res, posts, { page, limit, total });
+});
+
+export const getComments = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
+  const [comments, total] = await Promise.all([
+    Comment.find({ post: req.params.id })
+      .populate('user', 'name avatar')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Comment.countDocuments({ post: req.params.id }),
+  ]);
+
+  return paginated(res, comments, { page, limit, total });
 });

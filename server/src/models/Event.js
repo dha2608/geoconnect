@@ -23,4 +23,8 @@ eventSchema.index({ startTime: 1 });
 eventSchema.index({ organizer: 1 });
 eventSchema.index({ title: 'text', description: 'text' });
 
+eventSchema.index({ category: 1, startTime: 1 });          // Filter by category + sort by start
+eventSchema.index({ organizer: 1, startTime: -1 });         // User's events sorted by date
+eventSchema.index({ isPublic: 1, location: '2dsphere' });   // Public events geo query
+
 export default mongoose.model('Event', eventSchema);

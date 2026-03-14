@@ -10,16 +10,12 @@ const postSchema = new mongoose.Schema({
   },
   address: { type: String, default: '' },
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  comments: [{
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    text: { type: String, maxlength: 300 },
-    createdAt: { type: Date, default: Date.now },
-  }],
 }, { timestamps: true });
 
 postSchema.index({ location: '2dsphere' });
 postSchema.index({ author: 1 });
 postSchema.index({ createdAt: -1 });
 postSchema.index({ text: 'text' });
+postSchema.index({ author: 1, createdAt: -1 }); // User's posts sorted by date
 
 export default mongoose.model('Post', postSchema);

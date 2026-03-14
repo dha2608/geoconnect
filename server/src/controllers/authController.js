@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken, hashToken } from '../utils/jwt.js';
 import { sendPasswordResetEmail, sendEmailVerification } from '../utils/email.js';
@@ -6,6 +7,7 @@ import { uploadToCloudinary } from '../middleware/upload.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError, ERR } from '../utils/errors.js';
 import { ok, created, message } from '../utils/response.js';
+import { blacklistToken } from '../utils/tokenBlacklist.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -95,6 +97,17 @@ export const logout = asyncHandler(async (req, res) => {
       // Token invalid — still clear cookie
     }
   }
+
+  // Blacklist the current access token
+  const accessToken = req.headers.authorization?.split(' ')[1] || req.token;
+  if (accessToken) {
+    try {
+      const decoded = jwt.decode(accessToken);
+      const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 900;
+      await blacklistToken(accessToken, ttl);
+    } catch { /* best-effort */ }
+  }
+
   res.clearCookie('refreshToken');
   return message(res, 'Logged out successfully');
 });
@@ -185,6 +198,16 @@ export const changePassword = asyncHandler(async (req, res) => {
 
   user.password = newPassword;
   await user.save();
+
+  // Blacklist the current access token so it can't be reused after password change
+  const accessToken = req.headers.authorization?.split(' ')[1] || req.token;
+  if (accessToken) {
+    try {
+      const decoded = jwt.decode(accessToken);
+      const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 900;
+      await blacklistToken(accessToken, ttl);
+    } catch { /* best-effort */ }
+  }
 
   return message(res, 'Password updated successfully');
 });
