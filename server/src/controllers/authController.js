@@ -3,6 +3,9 @@ import User from '../models/User.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken, hashToken } from '../utils/jwt.js';
 import { sendPasswordResetEmail, sendEmailVerification } from '../utils/email.js';
 import { uploadToCloudinary } from '../middleware/upload.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { AppError, ERR } from '../utils/errors.js';
+import { ok, created, message } from '../utils/response.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -28,143 +31,129 @@ const issueTokens = async (user, res) => {
 
 // ─── POST /api/auth/register ──────────────────────────────────────────────────
 
-export const register = async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
+export const register = asyncHandler(async (req, res) => {
+  const { name, email, password } = req.body;
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email already registered' });
-    }
-
-    // Upload avatar to Cloudinary if provided
-    let avatarUrl = '';
-    if (req.file) {
-      try {
-        const result = await uploadToCloudinary(req.file.buffer, 'geoconnect/avatars');
-        avatarUrl = result.secure_url;
-      } catch (uploadErr) {
-        console.error('[register] Avatar upload failed:', uploadErr.message);
-        // Continue without avatar — not a blocker
-      }
-    }
-
-    const user = await User.create({ name, email, password, avatar: avatarUrl });
-
-    // Generate email verification token
-    const verifyToken = user.createToken('emailVerification');
-    await user.save({ validateBeforeSave: false });
-    await sendEmailVerification(email, verifyToken);
-
-    const accessToken = await issueTokens(user, res);
-
-    res.status(201).json({ user: user.toPublicJSON(), accessToken });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    throw AppError.badRequest('Email already registered');
   }
-};
+
+  // Upload avatar to Cloudinary if provided
+  let avatarUrl = '';
+  if (req.file) {
+    try {
+      const result = await uploadToCloudinary(req.file.buffer, 'geoconnect/avatars');
+      avatarUrl = result.secure_url;
+    } catch (uploadErr) {
+      console.error('[register] Avatar upload failed:', uploadErr.message);
+      // Continue without avatar — not a blocker
+    }
+  }
+
+  const user = await User.create({ name, email, password, avatar: avatarUrl });
+
+  // Generate email verification token
+  const verifyToken = user.createToken('emailVerification');
+  await user.save({ validateBeforeSave: false });
+  await sendEmailVerification(email, verifyToken);
+
+  const accessToken = await issueTokens(user, res);
+
+  return created(res, { user: user.toPublicJSON(), accessToken });
+});
 
 // ─── POST /api/auth/login ─────────────────────────────────────────────────────
 
-export const login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
+export const login = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).select('+password');
-    if (!user || !user.password) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
-
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
-
-    const accessToken = await issueTokens(user, res);
-    res.json({ user: user.toPublicJSON(), accessToken });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+  const user = await User.findOne({ email }).select('+password');
+  if (!user || !user.password) {
+    throw AppError.unauthorized('Invalid email or password');
   }
-};
+
+  const isMatch = await user.comparePassword(password);
+  if (!isMatch) {
+    throw AppError.unauthorized('Invalid email or password');
+  }
+
+  const accessToken = await issueTokens(user, res);
+  return ok(res, { user: user.toPublicJSON(), accessToken });
+});
 
 // ─── POST /api/auth/logout ────────────────────────────────────────────────────
 
-export const logout = async (req, res) => {
-  try {
-    // Clear stored refresh token if user is authenticated
-    const token = req.cookies.refreshToken;
-    if (token) {
-      try {
-        const decoded = verifyRefreshToken(token);
-        await User.findByIdAndUpdate(decoded.userId, { refreshTokenHash: null });
-      } catch {
-        // Token invalid — still clear cookie
-      }
+export const logout = asyncHandler(async (req, res) => {
+  // Clear stored refresh token if user is authenticated
+  const token = req.cookies.refreshToken;
+  if (token) {
+    try {
+      const decoded = verifyRefreshToken(token);
+      await User.findByIdAndUpdate(decoded.userId, { refreshTokenHash: null });
+    } catch {
+      // Token invalid — still clear cookie
     }
-    res.clearCookie('refreshToken');
-    res.json({ message: 'Logged out successfully' });
-  } catch (error) {
-    res.clearCookie('refreshToken');
-    res.json({ message: 'Logged out successfully' });
   }
-};
+  res.clearCookie('refreshToken');
+  return message(res, 'Logged out successfully');
+});
 
 // ─── POST /api/auth/refresh  (with token rotation) ───────────────────────────
 
-export const refresh = async (req, res) => {
-  try {
-    const token = req.cookies.refreshToken;
-    if (!token) {
-      return res.status(401).json({ message: 'No refresh token' });
-    }
-
-    const decoded = verifyRefreshToken(token);
-    const user = await User.findById(decoded.userId).select('+refreshTokenHash');
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
-    }
-
-    // Rotation check — if hash doesn't match, token was already used (possible theft)
-    const incomingHash = hashToken(token);
-    if (!user.refreshTokenHash || user.refreshTokenHash !== incomingHash) {
-      // Potential token reuse attack — invalidate all sessions
-      user.refreshTokenHash = null;
-      await user.save({ validateBeforeSave: false });
-      res.clearCookie('refreshToken');
-      return res.status(401).json({ message: 'Token reuse detected, please log in again' });
-    }
-
-    // Issue new token pair (rotation)
-    const accessToken = await issueTokens(user, res);
-    res.json({ user: user.toPublicJSON(), accessToken });
-  } catch (error) {
-    res.clearCookie('refreshToken');
-    res.status(401).json({ message: 'Invalid refresh token' });
+export const refresh = asyncHandler(async (req, res) => {
+  const token = req.cookies.refreshToken;
+  if (!token) {
+    throw AppError.unauthorized('No refresh token');
   }
-};
+
+  // verifyRefreshToken throws on invalid/expired token — clear cookie before propagating
+  let decoded;
+  try {
+    decoded = verifyRefreshToken(token);
+  } catch {
+    res.clearCookie('refreshToken');
+    throw AppError.unauthorized('Invalid refresh token');
+  }
+
+  const user = await User.findById(decoded.userId).select('+refreshTokenHash');
+  if (!user) {
+    throw AppError.unauthorized('User not found');
+  }
+
+  // Rotation check — if hash doesn't match, token was already used (possible theft)
+  const incomingHash = hashToken(token);
+  if (!user.refreshTokenHash || user.refreshTokenHash !== incomingHash) {
+    // Potential token reuse attack — invalidate all sessions
+    user.refreshTokenHash = null;
+    await user.save({ validateBeforeSave: false });
+    res.clearCookie('refreshToken');
+    throw AppError.unauthorized('Token reuse detected, please log in again');
+  }
+
+  // Issue new token pair (rotation)
+  const accessToken = await issueTokens(user, res);
+  return ok(res, { user: user.toPublicJSON(), accessToken });
+});
 
 // ─── POST /api/auth/guest ─────────────────────────────────────────────────────
 
-export const guestLogin = async (req, res) => {
-  try {
-    const guestName = `Guest_${Date.now().toString(36)}`;
-    const user = await User.create({
-      name: guestName,
-      email: `${guestName.toLowerCase()}@guest.geoconnect`,
-      isGuest: true,
-      isEmailVerified: true, // guests don't need verification
-    });
+export const guestLogin = asyncHandler(async (req, res) => {
+  const guestName = `Guest_${Date.now().toString(36)}`;
+  const user = await User.create({
+    name: guestName,
+    email: `${guestName.toLowerCase()}@guest.geoconnect`,
+    isGuest: true,
+    isEmailVerified: true, // guests don't need verification
+  });
 
-    const accessToken = generateAccessToken(user._id);
-    res.status(201).json({ user: user.toPublicJSON(), accessToken });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-};
+  const accessToken = generateAccessToken(user._id);
+  return created(res, { user: user.toPublicJSON(), accessToken });
+});
 
 // ─── OAuth callback ───────────────────────────────────────────────────────────
 
-export const oauthCallback = async (req, res) => {
+export const oauthCallback = asyncHandler(async (req, res) => {
   try {
     const user = req.user;
     // OAuth users are inherently email-verified
@@ -178,128 +167,109 @@ export const oauthCallback = async (req, res) => {
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
     res.redirect(`${clientUrl}/auth/callback?token=${accessToken}`);
   } catch (error) {
+    // OAuth errors redirect instead of returning JSON — keep try-catch for redirect
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
     res.redirect(`${clientUrl}/login?error=oauth_failed`);
   }
-};
+});
 
 // ─── PUT /api/auth/password ───────────────────────────────────────────────────
 
-export const changePassword = async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-    const user = await User.findById(req.user._id).select('+password');
-    if (!user) return res.status(404).json({ message: 'User not found' });
+export const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const user = await User.findById(req.user._id).select('+password');
+  if (!user) throw new AppError(ERR.USER_NOT_FOUND);
 
-    const isMatch = await user.comparePassword(currentPassword);
-    if (!isMatch) return res.status(400).json({ message: 'Current password is incorrect' });
+  const isMatch = await user.comparePassword(currentPassword);
+  if (!isMatch) throw AppError.badRequest('Current password is incorrect');
 
-    user.password = newPassword;
-    await user.save();
+  user.password = newPassword;
+  await user.save();
 
-    res.json({ message: 'Password updated successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to update password' });
-  }
-};
+  return message(res, 'Password updated successfully');
+});
 
 // ─── POST /api/auth/forgot-password ───────────────────────────────────────────
 
-export const forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
 
-    // Always return success to prevent email enumeration
-    if (!user) {
-      return res.json({ message: 'If that email exists, a reset link has been sent' });
-    }
-
-    const resetToken = user.createToken('passwordReset');
-    await user.save({ validateBeforeSave: false });
-
-    await sendPasswordResetEmail(email, resetToken);
-
-    res.json({ message: 'If that email exists, a reset link has been sent' });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+  // Always return success to prevent email enumeration
+  if (!user) {
+    return message(res, 'If that email exists, a reset link has been sent');
   }
-};
+
+  const resetToken = user.createToken('passwordReset');
+  await user.save({ validateBeforeSave: false });
+
+  await sendPasswordResetEmail(email, resetToken);
+
+  return message(res, 'If that email exists, a reset link has been sent');
+});
 
 // ─── POST /api/auth/reset-password ────────────────────────────────────────────
 
-export const resetPassword = async (req, res) => {
-  try {
-    const { token, password } = req.body;
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token, password } = req.body;
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const user = await User.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpires: { $gt: Date.now() },
-    });
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() },
+  });
 
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired reset token' });
-    }
-
-    user.password = password;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    // Invalidate existing sessions
-    user.refreshTokenHash = null;
-    await user.save();
-
-    res.json({ message: 'Password has been reset. Please log in with your new password.' });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+  if (!user) {
+    throw AppError.badRequest('Invalid or expired reset token');
   }
-};
+
+  user.password = password;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+  // Invalidate existing sessions
+  user.refreshTokenHash = null;
+  await user.save();
+
+  return message(res, 'Password has been reset. Please log in with your new password.');
+});
 
 // ─── POST /api/auth/verify-email ──────────────────────────────────────────────
 
-export const verifyEmail = async (req, res) => {
-  try {
-    const { token } = req.body;
+export const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.body;
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const user = await User.findOne({
-      emailVerificationToken: hashedToken,
-      emailVerificationExpires: { $gt: Date.now() },
-    });
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+  const user = await User.findOne({
+    emailVerificationToken: hashedToken,
+    emailVerificationExpires: { $gt: Date.now() },
+  });
 
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired verification token' });
-    }
-
-    user.isEmailVerified = true;
-    user.emailVerificationToken = undefined;
-    user.emailVerificationExpires = undefined;
-    await user.save({ validateBeforeSave: false });
-
-    res.json({ message: 'Email verified successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+  if (!user) {
+    throw AppError.badRequest('Invalid or expired verification token');
   }
-};
+
+  user.isEmailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+  await user.save({ validateBeforeSave: false });
+
+  return message(res, 'Email verified successfully');
+});
 
 // ─── POST /api/auth/resend-verification ───────────────────────────────────────
 
-export const resendVerification = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
+export const resendVerification = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) throw new AppError(ERR.USER_NOT_FOUND);
 
-    if (user.isEmailVerified) {
-      return res.status(400).json({ message: 'Email is already verified' });
-    }
-
-    const verifyToken = user.createToken('emailVerification');
-    await user.save({ validateBeforeSave: false });
-
-    await sendEmailVerification(user.email, verifyToken);
-
-    res.json({ message: 'Verification email sent' });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+  if (user.isEmailVerified) {
+    throw AppError.badRequest('Email is already verified');
   }
-};
+
+  const verifyToken = user.createToken('emailVerification');
+  await user.save({ validateBeforeSave: false });
+
+  await sendEmailVerification(user.email, verifyToken);
+
+  return message(res, 'Verification email sent');
+});
