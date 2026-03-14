@@ -5,7 +5,6 @@ export { default as Modal } from './Modal';
 export { default as LoadingSpinner } from './LoadingSpinner';
 export { default as Avatar } from './Avatar';
 export { default as Badge } from './Badge';
-export { default as BottomSheet } from './BottomSheet';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { ToastProvider, showToast } from './Toast';
 export { default as Skeleton, PostCardSkeleton, PanelSkeleton, ProfileSkeleton, MessageSkeleton } from './Skeleton';

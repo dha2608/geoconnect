@@ -9,8 +9,6 @@ import PageTransition from './components/ui/PageTransition';
 import OfflineBanner from './components/ui/OfflineBanner';
 
 const AuthPage = lazy(() => import('./pages/auth/AuthPage'));
-const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
-const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 const MapView = lazy(() => import('./components/map/MapView'));
