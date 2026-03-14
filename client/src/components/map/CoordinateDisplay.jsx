@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMapEvents, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import toast from 'react-hot-toast';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -42,12 +43,18 @@ export default function CoordinateDisplay() {
   const [coords, setCoords] = useState(null); // { lat, lng }
   const [useDMS, setUseDMS] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const copiedTimer = useRef(null);
+  const hideTimer = useRef(null);
+  const containerRef = useRef(null);
 
-  // Track mouse position on desktop
+  // Track mouse position on desktop — also show on hover
   useMapEvents({
     mousemove(e) {
       setCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
+      setIsVisible(true);
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      hideTimer.current = setTimeout(() => setIsVisible(false), 3000);
     },
     mouseout() {
       // Fall back to map center when mouse leaves
@@ -61,6 +68,14 @@ export default function CoordinateDisplay() {
     const c = map.getCenter();
     setCoords({ lat: c.lat, lng: c.lng });
   }, [map]);
+
+  // Prevent click/scroll leaking to Leaflet canvas
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    L.DomEvent.disableClickPropagation(el);
+    L.DomEvent.disableScrollPropagation(el);
+  }, []);
 
   // Copy to clipboard
   const handleCopy = useCallback(async () => {
@@ -94,13 +109,22 @@ export default function CoordinateDisplay() {
 
   return (
     <div
+      ref={containerRef}
       onClick={handleCopy}
-      className="absolute bottom-3 left-3 z-[1000]
+      onMouseEnter={() => {
+        if (hideTimer.current) clearTimeout(hideTimer.current);
+        setIsVisible(true);
+      }}
+      onMouseLeave={() => {
+        hideTimer.current = setTimeout(() => setIsVisible(false), 1500);
+      }}
+      className={`absolute bottom-3 left-3 z-[1000]
                  flex items-center gap-2
                  px-3 py-1.5 rounded-lg
                  bg-black/60 backdrop-blur-md border border-white/10
                  cursor-pointer select-none
-                 hover:bg-black/75 transition-colors duration-150"
+                 hover:bg-black/75 transition-all duration-300
+                 ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       title="Click to copy coordinates"
     >
       {/* Coordinate text */}

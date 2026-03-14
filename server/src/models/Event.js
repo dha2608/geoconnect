@@ -21,5 +21,6 @@ const eventSchema = new mongoose.Schema({
 eventSchema.index({ location: '2dsphere' });
 eventSchema.index({ startTime: 1 });
 eventSchema.index({ organizer: 1 });
+eventSchema.index({ title: 'text', description: 'text' });
 
 export default mongoose.model('Event', eventSchema);

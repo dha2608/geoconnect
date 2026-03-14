@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { searchGeocode, reverseGeocode } from '../controllers/geocodeController.js';
-import { apiLimiter } from '../middleware/rateLimiter.js';
+import { geocodeLimiter } from '../middleware/rateLimiter.js';
 import { validate } from '../middleware/validate.js';
 import { validateSearchGeocode, validateReverseGeocode } from '../validators/index.js';
 
 const router = Router();
 
-router.get('/search', apiLimiter, validateSearchGeocode, validate, searchGeocode);
-router.get('/reverse', apiLimiter, validateReverseGeocode, validate, reverseGeocode);
+// Use dedicated geocodeLimiter instead of the global apiLimiter to prevent
+// double-counting (the global apiLimiter is already applied in server.js).
+router.get('/search', geocodeLimiter, validateSearchGeocode, validate, searchGeocode);
+router.get('/reverse', geocodeLimiter, validateReverseGeocode, validate, reverseGeocode);
 
 export default router;

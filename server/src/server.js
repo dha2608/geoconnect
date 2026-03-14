@@ -12,7 +12,7 @@ import hpp from 'hpp';
 
 import connectDB from './config/db.js';
 import passport from './config/passport.js';
-import { apiLimiter } from './middleware/rateLimiter.js';
+import { apiLimiter, writeLimiter } from './middleware/rateLimiter.js';
 import { setupSocket } from './socket/handler.js';
 import { startEventReminderJob } from './jobs/eventReminder.js';
 
@@ -27,6 +27,9 @@ import messageRoutes from './routes/messages.js';
 import geocodeRoutes from './routes/geocode.js';
 import notificationRoutes from './routes/notifications.js';
 import reportRoutes from './routes/reports.js';
+import discoverRoutes from './routes/discover.js';
+import activityRoutes from './routes/activity.js';
+import collectionRoutes from './routes/collections.js';
 
 dotenv.config();
 
@@ -67,13 +70,26 @@ app.use(cookieParser());
 app.use(passport.initialize());
 app.use(apiLimiter);
 
+// Write limiter — applies only to mutating HTTP methods on /api/
+app.use('/api/', (req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    return writeLimiter(req, res, next);
+  }
+  next();
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
 });
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users/me/activity', activityRoutes);       // must be before /api/users — prevents generic user router swallowing the path
 app.use('/api/users/notifications', notificationRoutes); // must be before /api/users — prevents /:id swallowing "notifications"
 app.use('/api/users', userRoutes);
 app.use('/api/pins', pinRoutes);
@@ -82,7 +98,9 @@ app.use('/api/posts', postRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/discover', discoverRoutes);
 app.use('/api/geocode', geocodeRoutes);
+app.use('/api/collections', collectionRoutes);
 
 // 404 handler — catch all unmatched routes
 app.use((req, res) => {

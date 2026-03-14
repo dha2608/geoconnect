@@ -1,17 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useMap } from 'react-leaflet';
+import { useMap, useMapEvents } from 'react-leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
 import L from 'leaflet';
 import { setTileLayer } from '../../features/map/mapSlice';
 import useGeolocation from '../../hooks/useGeolocation';
 import useLocationSharing from '../../socket/useLocationSharing';
+import { MAP_SHORTCUT_EVENTS } from '../../hooks/useKeyboardShortcuts';
 
 const TILE_OPTIONS = [
   { id: 'dark',      label: 'Dark',      icon: '🌙' },
   { id: 'street',    label: 'Street',    icon: '🗺️' },
   { id: 'light',     label: 'Light',     icon: '☀️' },
   { id: 'satellite', label: 'Satellite', icon: '🛰️' },
+  { id: 'terrain',   label: 'Terrain',   icon: '⛰️' },
 ];
 
 /**
@@ -29,7 +31,22 @@ export default function MapControls() {
   const dispatch = useDispatch();
   const { userLocation, isLocating, tileLayer } = useSelector((state) => state.map);
   const [showLayers, setShowLayers] = useState(false);
+  const [bearing, setBearing] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const controlRef = useRef(null);
+
+  // Track map bearing (rotation) for compass
+  useMapEvents({
+    rotate: () => setBearing(map.getBearing?.() ?? 0),
+    move: () => setBearing(map.getBearing?.() ?? 0),
+  });
+
+  // Track fullscreen changes
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
 
   // Separate hook instance with autoWatch:false so it doesn't start a duplicate watcher.
   // We only use it to imperatively trigger a one-shot locate() when the user taps the button.
@@ -54,7 +71,7 @@ export default function MapControls() {
     L.DomEvent.disableScrollPropagation(el);
   }, []);
 
-  const handleLocateMe = () => {
+  const handleLocateMe = useCallback(() => {
     if (userLocation) {
       // Already have a fix — just fly to it
       map.flyTo([userLocation.lat, userLocation.lng], 16, { duration: 1.5 });
@@ -63,7 +80,24 @@ export default function MapControls() {
       pendingFlyRef.current = true;
       locate();
     }
-  };
+  }, [userLocation, map, locate]);
+
+  // Listen for keyboard shortcut events fired from outside the MapContainer
+  useEffect(() => {
+    const onZoomIn   = () => map.zoomIn();
+    const onZoomOut  = () => map.zoomOut();
+    const onLocateMe = () => handleLocateMe();
+
+    window.addEventListener(MAP_SHORTCUT_EVENTS.ZOOM_IN,   onZoomIn);
+    window.addEventListener(MAP_SHORTCUT_EVENTS.ZOOM_OUT,  onZoomOut);
+    window.addEventListener(MAP_SHORTCUT_EVENTS.LOCATE_ME, onLocateMe);
+
+    return () => {
+      window.removeEventListener(MAP_SHORTCUT_EVENTS.ZOOM_IN,   onZoomIn);
+      window.removeEventListener(MAP_SHORTCUT_EVENTS.ZOOM_OUT,  onZoomOut);
+      window.removeEventListener(MAP_SHORTCUT_EVENTS.LOCATE_ME, onLocateMe);
+    };
+  }, [map, handleLocateMe]);
 
   const handleTileChange = (id) => {
     dispatch(setTileLayer(id));
@@ -75,6 +109,53 @@ export default function MapControls() {
       ref={controlRef}
       className="absolute right-4 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-2"
     >
+      {/* ── Compass — reset map bearing to north ──────────────── */}
+      <button
+        onClick={() => {
+          if (map.setBearing) map.setBearing(0);
+          map.flyTo(map.getCenter(), map.getZoom(), { duration: 0.3 });
+        }}
+        className="w-10 h-10 rounded-xl glass flex items-center justify-center text-txt-primary hover:text-accent-primary transition-colors"
+        title="Reset to North"
+        aria-label="Reset map orientation to north"
+      >
+        <svg
+          className="w-5 h-5 transition-transform duration-300"
+          style={{ transform: `rotate(${-bearing}deg)` }}
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <polygon points="12,2 16,14 12,11 8,14" fill="#ef4444" stroke="#ef4444" strokeWidth="1" />
+          <polygon points="12,22 16,14 12,17 8,14" fill="currentColor" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+          <circle cx="12" cy="12" r="2" fill="currentColor" opacity="0.6" />
+        </svg>
+      </button>
+
+      {/* ── Fullscreen Toggle ────────────────────────────────────── */}
+      <button
+        onClick={() => {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen?.();
+          } else {
+            document.exitFullscreen?.();
+          }
+        }}
+        className="w-10 h-10 rounded-xl glass flex items-center justify-center text-txt-primary hover:text-accent-primary transition-colors"
+        title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+        aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+      >
+        {isFullscreen ? (
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+          </svg>
+        ) : (
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+          </svg>
+        )}
+      </button>
+
       {/* ── Locate Me ─────────────────────────────────────────────── */}
       <button
         onClick={handleLocateMe}

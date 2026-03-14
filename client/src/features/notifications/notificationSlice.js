@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import API from '../../api/axios';
+import { playNotificationSound, showBrowserNotification } from '../../utils/notificationSound';
 
 export const fetchNotifications = createAsyncThunk('notifications/fetch', async (_, { rejectWithValue }) => {
   try { const res = await API.get('/users/notifications'); return res.data; }
@@ -28,17 +29,36 @@ export const clearAllNotifications = createAsyncThunk('notifications/clearAll', 
 
 const notificationSlice = createSlice({
   name: 'notifications',
-  initialState: { items: [], unreadCount: 0, loading: false },
+  initialState: { items: [], unreadCount: 0, loading: false, latestNotification: null },
   reducers: {
     addNotification: (state, action) => {
       state.items.unshift(action.payload);
       state.unreadCount += 1;
+      state.latestNotification = action.payload;
+
+      // Side effects — sound + browser notification
+      // (These are idempotent and don't modify state, so they're safe here)
+      const n = action.payload;
+      const soundType = n.type === 'message' ? 'message' : 'default';
+      playNotificationSound(soundType);
+
+      showBrowserNotification(
+        n.title || 'GeoConnect',
+        { body: n.message || n.text || '', tag: n._id || 'notification' }
+      );
     },
     clearNotifications: (state) => { state.items = []; state.unreadCount = 0; },
+    setLatestNotification: (state, action) => {
+      state.latestNotification = action.payload;
+    },
+    clearLatestNotification: (state) => {
+      state.latestNotification = null;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchNotifications.fulfilled, (state, action) => {
-      state.items = action.payload.notifications || action.payload;
+      const items = action.payload.data || action.payload.notifications || action.payload;
+      state.items = Array.isArray(items) ? items : [];
       state.unreadCount = state.items.filter(n => !n.read).length;
     });
     builder.addCase(markAsRead.fulfilled, (state, action) => {
@@ -64,5 +84,10 @@ const notificationSlice = createSlice({
   },
 });
 
-export const { addNotification, clearNotifications } = notificationSlice.actions;
+export const {
+  addNotification,
+  clearNotifications,
+  setLatestNotification,
+  clearLatestNotification,
+} = notificationSlice.actions;
 export default notificationSlice.reducer;

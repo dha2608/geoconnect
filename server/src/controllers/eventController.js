@@ -8,7 +8,7 @@ export const getEventsByViewport = async (req, res) => {
     if (!swLat || !swLng || !neLat || !neLng) {
       return res.status(400).json({ message: 'Viewport bounds required' });
     }
-    
+
     const events = await Event.find({
       isPublic: true,
       endTime: { $gte: new Date() },
@@ -20,8 +20,11 @@ export const getEventsByViewport = async (req, res) => {
           ],
         },
       },
-    }).populate('organizer', 'name avatar').sort({ startTime: 1 });
-    
+    })
+      .populate('organizer', 'name avatar')
+      .sort({ startTime: 1 })
+      .limit(req.pagination.limit);
+
     res.json(events);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -30,15 +33,22 @@ export const getEventsByViewport = async (req, res) => {
 
 export const getUpcomingEvents = async (req, res) => {
   try {
-    const { limit = 12 } = req.query;
-    const events = await Event.find({
-      isPublic: true,
-      startTime: { $gte: new Date() },
-    })
-      .sort({ startTime: 1 })
-      .limit(parseInt(limit))
-      .populate('organizer', 'name avatar');
-    res.json(events);
+    const { page, limit, skip } = req.pagination;
+    const filter = { isPublic: true, startTime: { $gte: new Date() } };
+
+    const [events, total] = await Promise.all([
+      Event.find(filter)
+        .sort({ startTime: 1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('organizer', 'name avatar'),
+      Event.countDocuments(filter),
+    ]);
+
+    res.json({
+      data: events,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch upcoming events' });
   }
@@ -157,21 +167,40 @@ export const searchEvents = async (req, res) => {
     const { q } = req.query;
     if (!q || q.length < 2) return res.status(400).json({ message: 'Query must be at least 2 characters' });
 
-    const regex = { $regex: q, $options: 'i' };
-    const events = await Event.find({
-      isPublic: true,
-      endTime: { $gte: new Date() },
-      $or: [
-        { title: regex },
-        { description: regex },
-        { address: regex },
-      ],
-    })
-      .populate('organizer', 'name avatar')
-      .sort({ startTime: 1 })
-      .limit(20);
+    const { page, limit, skip } = req.pagination;
+    const baseFilter = { isPublic: true, endTime: { $gte: new Date() } };
 
-    res.json(events);
+    let query;
+    let projection = {};
+    let sortOpts = { startTime: 1 };
+
+    if (q.length >= 3) {
+      // Use MongoDB text index for relevance-ranked search
+      query = { ...baseFilter, $text: { $search: q } };
+      projection = { score: { $meta: 'textScore' } };
+      sortOpts = { score: { $meta: 'textScore' } };
+    } else {
+      // Fallback to regex for very short queries
+      const regex = { $regex: q, $options: 'i' };
+      query = {
+        ...baseFilter,
+        $or: [{ title: regex }, { description: regex }, { address: regex }],
+      };
+    }
+
+    const [events, total] = await Promise.all([
+      Event.find(query, projection)
+        .populate('organizer', 'name avatar')
+        .sort(sortOpts)
+        .skip(skip)
+        .limit(limit),
+      Event.countDocuments(query),
+    ]);
+
+    res.json({
+      data: events,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

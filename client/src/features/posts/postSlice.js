@@ -46,9 +46,11 @@ const postSlice = createSlice({
     builder.addCase(fetchFeed.pending, (state) => { state.loading = true; });
     builder.addCase(fetchFeed.fulfilled, (state, action) => {
       state.loading = false;
-      const newPosts = action.payload.posts || action.payload;
+      const items = action.payload.data || action.payload.posts || action.payload;
+      const newPosts = Array.isArray(items) ? items : [];
+      const pagination = action.payload.pagination;
       state.posts = state.page === 1 ? newPosts : [...state.posts, ...newPosts];
-      state.hasMore = newPosts.length >= 20;
+      state.hasMore = pagination ? pagination.page < pagination.pages : newPosts.length >= 20;
       state.page += 1;
     });
     builder.addCase(fetchFeed.rejected, (state, action) => { state.loading = false; state.error = action.payload?.message; });

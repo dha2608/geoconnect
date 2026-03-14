@@ -4,22 +4,25 @@ import { uploadToCloudinary } from '../middleware/upload.js';
 
 export const getFeed = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+    const { page, limit, skip } = req.pagination;
+
     const user = req.user;
     const followingIds = [...user.following, user._id];
-    
-    const posts = await Post.find({ author: { $in: followingIds } })
-      .populate('author', 'name avatar')
-      .populate('comments.user', 'name avatar')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-    
-    const total = await Post.countDocuments({ author: { $in: followingIds } });
-    
-    res.json({ posts, total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) });
+
+    const [posts, total] = await Promise.all([
+      Post.find({ author: { $in: followingIds } })
+        .populate('author', 'name avatar')
+        .populate('comments.user', 'name avatar')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Post.countDocuments({ author: { $in: followingIds } }),
+    ]);
+
+    res.json({
+      data: posts,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -233,14 +236,22 @@ export const unlikePost = async (req, res) => {
 
 export const getUserPosts = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = 10;
-    const posts = await Post.find({ author: req.params.userId })
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate('author', 'username name avatar');
-    res.json(posts);
+    const { page, limit, skip } = req.pagination;
+    const filter = { author: req.params.userId };
+
+    const [posts, total] = await Promise.all([
+      Post.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('author', 'username name avatar'),
+      Post.countDocuments(filter),
+    ]);
+
+    res.json({
+      data: posts,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch user posts' });
   }

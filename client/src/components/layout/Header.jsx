@@ -1,10 +1,13 @@
 import { motion } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { toggleSidebar, setActivePanel } from '../../features/ui/uiSlice';
 import Avatar from '../ui/Avatar';
+import LiveIndicator from '../ui/LiveIndicator';
 
 export default function Header() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const { unreadCount } = useSelector((state) => state.notifications);
   const { unreadCount: unreadMessages } = useSelector((state) => state.messages);
@@ -24,9 +27,16 @@ export default function Header() {
             <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
           </svg>
         </button>
-        <h1 className="text-xl font-heading font-bold bg-gradient-to-r from-accent-primary to-accent-secondary bg-clip-text text-transparent">
+        <h1
+          onClick={() => navigate('/')}
+          className="text-xl font-heading font-bold bg-gradient-to-r from-accent-primary to-accent-secondary bg-clip-text text-transparent cursor-pointer select-none"
+          role="link"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter') navigate('/'); }}
+        >
           GeoConnect
         </h1>
+        <LiveIndicator className="hidden sm:flex" />
       </div>
 
       <div className="flex items-center gap-2">

@@ -47,6 +47,7 @@ import { userApi } from '../../api/userApi';
 import useRequireAuth from '../../hooks/useRequireAuth';
 import { formatDistanceToNow, format, isToday, isYesterday, isSameDay } from 'date-fns';
 import Avatar from '../ui/Avatar';
+import { PanelSkeleton, MessageSkeleton as MessageSkeletonUI, EmptyState } from '../ui';
 
 // Gracefully handle missing socket hook (created in parallel)
 let useMessaging;
@@ -154,74 +155,6 @@ function formatDateLabel(date) {
 /** Truncate string to maxLen characters */
 function truncate(str = '', maxLen = 40) {
   return str.length > maxLen ? str.slice(0, maxLen - 1) + '…' : str;
-}
-
-// ─── Loading skeletons ────────────────────────────────────────────────────────
-
-function ConversationSkeleton() {
-  return (
-    <div className="flex items-center gap-3 px-3 py-3 rounded-xl animate-pulse">
-      <div className="w-10 h-10 rounded-full bg-surface-hover flex-shrink-0" />
-      <div className="flex-1 space-y-2">
-        <div className="h-3 bg-surface-hover rounded-md w-3/5" />
-        <div className="h-2.5 bg-surface-hover rounded-md w-4/5" />
-      </div>
-      <div className="h-2 bg-surface-hover rounded w-10 flex-shrink-0" />
-    </div>
-  );
-}
-
-function MessageSkeleton({ align = 'left' }) {
-  const isRight = align === 'right';
-  return (
-    <div className={`flex ${isRight ? 'justify-end' : 'justify-start'} animate-pulse`}>
-      <div
-        className={`h-8 rounded-2xl bg-surface-hover ${isRight ? 'w-36' : 'w-48'}`}
-      />
-    </div>
-  );
-}
-
-// ─── Empty states ─────────────────────────────────────────────────────────────
-
-function EmptyConversations() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.12 }}
-      className="flex flex-col items-center justify-center h-full py-20 px-6 text-center"
-    >
-      <div className="w-16 h-16 rounded-2xl bg-accent-primary/10 border border-accent-primary/15 flex items-center justify-center mb-5 text-txt-muted">
-        <MessageSquareIcon className="w-8 h-8" />
-      </div>
-      <p className="text-txt-primary font-heading font-semibold text-base mb-1">
-        No conversations yet
-      </p>
-      <p className="text-txt-muted font-body text-sm leading-relaxed max-w-[200px]">
-        Start a conversation by visiting someone's profile.
-      </p>
-    </motion.div>
-  );
-}
-
-function EmptyMessages({ name }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 }}
-      className="flex flex-col items-center justify-center h-full py-16 px-6 text-center"
-    >
-      <div className="w-14 h-14 rounded-full bg-accent-primary/10 border border-accent-primary/15 flex items-center justify-center mb-4 text-txt-muted">
-        <MessageSquareIcon className="w-7 h-7" />
-      </div>
-      <p className="text-txt-secondary font-body text-sm">
-        Start the conversation with{' '}
-        <span className="text-txt-primary font-medium">{name}</span>
-      </p>
-    </motion.div>
-  );
 }
 
 // ─── Typing indicator ─────────────────────────────────────────────────────────
@@ -488,13 +421,7 @@ function NewConversationView({ currentUserId, onClose, onBack, onStartChat }) {
         style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.07) transparent' }}
       >
         {/* Loading */}
-        {searching && (
-          <div className="space-y-1 pt-1">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <ConversationSkeleton key={i} />
-            ))}
-          </div>
-        )}
+        {searching && <PanelSkeleton />}
 
         {/* Error */}
         {error && (
@@ -639,13 +566,7 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation, on
         style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.07) transparent' }}
       >
         {/* Loading */}
-        {loading && conversations.length === 0 && (
-          <div className="space-y-1 pt-1">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <ConversationSkeleton key={i} />
-            ))}
-          </div>
-        )}
+        {loading && conversations.length === 0 && <PanelSkeleton />}
 
         {/* Error */}
         {!loading && error && conversations.length === 0 && (
@@ -671,7 +592,13 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation, on
         )}
 
         {/* Empty */}
-        {!loading && !error && conversations.length === 0 && <EmptyConversations />}
+        {!loading && !error && conversations.length === 0 && (
+          <EmptyState
+            icon="messages"
+            title="No conversations"
+            description="Start a conversation by visiting someone's profile"
+          />
+        )}
 
         {/* Conversation rows */}
         {conversations.length > 0 && (
@@ -939,18 +866,16 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
         style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.07) transparent' }}
       >
         {/* Loading skeletons */}
-        {loading && messages.length === 0 && (
-          <div className="flex flex-col gap-3 pt-2">
-            <MessageSkeleton align="left"  />
-            <MessageSkeleton align="right" />
-            <MessageSkeleton align="left"  />
-            <MessageSkeleton align="right" />
-            <MessageSkeleton align="left"  />
-          </div>
-        )}
+        {loading && messages.length === 0 && <MessageSkeletonUI />}
 
         {/* Empty state */}
-        {!loading && messages.length === 0 && <EmptyMessages name={name} />}
+        {!loading && messages.length === 0 && (
+          <EmptyState
+            icon="messages"
+            title="Start chatting"
+            description="Send a message to begin the conversation"
+          />
+        )}
 
         {/* Message groups */}
         <AnimatePresence initial={false}>

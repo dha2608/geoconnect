@@ -66,7 +66,11 @@ const pinSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(fetchViewportPins.pending, (state) => { state.loading = true; });
-    builder.addCase(fetchViewportPins.fulfilled, (state, action) => { state.loading = false; state.pins = action.payload.pins || action.payload; });
+    builder.addCase(fetchViewportPins.fulfilled, (state, action) => {
+      state.loading = false;
+      const items = action.payload.data || action.payload.pins || action.payload;
+      state.pins = Array.isArray(items) ? items : [];
+    });
     builder.addCase(fetchViewportPins.rejected, (state, action) => { state.loading = false; state.error = action.payload?.message; });
     builder.addCase(fetchPin.fulfilled, (state, action) => { state.selectedPin = action.payload.pin || action.payload; });
     builder.addCase(createPin.fulfilled, (state, action) => { state.pins.push(action.payload.pin || action.payload); });
@@ -83,7 +87,10 @@ const pinSlice = createSlice({
       if (idx !== -1) state.pins[idx] = updated;
       if (state.selectedPin?._id === updated._id) state.selectedPin = updated;
     });
-    builder.addCase(searchPins.fulfilled, (state, action) => { state.searchResults = action.payload.pins || action.payload; });
+    builder.addCase(searchPins.fulfilled, (state, action) => {
+      const items = action.payload.data || action.payload.pins || action.payload;
+      state.searchResults = Array.isArray(items) ? items : [];
+    });
     builder.addCase(checkInPin.fulfilled, (state, action) => {
       const { pinId, checkIns, checkInCount } = action.payload;
       // Update selectedPin checkIns

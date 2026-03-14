@@ -148,16 +148,29 @@ export const searchUsers = async (req, res) => {
     // Get blocked users to exclude from search
     const currentUser = await User.findById(req.user._id).select('blockedUsers');
     const blockedIds = currentUser?.blockedUsers || [];
+    const blockedFilter = { _id: { $nin: blockedIds }, blockedUsers: { $nin: [req.user._id] } };
 
-    const users = await User.find({
-      _id: { $nin: blockedIds },
-      blockedUsers: { $nin: [req.user._id] },
-      $or: [
-        { name: { $regex: q, $options: 'i' } },
-        { email: { $regex: q, $options: 'i' } },
-      ],
-    }).select('name avatar bio followers following').limit(20);
-    
+    let users;
+    if (q.length >= 3) {
+      // Use MongoDB text index for relevance-ranked search on name + bio
+      users = await User.find(
+        { ...blockedFilter, $text: { $search: q } },
+        { score: { $meta: 'textScore' } },
+      )
+        .sort({ score: { $meta: 'textScore' } })
+        .select('name avatar bio followers following')
+        .limit(20);
+    } else {
+      // Fallback to regex for very short queries — also searches email
+      users = await User.find({
+        ...blockedFilter,
+        $or: [
+          { name: { $regex: q, $options: 'i' } },
+          { email: { $regex: q, $options: 'i' } },
+        ],
+      }).select('name avatar bio followers following').limit(20);
+    }
+
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });

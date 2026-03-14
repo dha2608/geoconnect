@@ -18,6 +18,8 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const ActivityPage = lazy(() => import('./pages/ActivityPage'));
+const CollectionsPage = lazy(() => import('./pages/CollectionsPage'));
 
 function App() {
   const location = useLocation();
@@ -54,6 +56,8 @@ function App() {
                 <Route path="profile/:userId?" element={<PageTransition><ProfilePage /></PageTransition>} />
                 <Route path="settings" element={<PageTransition><SettingsPage /></PageTransition>} />
                 <Route path="explore" element={<PageTransition><ExplorePage /></PageTransition>} />
+                <Route path="activity" element={<PageTransition><ActivityPage /></PageTransition>} />
+                <Route path="collections" element={<PageTransition><CollectionsPage /></PageTransition>} />
               </Route>
               {/* 404 catch-all */}
               <Route path="*" element={<PageTransition><NotFoundPage /></PageTransition>} />

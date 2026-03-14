@@ -31,6 +31,7 @@ import {
 } from '../../features/notifications/notificationSlice';
 import { closePanel } from '../../features/ui/uiSlice';
 import { formatDistanceToNow } from 'date-fns';
+import { PanelSkeleton, EmptyState } from '../ui';
 
 // ─── Spring ───────────────────────────────────────────────────────────────────
 
@@ -125,44 +126,6 @@ const CheckAllIcon = () => (
     <polyline points="15 6 9 12" />
   </svg>
 );
-
-// ─── Loading skeleton ─────────────────────────────────────────────────────────
-
-function NotificationSkeleton() {
-  return (
-    <div className="flex items-start gap-3 p-3.5 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] animate-pulse">
-      <div className="w-9 h-9 rounded-full bg-surface-hover flex-shrink-0" />
-      <div className="flex-1 space-y-2 pt-0.5">
-        <div className="h-3 bg-surface-hover rounded-md w-4/5" />
-        <div className="h-2.5 bg-surface-hover rounded-md w-2/5" />
-      </div>
-      <div className="w-1.5 h-1.5 rounded-full bg-surface-active mt-2 flex-shrink-0" />
-    </div>
-  );
-}
-
-// ─── Empty state ──────────────────────────────────────────────────────────────
-
-function EmptyState() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.12 }}
-      className="flex flex-col items-center justify-center h-full py-20 px-6 text-center"
-    >
-      <div className="w-16 h-16 rounded-2xl bg-accent-primary/10 border border-accent-primary/15 flex items-center justify-center mb-5 text-txt-muted">
-        <BellIcon className="w-8 h-8" />
-      </div>
-      <p className="text-txt-primary font-heading font-semibold text-base mb-1">
-        No notifications yet
-      </p>
-      <p className="text-txt-muted font-body text-sm leading-relaxed max-w-[200px]">
-        When people interact with your content, you'll see it here.
-      </p>
-    </motion.div>
-  );
-}
 
 // ─── Notification item ────────────────────────────────────────────────────────
 
@@ -397,16 +360,16 @@ export default function NotificationPanel() {
             style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.07) transparent' }}
           >
             {/* Loading skeletons */}
-            {loading && items.length === 0 && (
-              <div className="space-y-2">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <NotificationSkeleton key={i} />
-                ))}
-              </div>
-            )}
+            {loading && items.length === 0 && <PanelSkeleton />}
 
             {/* Empty state */}
-            {!loading && items.length === 0 && <EmptyState />}
+            {!loading && items.length === 0 && (
+              <EmptyState
+                icon="notifications"
+                title="No notifications"
+                description="You're all caught up! Check back later for updates"
+              />
+            )}
 
             {/* Notification list */}
             {items.length > 0 && (

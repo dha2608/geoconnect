@@ -9,6 +9,7 @@ const uiSlice = createSlice({
     modalData: null,
     mapStyle: 'dark',
     isMobile: window.innerWidth < 768,
+    isTablet: window.innerWidth >= 768 && window.innerWidth < 1024,
     activeMapTool: null, // 'draw' | 'measure' | 'route' | null
   },
   reducers: {
@@ -30,9 +31,18 @@ const uiSlice = createSlice({
     closeModal: (state) => { state.modalOpen = null; state.modalData = null; },
     setMapStyle: (state, action) => { state.mapStyle = action.payload; },
     setIsMobile: (state, action) => { state.isMobile = action.payload; },
+    /** Compute both isMobile and isTablet from the current viewport width. */
+    setDeviceSize: (state, action) => {
+      const w = action.payload;
+      state.isMobile = w < 768;
+      state.isTablet = w >= 768 && w < 1024;
+    },
     setActiveMapTool: (state, action) => { state.activeMapTool = action.payload; },
   },
 });
 
-export const { toggleSidebar, setSidebarOpen, setActivePanel, closePanel, openModal, closeModal, setMapStyle, setIsMobile, setActiveMapTool } = uiSlice.actions;
+export const {
+  toggleSidebar, setSidebarOpen, setActivePanel, closePanel,
+  openModal, closeModal, setMapStyle, setIsMobile, setDeviceSize, setActiveMapTool,
+} = uiSlice.actions;
 export default uiSlice.reducer;

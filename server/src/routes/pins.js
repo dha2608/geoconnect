@@ -4,13 +4,14 @@ import { authenticate, optionalAuth } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
 import { validateCreatePin, validateUpdatePin, validatePinId, validateUserId, validateSearchQuery } from '../validators/index.js';
+import { paginate } from '../middleware/pagination.js';
 
 const router = Router();
 
-router.get('/', optionalAuth, getPinsByViewport);
-router.get('/search', optionalAuth, validateSearchQuery, validate, searchPins);
-router.get('/nearby', optionalAuth, getNearbyPins);
-router.get('/trending', optionalAuth, getTrendingPins);
+router.get('/', optionalAuth, paginate, getPinsByViewport);
+router.get('/search', optionalAuth, validateSearchQuery, validate, paginate, searchPins);
+router.get('/nearby', optionalAuth, paginate, getNearbyPins);
+router.get('/trending', optionalAuth, paginate, getTrendingPins);
 router.get('/saved/:userId', authenticate, validateUserId, validate, getSavedPins);
 router.get('/:id', optionalAuth, validatePinId, validate, getPin);
 router.post('/', authenticate, upload.array('images', 5), validateCreatePin, validate, createPin);
