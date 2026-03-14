@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // ---------------------------------------------------------------------------
 // Category definitions
@@ -47,6 +47,8 @@ const chipVariants = {
 // ---------------------------------------------------------------------------
 export default function QuickCategories() {
   const [activeId, setActiveId] = useState(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [hoverTimer, setHoverTimer] = useState(null);
 
   const handleChipClick = (category) => {
     const nextId = activeId === category.id ? null : category.id;
@@ -63,15 +65,41 @@ export default function QuickCategories() {
     }
   };
 
+  const handleMouseEnter = useCallback(() => {
+    if (hoverTimer) clearTimeout(hoverTimer);
+    setIsVisible(true);
+  }, [hoverTimer]);
+
+  const handleMouseLeave = useCallback(() => {
+    const timer = setTimeout(() => setIsVisible(false), 400);
+    setHoverTimer(timer);
+  }, []);
+
   return (
     // Sits below the SearchBar (top-4 + ~44px height ≈ top-[72px]).
     // right-16 avoids the MapControls column on the right edge.
-    <div className="absolute top-[72px] left-4 right-16 pointer-events-auto z-[1001]">
+    // Hover trigger zone — always interactive, content fades in/out.
+    <div
+      className="absolute top-[72px] left-4 right-16 pointer-events-auto z-[1001]"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {/* Invisible trigger strip — always present for hover detection */}
+      <div className="h-3" />
+      <AnimatePresence>
       {/*
         Wrapper with overflow-hidden clips the fade-edge overlays cleanly.
         The scrollable row lives inside so the gradient overlays are layered on top.
       */}
-      <div className="relative overflow-hidden">
+      {(isVisible || activeId) && (
+      <motion.div
+        key="quick-cats"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.2 }}
+        className="relative overflow-hidden"
+      >
 
         {/* ── Left fade — hints that the list scrolls ────────────────── */}
         <div
@@ -139,7 +167,9 @@ export default function QuickCategories() {
             );
           })}
         </motion.div>
-      </div>
+      </motion.div>
+      )}
+      </AnimatePresence>
     </div>
   );
 }

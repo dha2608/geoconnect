@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import API from '../../api/axios';
+import { playNotificationSound, showBrowserNotification } from '../../utils/notificationSound';
 
 export const fetchNotifications = createAsyncThunk('notifications/fetch', async (_, { rejectWithValue }) => {
   try { const res = await API.get('/users/notifications'); return res.data; }
@@ -33,6 +34,18 @@ const notificationSlice = createSlice({
     addNotification: (state, action) => {
       state.items.unshift(action.payload);
       state.unreadCount += 1;
+      state.latestNotification = action.payload;
+
+      // Side effects — sound + browser notification
+      // (These are idempotent and don't modify state, so they're safe here)
+      const n = action.payload;
+      const soundType = n.type === 'message' ? 'message' : 'default';
+      playNotificationSound(soundType);
+
+      showBrowserNotification(
+        n.title || 'GeoConnect',
+        { body: n.message || n.text || '', tag: n._id || 'notification' }
+      );
     },
     clearNotifications: (state) => { state.items = []; state.unreadCount = 0; },
     setLatestNotification: (state, action) => {

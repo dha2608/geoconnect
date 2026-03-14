@@ -114,7 +114,7 @@ export default function SearchBar() {
       setResults([]);
       return;
     }
-    debounceRef.current = setTimeout(() => search(query), 300);
+    debounceRef.current = setTimeout(() => search(query), 500);
     return () => clearTimeout(debounceRef.current);
   }, [query, search]);
 
@@ -408,10 +408,15 @@ export default function SearchBar() {
               </>
             )}
 
-            {/* ── Search Results ────────────────────────────────────────────── */}
+            {/* ── Search Results (sorted by proximity when user location available) */}
             {showResults && (
               <div className="max-h-72 overflow-y-auto">
-                {results.map((result, i) => {
+                {[...results].sort((a, b) => {
+                  if (!userLocation) return 0;
+                  const dA = haversine(userLocation.lat, userLocation.lng, parseFloat(a.lat), parseFloat(a.lon));
+                  const dB = haversine(userLocation.lat, userLocation.lng, parseFloat(b.lat), parseFloat(b.lon));
+                  return dA - dB;
+                }).map((result, i) => {
                   const typeIcon = getResultTypeIcon(result.type, result.class);
                   const dist     = getDistance(result);
 

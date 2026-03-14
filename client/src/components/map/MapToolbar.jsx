@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useMap } from 'react-leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -47,6 +47,8 @@ export default function MapToolbar() {
   const dispatch = useDispatch();
   const activeMapTool = useSelector((state) => state.ui.activeMapTool);
   const containerRef = useRef(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const hoverTimerRef = useRef(null);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -63,14 +65,32 @@ export default function MapToolbar() {
     dispatch(setActiveMapTool(null));
   }, [dispatch]);
 
+  const handleMouseEnter = useCallback(() => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    setIsHovered(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    hoverTimerRef.current = setTimeout(() => setIsHovered(false), 400);
+  }, []);
+
+  // Keep visible when a tool is active
+  const showToolbar = isHovered || activeMapTool;
+
   return (
     <div
       ref={containerRef}
       className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] flex flex-col items-center gap-2"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
+      {/* Invisible hover trigger strip */}
+      {!showToolbar && (
+        <div className="w-48 h-8 cursor-pointer" />
+      )}
       {/* Active Tool Panel */}
       <AnimatePresence mode="wait">
-        {activeMapTool === 'draw' && (
+        {showToolbar && activeMapTool === 'draw' && (
           <motion.div
             key="draw"
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -106,9 +126,12 @@ export default function MapToolbar() {
       </AnimatePresence>
 
       {/* Toolbar */}
+      <AnimatePresence>
+        {showToolbar && (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
         transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.1 }}
         className="flex items-center gap-1 px-2 py-1.5 glass rounded-xl"
       >
@@ -142,6 +165,8 @@ export default function MapToolbar() {
           );
         })}
       </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

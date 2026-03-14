@@ -150,6 +150,8 @@ export default function ScaleBar() {
   const map          = useMap();
   const containerRef = useRef(null);
   const [scale, setScale] = useState(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const hideTimerRef = useRef(null);
 
   // Compute initial scale after mount
   useEffect(() => {
@@ -165,9 +167,20 @@ export default function ScaleBar() {
   }, []);
 
   // Recompute whenever the map is zoomed or panned (latitude shifts the scale)
+  // Also flash the scale bar briefly on zoom/pan for user orientation
   useMapEvents({
-    zoomend: () => setScale(computeScale(map)),
-    moveend: () => setScale(computeScale(map)),
+    zoomend: () => {
+      setScale(computeScale(map));
+      setIsVisible(true);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = setTimeout(() => setIsVisible(false), 3000);
+    },
+    moveend: () => {
+      setScale(computeScale(map));
+      setIsVisible(true);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = setTimeout(() => setIsVisible(false), 3000);
+    },
   });
 
   if (!scale) return null;
@@ -177,11 +190,19 @@ export default function ScaleBar() {
   return (
     <div
       ref={containerRef}
+      onMouseEnter={() => {
+        if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+        setIsVisible(true);
+      }}
+      onMouseLeave={() => {
+        hideTimerRef.current = setTimeout(() => setIsVisible(false), 1500);
+      }}
       // bottom-11 (44 px) sits comfortably above CoordinateDisplay (bottom-3 + ~25 px height ≈ 37 px)
-      className="absolute bottom-11 left-3 z-[1000]
+      className={`absolute bottom-11 left-3 z-[1000]
                  px-2.5 pt-1.5 pb-2 glass rounded-lg
                  flex flex-col gap-2
-                 pointer-events-none select-none"
+                 select-none transition-all duration-300
+                 ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       role="img"
       aria-label="Map scale bar"
     >

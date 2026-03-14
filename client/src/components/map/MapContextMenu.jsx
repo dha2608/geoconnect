@@ -172,11 +172,48 @@ export default function MapContextMenu() {
     }
   };
 
+  const handleCreateEvent = () => {
+    if (!menu) return;
+    dispatch(openModal({ modal: 'createEvent', data: { lat: menu.lat, lng: menu.lng } }));
+    closeMenu();
+  };
+
+  const handleCopyCoords = async () => {
+    if (!menu) return;
+    const text = `${menu.lat.toFixed(6)}, ${menu.lng.toFixed(6)}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Coordinates copied!');
+    } catch {
+      toast.error('Failed to copy coordinates');
+    }
+    closeMenu();
+  };
+
+  const handleShareLocation = async () => {
+    if (!menu) return;
+    const url = `https://www.google.com/maps?q=${menu.lat.toFixed(6)},${menu.lng.toFixed(6)}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Location on GeoConnect', text: `${menu.lat.toFixed(6)}, ${menu.lng.toFixed(6)}`, url });
+        closeMenu();
+        return;
+      } catch { /* fall through */ }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Location link copied!');
+    } catch {
+      toast.error('Failed to share location');
+    }
+    closeMenu();
+  };
+
   /* ── Position: clamp to map edges so the menu stays visible ── */
   const getMenuStyle = () => {
     if (!menu) return {};
     const MENU_W = 200;
-    const MENU_H = 130; // approx height of 3 items + padding
+    const MENU_H = 260; // approx height of 6 items + padding + divider
     const mapSize = map.getSize();
 
     let x = menu.x + 6; // 6px offset from cursor
@@ -205,7 +242,7 @@ export default function MapContextMenu() {
           animate={{ opacity: 1, scale: 1,    y:  0 }}
           exit={{    opacity: 0, scale: 0.85, y: -4 }}
           transition={{ duration: 0.15, ease: 'easeOut' }}
-          className="glass rounded-xl border border-surface-divider shadow-lg p-2 min-w-[180px]"
+          className="glass rounded-xl border border-surface-divider shadow-lg p-2 min-w-[200px]"
         >
           <MenuButton icon="📍" onClick={handleCreatePin}>
             Create Pin Here
@@ -221,6 +258,20 @@ export default function MapContextMenu() {
             disabled={geocoding}
           >
             {geocoding ? 'Looking up…' : "What's here?"}
+          </MenuButton>
+
+          <div className="my-1 border-t border-surface-divider" />
+
+          <MenuButton icon="📅" onClick={handleCreateEvent}>
+            Create Event Here
+          </MenuButton>
+
+          <MenuButton icon="📋" onClick={handleCopyCoords}>
+            Copy Coordinates
+          </MenuButton>
+
+          <MenuButton icon="📤" onClick={handleShareLocation}>
+            Share Location
           </MenuButton>
         </motion.div>
       )}

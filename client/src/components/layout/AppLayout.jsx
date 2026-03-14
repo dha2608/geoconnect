@@ -28,6 +28,7 @@ import NotificationToast from '../ui/NotificationToast';
 import LiveIndicator from '../ui/LiveIndicator';
 import OnboardingTour from '../ui/OnboardingTour';
 import WelcomeChecklist from '../ui/WelcomeChecklist';
+import { requestNotificationPermission } from '../../utils/notificationSound';
 
 // Heavy panels — lazy-loaded so they don't block the initial map render
 const FeedPanel         = lazy(() => import('../posts/FeedPanel'));
@@ -79,6 +80,11 @@ export default function AppLayout() {
       return () => clearTimeout(timer);
     }
   }, [user?._id]);
+
+  // Request browser notification permission on first load
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
 
   useEffect(() => {
     const handleResize = () => dispatch(setDeviceSize(window.innerWidth));

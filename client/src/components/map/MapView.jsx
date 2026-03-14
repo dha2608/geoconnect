@@ -17,6 +17,10 @@ import PostMarker from './PostMarker';
 import CoordinateDisplay from './CoordinateDisplay';
 import MapContextMenu from './MapContextMenu';
 import ScaleBar from './ScaleBar';
+import WeatherWidget from './WeatherWidget';
+import HeatmapLayer from './HeatmapLayer';
+import MapBookmarks from './MapBookmarks';
+import PinFilterWidget from './PinFilterWidget';
 
 const TILE_LAYERS = {
   dark: {
@@ -81,10 +85,15 @@ function MapInner() {
  *     ├─ EventLayer      (event markers on map)
  *     ├─ NearbyUsersLayer (nearby user avatars)
  *     ├─ DestinationMarker (red pin for set destination)
+ *     ├─ WeatherWidget   (weather info overlay)
+ *     ├─ HeatmapLayer   (pin density heatmap canvas)
+ *     ├─ MapBookmarks   (save/restore map positions)
  *     ├─ MapControls     (zoom / locate / tile switcher — uses useMap)
  *     └─ MapToolbar      (map tool actions — draw, measure, etc.)
  *   Overlay div (pointer-events-none)
- *     └─ SearchBar       (floats above the map canvas)
+ *     ├─ SearchBar       (floats above the map canvas)
+ *     ├─ QuickCategories (category quick-filter)
+ *     └─ PinFilterWidget (category/tag filter panel)
  */
 const MapView = memo(function MapView() {
   const { center, zoom, tileLayer } = useSelector((state) => state.map);
@@ -115,6 +124,9 @@ const MapView = memo(function MapView() {
         <MapContextMenu />
         <CoordinateDisplay />
         <ScaleBar />
+        <WeatherWidget />
+        <HeatmapLayer />
+        <MapBookmarks />
         <MapControls />
         <MapToolbar />
       </MapContainer>
@@ -123,6 +135,7 @@ const MapView = memo(function MapView() {
       <div className="absolute inset-0 pointer-events-none z-[1000]">
         <SearchBar />
         <QuickCategories />
+        <PinFilterWidget />
       </div>
     </div>
   );
