@@ -316,12 +316,39 @@ export const validateUpdateSettings = [
   body('privacy')
     .optional()
     .isObject().withMessage('privacy must be an object'),
+  body('privacy.shareLocation')
+    .optional()
+    .isBoolean().withMessage('privacy.shareLocation must be a boolean'),
+  body('privacy.nearbyDiscovery')
+    .optional()
+    .isBoolean().withMessage('privacy.nearbyDiscovery must be a boolean'),
+  body('privacy.publicProfile')
+    .optional()
+    .isBoolean().withMessage('privacy.publicProfile must be a boolean'),
   body('notifications')
     .optional()
     .isObject().withMessage('notifications must be an object'),
+  body('notifications.push')
+    .optional()
+    .isBoolean().withMessage('notifications.push must be a boolean'),
+  body('notifications.email')
+    .optional()
+    .isBoolean().withMessage('notifications.email must be a boolean'),
+  body('notifications.newFollower')
+    .optional()
+    .isBoolean().withMessage('notifications.newFollower must be a boolean'),
+  body('notifications.nearbyEvent')
+    .optional()
+    .isBoolean().withMessage('notifications.nearbyEvent must be a boolean'),
   body('appearance')
     .optional()
     .isObject().withMessage('appearance must be an object'),
+  body('appearance.mapStyle')
+    .optional()
+    .isIn(['dark', 'street', 'light', 'satellite']).withMessage('appearance.mapStyle must be one of: dark, street, light, satellite'),
+  body('appearance.distanceUnit')
+    .optional()
+    .isIn(['km', 'miles']).withMessage('appearance.distanceUnit must be km or miles'),
 ];
 
 export const validateUserParamId = [

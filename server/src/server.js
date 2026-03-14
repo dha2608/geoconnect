@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import crypto from 'crypto';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -14,6 +15,7 @@ import connectDB from './config/db.js';
 import mongoose from 'mongoose';
 import passport from './config/passport.js';
 import { apiLimiter, writeLimiter } from './middleware/rateLimiter.js';
+import { AppError } from './utils/errors.js';
 import { setupSocket } from './socket/handler.js';
 import { startEventReminderJob } from './jobs/eventReminder.js';
 
@@ -54,6 +56,15 @@ startEventReminderJob(io);
 
 // Make io accessible in routes
 app.set('io', io);
+
+// ── Request ID middleware ─────────────────────────────────────────────────────
+// Attaches a unique X-Request-ID to every request/response for tracing.
+app.use((req, res, next) => {
+  const id = req.headers['x-request-id'] || crypto.randomUUID();
+  req.requestId = id;
+  res.setHeader('X-Request-ID', id);
+  next();
+});
 
 // Middleware
 app.use(helmet());
@@ -120,15 +131,55 @@ app.use('/api/collections', collectionRoutes);
 // 404 handler — catch all unmatched routes
 app.use((req, res) => {
   res.status(404).json({
-    message: `Route not found: ${req.method} ${req.originalUrl}`,
+    success: false,
+    error: {
+      code: 'NOT_FOUND',
+      message: `Route not found: ${req.method} ${req.originalUrl}`,
+    },
   });
 });
 
-// Error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
+// Global error handler — works with AppError and asyncHandler
+app.use((err, req, res, _next) => {
+  // Log with request ID for tracing
+  const rid = req.requestId ? `[${req.requestId}]` : '';
+  console.error(`${rid} ${err.stack || err.message}`);
+
+  // If it's our AppError, use its structured data
+  if (err instanceof AppError) {
+    return res.status(err.status).json({
+      success: false,
+      error: err.toJSON(),
+      ...(req.requestId && { requestId: req.requestId }),
+    });
+  }
+
+  // Mongoose validation error → 400
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_FAILED', message: err.message },
+      ...(req.requestId && { requestId: req.requestId }),
+    });
+  }
+
+  // Mongoose duplicate key → 409
+  if (err.code === 11000) {
+    return res.status(409).json({
+      success: false,
+      error: { code: 'DUPLICATE_ENTRY', message: 'Duplicate entry' },
+      ...(req.requestId && { requestId: req.requestId }),
+    });
+  }
+
+  // Fallback — generic 500
   res.status(err.status || 500).json({
-    message: err.message || 'Internal server error',
+    success: false,
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: err.message || 'Internal server error',
+    },
+    ...(req.requestId && { requestId: req.requestId }),
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 });
