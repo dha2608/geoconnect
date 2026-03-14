@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { togglePinLike, togglePinSave, clearSelectedPin, fetchPin, checkInPin } from '../../features/pins/pinSlice';
+import { togglePinLike, togglePinSave, clearSelectedPin, fetchPin, checkInPin, selectSelectedPin } from '../../features/pins/pinSlice';
 import { closeModal, openModal, setActiveMapTool } from '../../features/ui/uiSlice';
 import { setRoutingDestination } from '../../features/map/mapSlice';
 import * as turf from '@turf/turf';
@@ -204,7 +204,7 @@ export default function PinDetailPanel() {
   const requireAuth = useRequireAuth();
   const modalOpen   = useSelector((state) => state.ui.modalOpen);
   const modalData   = useSelector((state) => state.ui.modalData);
-  const selectedPin = useSelector((state) => state.pins.selectedPin);
+  const selectedPin = useSelector(selectSelectedPin);
   const user        = useSelector((state) => state.auth.user);
   const userLocation = useSelector((state) => state.map.userLocation);
 

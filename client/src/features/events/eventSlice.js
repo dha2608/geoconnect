@@ -1,10 +1,27 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, createEntityAdapter, createSelector } from '@reduxjs/toolkit';
 import { eventApi } from '../../api/eventApi';
 
-export const fetchViewportEvents = createAsyncThunk('events/fetchViewport', async (bounds, { rejectWithValue }) => {
-  try { const res = await eventApi.getViewportEvents(bounds); return res.data; }
-  catch (err) { return rejectWithValue(err.response?.data); }
-});
+// --- Entity Adapter (O(1) lookups by _id) ---
+const eventsAdapter = createEntityAdapter({ selectId: (event) => event._id });
+
+// --- Async Thunks ---
+let viewportAbort = null;
+export const fetchViewportEvents = createAsyncThunk(
+  'events/fetchViewport',
+  async (bounds, { rejectWithValue, signal }) => {
+    try {
+      if (viewportAbort) viewportAbort.abort();
+      const controller = new AbortController();
+      viewportAbort = controller;
+      signal.addEventListener('abort', () => controller.abort());
+      const res = await eventApi.getViewportEvents(bounds, { signal: controller.signal });
+      return res.data;
+    } catch (err) {
+      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return rejectWithValue({ canceled: true });
+      return rejectWithValue(err.response?.data);
+    }
+  }
+);
 
 export const fetchEvent = createAsyncThunk('events/fetchOne', async (id, { rejectWithValue }) => {
   try { const res = await eventApi.getEvent(id); return res.data; }
@@ -36,9 +53,15 @@ export const updateEvent = createAsyncThunk('events/update', async ({ id, data }
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
+// --- Slice ---
 const eventSlice = createSlice({
   name: 'events',
-  initialState: { events: [], selectedEvent: null, searchResults: [], loading: false, error: null },
+  initialState: eventsAdapter.getInitialState({
+    selectedEvent: null,
+    searchResults: [],
+    loading: false,
+    error: null,
+  }),
   reducers: {
     setSelectedEvent: (state, action) => { state.selectedEvent = action.payload; },
     clearSelectedEvent: (state) => { state.selectedEvent = null; },
@@ -49,15 +72,23 @@ const eventSlice = createSlice({
     builder.addCase(fetchViewportEvents.fulfilled, (state, action) => {
       state.loading = false;
       const items = action.payload.data || action.payload.events || action.payload;
-      state.events = Array.isArray(items) ? items : [];
+      if (Array.isArray(items)) eventsAdapter.setAll(state, items);
     });
-    builder.addCase(fetchViewportEvents.rejected, (state, action) => { state.loading = false; state.error = action.payload?.message; });
-    builder.addCase(fetchEvent.fulfilled, (state, action) => { state.selectedEvent = action.payload.event || action.payload; });
-    builder.addCase(createEvent.fulfilled, (state, action) => { state.events.push(action.payload.event || action.payload); });
+    builder.addCase(fetchViewportEvents.rejected, (state, action) => {
+      if (action.payload?.canceled) return;
+      state.loading = false;
+      state.error = action.payload?.message;
+    });
+    builder.addCase(fetchEvent.fulfilled, (state, action) => {
+      state.selectedEvent = action.payload.event || action.payload;
+    });
+    builder.addCase(createEvent.fulfilled, (state, action) => {
+      const event = action.payload.event || action.payload;
+      eventsAdapter.addOne(state, event);
+    });
     builder.addCase(toggleRsvp.fulfilled, (state, action) => {
       const updated = action.payload.event || action.payload;
-      const idx = state.events.findIndex(e => e._id === updated._id);
-      if (idx !== -1) state.events[idx] = updated;
+      eventsAdapter.upsertOne(state, updated);
       if (state.selectedEvent?._id === updated._id) state.selectedEvent = updated;
     });
     builder.addCase(searchEvents.fulfilled, (state, action) => {
@@ -65,17 +96,33 @@ const eventSlice = createSlice({
       state.searchResults = Array.isArray(items) ? items : [];
     });
     builder.addCase(deleteEvent.fulfilled, (state, action) => {
-      state.events = state.events.filter(e => e._id !== action.payload.id);
+      eventsAdapter.removeOne(state, action.payload.id);
       if (state.selectedEvent?._id === action.payload.id) state.selectedEvent = null;
     });
     builder.addCase(updateEvent.fulfilled, (state, action) => {
       const updated = action.payload.event || action.payload;
-      const idx = state.events.findIndex(e => e._id === updated._id);
-      if (idx !== -1) state.events[idx] = updated;
+      eventsAdapter.upsertOne(state, updated);
       if (state.selectedEvent?._id === updated._id) state.selectedEvent = updated;
     });
   },
 });
 
 export const { setSelectedEvent, clearSelectedEvent, clearEventSearch } = eventSlice.actions;
+
+// --- Memoized Selectors ---
+const adapterSelectors = eventsAdapter.getSelectors((state) => state.events);
+
+export const selectAllEvents = adapterSelectors.selectAll;
+export const selectEventById = adapterSelectors.selectById;
+export const selectEventIds = adapterSelectors.selectIds;
+export const selectEventsLoading = (state) => state.events.loading;
+export const selectEventsError = (state) => state.events.error;
+export const selectSelectedEvent = (state) => state.events.selectedEvent;
+export const selectEventSearchResults = (state) => state.events.searchResults;
+
+export const selectUpcomingEvents = createSelector(
+  [selectAllEvents],
+  (events) => events.filter((e) => new Date(e.date || e.startDate) >= new Date())
+);
+
 export default eventSlice.reducer;

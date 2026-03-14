@@ -1,7 +1,7 @@
 import API from './axios';
 
 export const pinApi = {
-  getViewportPins: (bounds) => API.get('/pins', { params: bounds }),
+  getViewportPins: (bounds, config) => API.get('/pins', { params: bounds, ...config }),
   getNearbyPins: (params) => API.get('/pins/nearby', { params }),
   getPin: (id) => API.get(`/pins/${id}`),
   createPin: (data) => API.post('/pins', data),

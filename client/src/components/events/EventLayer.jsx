@@ -18,7 +18,7 @@ import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useSelector, useDispatch } from 'react-redux';
 import { format } from 'date-fns';
-import { setSelectedEvent } from '../../features/events/eventSlice';
+import { setSelectedEvent, selectAllEvents } from '../../features/events/eventSlice';
 import { openModal }        from '../../features/ui/uiSlice';
 
 // ─── Category config ──────────────────────────────────────────────────────────
@@ -183,7 +183,7 @@ const EventLayer = memo(function EventLayer() {
   const dispatch = useDispatch();
   const map      = useMap();
 
-  const events   = useSelector((state) => state.events.events);
+  const events   = useSelector(selectAllEvents);
 
   /** Reusable LayerGroup — added to map once, cleared on each events update. */
   const layerRef = useRef(null);

@@ -27,7 +27,7 @@ import compressImage from '../../utils/compressImage';
 import Modal  from '../ui/Modal';
 import Button from '../ui/Button';
 
-import { createEvent, updateEvent }  from '../../features/events/eventSlice';
+import { createEvent, updateEvent, selectEventsLoading }  from '../../features/events/eventSlice';
 import { closeModal }   from '../../features/ui/uiSlice';
 import useRequireAuth from '../../hooks/useRequireAuth';
 
@@ -131,7 +131,7 @@ export default function CreateEventModal() {
   const modalOpen  = useSelector((s) => s.ui.modalOpen);
   const modalData  = useSelector((s) => s.ui.modalData);
   const mapCenter  = useSelector((s) => s.map.center);     // [lat, lng]
-  const { loading } = useSelector((s) => s.events);
+  const loading = useSelector(selectEventsLoading);
 
   const editEvent = modalData?.editEvent ?? null;
   const isEditMode = Boolean(editEvent);

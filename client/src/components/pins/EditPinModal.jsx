@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { updatePin } from '../../features/pins/pinSlice';
+import { updatePin, selectPinsLoading } from '../../features/pins/pinSlice';
 import { closeModal } from '../../features/ui/uiSlice';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
@@ -110,7 +110,7 @@ export default function EditPinModal() {
   const dispatch   = useDispatch();
   const modalOpen  = useSelector((state) => state.ui.modalOpen);
   const modalData  = useSelector((state) => state.ui.modalData);
-  const pinLoading = useSelector((state) => state.pins.loading);
+  const pinLoading = useSelector(selectPinsLoading);
 
   const isOpen = modalOpen === 'editPin';
   const pin    = modalData;

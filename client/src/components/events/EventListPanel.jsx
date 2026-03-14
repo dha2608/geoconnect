@@ -28,7 +28,7 @@ import { format, isPast, isFuture } from 'date-fns';
 import Button        from '../ui/Button';
 import { EmptyState } from '../ui';
 
-import { fetchViewportEvents }    from '../../features/events/eventSlice';
+import { fetchViewportEvents, selectAllEvents, selectEventsLoading }    from '../../features/events/eventSlice';
 import { openModal, closePanel }  from '../../features/ui/uiSlice';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -184,7 +184,8 @@ export default function EventListPanel() {
 
   const activePanel = useSelector((s) => s.ui.activePanel);
   const { isMobile } = useSelector((s) => s.ui);
-  const { events, loading } = useSelector((s) => s.events);
+  const events  = useSelector(selectAllEvents);
+  const loading = useSelector(selectEventsLoading);
   const viewport    = useSelector((s) => s.map.viewport);      // { north,south,east,west }
   const currentUser = useSelector((s) => s.auth?.user);
 

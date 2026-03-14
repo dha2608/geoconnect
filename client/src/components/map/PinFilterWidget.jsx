@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
-import { setFilters } from '../../features/pins/pinSlice';
+import { setFilters, selectAllPins, selectPinFilterCategory } from '../../features/pins/pinSlice';
 
 // ---------------------------------------------------------------------------
 // Category config — mirrors CATEGORY_MAP in PinDetailPanel
@@ -92,8 +92,8 @@ export default function PinFilterWidget() {
   const [open, setOpen] = useState(false);
 
   // ── Redux state ───────────────────────────────────────────────────────────
-  const pins          = useSelector((state) => state.pins.pins);
-  const currentFilter = useSelector((state) => state.pins.filters.category);
+  const pins          = useSelector(selectAllPins);
+  const currentFilter = useSelector(selectPinFilterCategory);
 
   // Normalise: 'all' → empty array, anything else kept as array
   const activeCategories = useMemo(() => {
