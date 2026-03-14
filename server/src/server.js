@@ -11,6 +11,7 @@ import xss from 'xss-clean';
 import hpp from 'hpp';
 
 import connectDB from './config/db.js';
+import mongoose from 'mongoose';
 import passport from './config/passport.js';
 import { apiLimiter, writeLimiter } from './middleware/rateLimiter.js';
 import { setupSocket } from './socket/handler.js';
@@ -70,6 +71,20 @@ app.use(cookieParser());
 app.use(passport.initialize());
 app.use(apiLimiter);
 
+// CSRF protection: verify origin for state-changing requests
+// Note: requests without Origin header (server-to-server, mobile apps, same-origin forms)
+// are allowed through — the Bearer token itself provides CSRF protection for API calls.
+app.use((req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  const origin = req.get('origin');
+  const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+  if (!origin) return next();
+  if (origin !== allowedOrigin) {
+    return res.status(403).json({ message: 'Forbidden: invalid origin' });
+  }
+  next();
+});
+
 // Write limiter — applies only to mutating HTTP methods on /api/
 app.use('/api/', (req, res, next) => {
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
@@ -122,5 +137,38 @@ const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
   console.log(`[GeoConnect] Server running on port ${PORT}`);
 });
+
+// Graceful shutdown
+const gracefulShutdown = (signal) => {
+  console.log(`\n[GeoConnect] ${signal} received. Starting graceful shutdown...`);
+
+  // Stop accepting new connections
+  httpServer.close(async () => {
+    console.log('[GeoConnect] HTTP server closed');
+
+    // Close Socket.io connections
+    await new Promise((resolve) => io.close(resolve));
+    console.log('[GeoConnect] Socket.io connections closed');
+
+    // Close MongoDB connection
+    try {
+      await mongoose.connection.close();
+      console.log('[GeoConnect] MongoDB connection closed');
+    } catch (err) {
+      console.error('[GeoConnect] Error closing MongoDB:', err.message);
+    }
+
+    process.exit(0);
+  });
+
+  // Force exit after 10s if graceful shutdown hangs
+  setTimeout(() => {
+    console.error('[GeoConnect] Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export default app;
