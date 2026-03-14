@@ -1,6 +1,8 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { AnimatePresence } from 'framer-motion';
+import { getMe } from './features/auth/authSlice';
 import AppLayout from './components/layout/AppLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoadingSpinner from './components/ui/LoadingSpinner';
@@ -21,6 +23,19 @@ const CollectionsPage = lazy(() => import('./pages/CollectionsPage'));
 
 function App() {
   const location = useLocation();
+  const dispatch = useDispatch();
+  const { initialized } = useSelector((state) => state.auth);
+
+  // Verify token on app mount, regardless of which route the user lands on.
+  // Without this, landing on /login with a stale token in localStorage
+  // leaves loading=true forever because only ProtectedRoute used to
+  // dispatch getMe().
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (token && !initialized) {
+      dispatch(getMe());
+    }
+  }, [dispatch, initialized]);
 
   return (
     <ErrorBoundary>
