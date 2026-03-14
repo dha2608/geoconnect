@@ -13,6 +13,8 @@ export function ToastProvider() {
       position="top-right"
       toastOptions={{
         duration: 4000,
+        role: 'status',
+        ariaProps: { role: 'status', 'aria-live': 'polite' },
         style: {
           background: isLight ? 'rgba(255, 255, 255, 0.82)' : 'rgba(15, 21, 32, 0.9)',
           backdropFilter: 'blur(20px)',

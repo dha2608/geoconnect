@@ -192,7 +192,7 @@ export default function EmptyState({ icon, title, description, action, className
       {IconNode && (
         <motion.div
           variants={itemVariants}
-          className="w-16 h-16 text-txt-muted opacity-50"
+          className="w-16 h-16 text-txt-secondary"
           aria-hidden="true"
         >
           {IconNode}
