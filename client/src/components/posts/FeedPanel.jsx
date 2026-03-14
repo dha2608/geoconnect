@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchFeed, clearPosts } from '../../features/posts/postSlice';
+import { fetchFeed, clearPosts, selectAllPosts, selectPostsLoading, selectPostsHasMore, selectPostsPage, selectPostsError } from '../../features/posts/postSlice';
 import { closePanel } from '../../features/ui/uiSlice';
 import PostCard from './PostCard';
 import { PostCardSkeleton, EmptyState } from '../ui';
@@ -35,7 +35,11 @@ const SCROLL_THRESHOLD = 150; // px from bottom to trigger next page
 
 export default function FeedPanel() {
   const dispatch = useDispatch();
-  const { posts, loading, hasMore, page, error } = useSelector((state) => state.posts);
+  const posts   = useSelector(selectAllPosts);
+  const loading = useSelector(selectPostsLoading);
+  const hasMore = useSelector(selectPostsHasMore);
+  const page    = useSelector(selectPostsPage);
+  const error   = useSelector(selectPostsError);
   const { activePanel, isMobile } = useSelector((state) => state.ui);
 
   const scrollRef = useRef(null);

@@ -16,7 +16,7 @@ import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { useSelector, useDispatch } from 'react-redux';
-import { setSelectedPin } from '../../features/pins/pinSlice';
+import { setSelectedPin, selectAllPins, selectPinFilters } from '../../features/pins/pinSlice';
 import { openModal } from '../../features/ui/uiSlice';
 import { getCategoryColor, getCategoryIconSvg } from './PinCategoryIcon';
 
@@ -154,8 +154,8 @@ const PinClusterLayer = memo(function PinClusterLayer() {
   const map = useMap();
   const dispatch = useDispatch();
 
-  const pins = useSelector((state) => state.pins?.pins ?? []);
-  const filters = useSelector((state) => state.pins?.filters ?? {});
+  const pins = useSelector(selectAllPins);
+  const filters = useSelector(selectPinFilters);
 
   // Keep a stable ref to the cluster group so we can clean up properly
   const clusterGroupRef = useRef(null);

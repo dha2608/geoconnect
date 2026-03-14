@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import { useSelector } from 'react-redux';
+import { selectAllPins } from '../../features/pins/pinSlice';
 import L from 'leaflet';
 
 // ---------------------------------------------------------------------------
@@ -66,7 +67,7 @@ export default function HeatmapLayer({
   maxOpacity = 0.6,
 }) {
   const map = useMap();
-  const pins = useSelector((state) => state.pins.pins);
+  const pins = useSelector(selectAllPins);
 
   // Refs so callbacks always see the latest values without re-registering
   const canvasRef    = useRef(null);

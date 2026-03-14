@@ -1,7 +1,7 @@
 import API from './axios';
 
 export const eventApi = {
-  getViewportEvents: (bounds) => API.get('/events', { params: bounds }),
+  getViewportEvents: (bounds, config) => API.get('/events', { params: bounds, ...config }),
   getEvent: (id) => API.get(`/events/${id}`),
   createEvent: (data) => API.post('/events', data),
   updateEvent: (id, data) => API.put(`/events/${id}`, data),

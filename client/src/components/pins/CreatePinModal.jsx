@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { createPin } from '../../features/pins/pinSlice';
+import { createPin, selectPinsLoading } from '../../features/pins/pinSlice';
 import { closeModal } from '../../features/ui/uiSlice';
 import useRequireAuth from '../../hooks/useRequireAuth';
 import Modal from '../ui/Modal';
@@ -130,7 +130,7 @@ export default function CreatePinModal() {
   const modalOpen   = useSelector((state) => state.ui.modalOpen);
   const modalData   = useSelector((state) => state.ui.modalData); // pre-filled coords from context menu
   const mapCenter   = useSelector((state) => state.map.center); // [lat, lng]
-  const pinLoading  = useSelector((state) => state.pins.loading);
+  const pinLoading  = useSelector(selectPinsLoading);
 
   const [imageFiles,    setImageFiles]    = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);

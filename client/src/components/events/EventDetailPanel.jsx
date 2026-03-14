@@ -34,6 +34,7 @@ import {
   toggleRsvp,
   deleteEvent,
   clearSelectedEvent,
+  selectEventsLoading,
 } from '../../features/events/eventSlice';
 import { closeModal, openModal } from '../../features/ui/uiSlice';
 import useRequireAuth from '../../hooks/useRequireAuth';
@@ -74,7 +75,7 @@ export default function EventDetailPanel() {
   const modalData    = useSelector((s) => s.ui.modalData);
   const { isMobile } = useSelector((s) => s.ui);
   const event        = useSelector((s) => s.events.selectedEvent);
-  const { loading }  = useSelector((s) => s.events);
+  const loading  = useSelector(selectEventsLoading);
   const currentUser  = useSelector((s) => s.auth.user);
 
   const isOpen  = modalOpen === 'eventDetail';
