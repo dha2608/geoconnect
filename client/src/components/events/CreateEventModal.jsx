@@ -141,6 +141,27 @@ export default function CreateEventModal() {
   const [coverPreview, setCoverPreview] = useState(null);
   const [isDragging,   setIsDragging]   = useState(false);
 
+  // Tags state
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
+
+  // Recurrence state
+  const [recurrence, setRecurrence] = useState({ type: 'none', interval: 1, daysOfWeek: [], endDate: '' });
+
+  // Reminders state
+  const [reminders, setReminders] = useState([{ minutesBefore: 60 }]);
+
+  const REMINDER_PRESETS = [
+    { label: '5 min',  value: 5 },
+    { label: '15 min', value: 15 },
+    { label: '30 min', value: 30 },
+    { label: '1 hour', value: 60 },
+    { label: '2 hours', value: 120 },
+    { label: '1 day',  value: 1440 },
+  ];
+
+  const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
   const isOpen = modalOpen === 'createEvent';
 
   // ── Form ──────────────────────────────────────────────────────────────────
@@ -191,6 +212,21 @@ export default function CreateEventModal() {
       if (editEvent.coverImage) {
         setCoverPreview(editEvent.coverImage);
       }
+      // Pre-populate tags, recurrence, reminders
+      if (editEvent.tags?.length) setTags(editEvent.tags);
+      if (editEvent.recurrence) {
+        setRecurrence({
+          type: editEvent.recurrence.type ?? 'none',
+          interval: editEvent.recurrence.interval ?? 1,
+          daysOfWeek: editEvent.recurrence.daysOfWeek ?? [],
+          endDate: editEvent.recurrence.endDate
+            ? new Date(editEvent.recurrence.endDate).toISOString().split('T')[0]
+            : '',
+        });
+      }
+      if (editEvent.reminders?.length) {
+        setReminders(editEvent.reminders.map((r) => ({ minutesBefore: r.minutesBefore })));
+      }
     }
   }, [isOpen, isEditMode, editEvent, reset]);
 
@@ -202,6 +238,10 @@ export default function CreateEventModal() {
       if (prev) URL.revokeObjectURL(prev);
       return null;
     });
+    setTags([]);
+    setTagInput('');
+    setRecurrence({ type: 'none', interval: 1, daysOfWeek: [], endDate: '' });
+    setReminders([{ minutesBefore: 60 }]);
     dispatch(closeModal());
   }, [dispatch, reset]);
 
@@ -235,6 +275,39 @@ export default function CreateEventModal() {
 
   const handleDragLeave = useCallback(() => setIsDragging(false), []);
 
+  // ── Tag handlers ──────────────────────────────────────────────────────────
+  const handleAddTag = useCallback((value) => {
+    const tag = value.trim().toLowerCase().replace(/^#/, '');
+    if (tag && tag.length <= 30 && tags.length < 10 && !tags.includes(tag)) {
+      setTags((prev) => [...prev, tag]);
+    }
+    setTagInput('');
+  }, [tags]);
+
+  const handleRemoveTag = useCallback((tagToRemove) => {
+    setTags((prev) => prev.filter((t) => t !== tagToRemove));
+  }, []);
+
+  const handleTagKeyDown = useCallback((e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      handleAddTag(tagInput);
+    } else if (e.key === 'Backspace' && !tagInput && tags.length) {
+      setTags((prev) => prev.slice(0, -1));
+    }
+  }, [tagInput, tags, handleAddTag]);
+
+  // ── Reminder handlers ─────────────────────────────────────────────────────
+  const handleAddReminder = useCallback((minutes) => {
+    if (reminders.length >= 5) return;
+    if (reminders.some((r) => r.minutesBefore === minutes)) return;
+    setReminders((prev) => [...prev, { minutesBefore: minutes }].sort((a, b) => a.minutesBefore - b.minutesBefore));
+  }, [reminders]);
+
+  const handleRemoveReminder = useCallback((minutes) => {
+    setReminders((prev) => prev.filter((r) => r.minutesBefore !== minutes));
+  }, []);
+
   // Revoke object URL when component unmounts
   useEffect(() => {
     return () => { if (coverPreview) URL.revokeObjectURL(coverPreview); };
@@ -263,6 +336,28 @@ export default function CreateEventModal() {
     if (coverFile) {
       const compressed = await compressImage(coverFile);
       fd.append('coverImage', compressed);
+    }
+
+    // Tags
+    if (tags.length) {
+      tags.forEach((tag) => fd.append('tags[]', tag));
+    }
+
+    // Recurrence
+    if (recurrence.type !== 'none') {
+      fd.append('recurrence[type]', recurrence.type);
+      fd.append('recurrence[interval]', String(recurrence.interval));
+      if (recurrence.type === 'weekly' && recurrence.daysOfWeek.length) {
+        recurrence.daysOfWeek.forEach((d) => fd.append('recurrence[daysOfWeek][]', String(d)));
+      }
+      if (recurrence.endDate) {
+        fd.append('recurrence[endDate]', recurrence.endDate);
+      }
+    }
+
+    // Reminders
+    if (reminders.length) {
+      reminders.forEach((r) => fd.append('reminders[]', JSON.stringify(r)));
     }
 
     // GeoJSON Point from map centre — center is [lat, lng]
@@ -439,6 +534,44 @@ export default function CreateEventModal() {
           <FieldError message={errors.description?.message} />
         </div>
 
+        {/* ── Tags ───────────────────────────────────────────────────────── */}
+        <div>
+          <label className={LABEL_CLS}>Tags <span className="normal-case text-slate-600">(max 10)</span></label>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {tags.map((tag) => (
+              <motion.span
+                key={tag}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full
+                           bg-blue-500/15 text-blue-300 text-xs font-medium"
+              >
+                #{tag}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTag(tag)}
+                  className="ml-0.5 hover:text-red-400 transition-colors"
+                  aria-label={`Remove tag ${tag}`}
+                >
+                  ×
+                </button>
+              </motion.span>
+            ))}
+          </div>
+          {tags.length < 10 && (
+            <input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={handleTagKeyDown}
+              onBlur={() => tagInput.trim() && handleAddTag(tagInput)}
+              placeholder="Type a tag and press Enter…"
+              className={INPUT_CLS}
+              maxLength={30}
+            />
+          )}
+        </div>
+
         {/* ── Start / End date-time ─────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -460,6 +593,102 @@ export default function CreateEventModal() {
               className={INPUT_CLS}
             />
             <FieldError message={errors.endTime?.message} />
+          </div>
+        </div>
+
+        {/* ── Recurrence ────────────────────────────────────────────────── */}
+        <div>
+          <label className={LABEL_CLS}>Recurrence</label>
+          <div className="space-y-3">
+            {/* Type selector */}
+            <div className="flex gap-1.5 rounded-lg overflow-hidden
+                            border border-[var(--glass-border)] bg-[var(--glass-bg)]">
+              {['none', 'daily', 'weekly', 'monthly'].map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setRecurrence((prev) => ({ ...prev, type }))}
+                  className={[
+                    'flex-1 py-2 text-xs font-medium transition-all duration-200 capitalize',
+                    recurrence.type === type
+                      ? 'bg-blue-500/20 text-blue-300'
+                      : 'text-slate-500 hover:text-slate-300',
+                  ].join(' ')}
+                >
+                  {type === 'none' ? 'One-time' : type}
+                </button>
+              ))}
+            </div>
+
+            {recurrence.type !== 'none' && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="space-y-3 overflow-hidden"
+              >
+                {/* Interval */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 whitespace-nowrap">Every</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="52"
+                    value={recurrence.interval}
+                    onChange={(e) => setRecurrence((prev) => ({ ...prev, interval: Math.max(1, Math.min(52, Number(e.target.value) || 1)) }))}
+                    className={`${INPUT_CLS} w-20 text-center`}
+                  />
+                  <span className="text-xs text-slate-500">
+                    {recurrence.type === 'daily' ? 'day(s)' : recurrence.type === 'weekly' ? 'week(s)' : 'month(s)'}
+                  </span>
+                </div>
+
+                {/* Days of week (only for weekly) */}
+                {recurrence.type === 'weekly' && (
+                  <div>
+                    <span className="text-xs text-slate-500 mb-1.5 block">On days:</span>
+                    <div className="flex gap-1.5">
+                      {DAYS_OF_WEEK.map((day, idx) => (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => {
+                            setRecurrence((prev) => ({
+                              ...prev,
+                              daysOfWeek: prev.daysOfWeek.includes(idx)
+                                ? prev.daysOfWeek.filter((d) => d !== idx)
+                                : [...prev.daysOfWeek, idx].sort(),
+                            }));
+                          }}
+                          className={[
+                            'w-9 h-9 rounded-lg text-xs font-semibold transition-all duration-200',
+                            recurrence.daysOfWeek.includes(idx)
+                              ? 'bg-blue-500/25 text-blue-300 border border-blue-500/40'
+                              : 'bg-[var(--glass-bg)] text-slate-500 border border-[var(--glass-border)] hover:text-slate-300',
+                          ].join(' ')}
+                        >
+                          {day}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* End date */}
+                <div>
+                  <label htmlFor="evt-rec-end" className="text-xs text-slate-500 mb-1 block">
+                    Repeat until <span className="text-slate-600">(optional)</span>
+                  </label>
+                  <input
+                    id="evt-rec-end"
+                    type="date"
+                    value={recurrence.endDate}
+                    onChange={(e) => setRecurrence((prev) => ({ ...prev, endDate: e.target.value }))}
+                    className={INPUT_CLS}
+                  />
+                </div>
+              </motion.div>
+            )}
           </div>
         </div>
 
@@ -525,6 +754,58 @@ export default function CreateEventModal() {
               )}
             />
           </div>
+        </div>
+
+        {/* ── Reminders ───────────────────────────────────────────────── */}
+        <div>
+          <label className={LABEL_CLS}>Reminders <span className="normal-case text-slate-600">(max 5)</span></label>
+
+          {/* Active reminders */}
+          {reminders.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {reminders.map((r) => {
+                const preset = REMINDER_PRESETS.find((p) => p.minutes === r.minutesBefore);
+                return (
+                  <motion.span
+                    key={r.minutesBefore}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full
+                               bg-amber-500/15 text-amber-300 text-xs font-medium"
+                  >
+                    🔔 {preset?.label ?? `${r.minutesBefore}m before`}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveReminder(r.minutesBefore)}
+                      className="ml-0.5 hover:text-red-400 transition-colors"
+                      aria-label="Remove reminder"
+                    >
+                      ×
+                    </button>
+                  </motion.span>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Preset buttons */}
+          {reminders.length < 5 && (
+            <div className="flex flex-wrap gap-1.5">
+              {REMINDER_PRESETS.filter((p) => !reminders.some((r) => r.minutesBefore === p.minutes)).map((preset) => (
+                <button
+                  key={preset.minutes}
+                  type="button"
+                  onClick={() => handleAddReminder(preset.minutes)}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium
+                             bg-[var(--glass-bg)] border border-[var(--glass-border)]
+                             text-slate-500 hover:text-slate-300 hover:border-amber-500/30
+                             transition-all duration-200"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Location preview (read-only info) ────────────────────────── */}

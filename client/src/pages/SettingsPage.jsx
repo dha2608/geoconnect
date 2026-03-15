@@ -12,8 +12,10 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Avatar from '../components/ui/Avatar';
 import { userApi } from '../api/userApi';
+import { authApi } from '../api/authApi';
 import API from '../api/axios';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 /* ─────────────────────────── animation variants ─────────────────────────── */
 const pageVariants = {
@@ -193,6 +195,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { user, isGuest } = useSelector((s) => s.auth);
   const { mapStyle } = useSelector((s) => s.ui);
+  const { i18n } = useTranslation();
 
   const fileInputRef = useRef();
   const saveTimeoutRef = useRef(null);
@@ -257,6 +260,15 @@ export default function SettingsPage() {
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ── fetch 2FA status ── */
+  useEffect(() => {
+    if (isGuest) return;
+    authApi.get2FAStatus().then((res) => {
+      setTwoFAEnabled(res.data.enabled);
+      setBackupCodesRemaining(res.data.backupCodesRemaining || 0);
+    }).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const saveSettings = (patch) => {
     if (isGuest || !settingsLoaded.current) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -273,6 +285,18 @@ export default function SettingsPage() {
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
+
+  /* ── 2FA state ── */
+  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+  const [twoFALoading, setTwoFALoading] = useState(false);
+  const [backupCodesRemaining, setBackupCodesRemaining] = useState(0);
+  const [setupStep, setSetupStep] = useState(null); // null | 'qr' | 'verify' | 'backup' | 'disable' | 'regenerate'
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [twoFASecret, setTwoFASecret] = useState('');
+  const [twoFACode, setTwoFACode] = useState('');
+  const [backupCodes, setBackupCodes] = useState([]);
+  const [twoFAError, setTwoFAError] = useState(null);
+  const [disablePassword, setDisablePassword] = useState('');
 
   /* ── handlers ── */
   const handleAvatarChange = (e) => {
@@ -347,6 +371,71 @@ export default function SettingsPage() {
     setLogoutLoading(true);
     await dispatch(logout());
     navigate('/login', { replace: true });
+  };
+
+  /* ── 2FA handlers ── */
+  const handleSetup2FA = async () => {
+    setTwoFALoading(true);
+    setTwoFAError(null);
+    try {
+      const res = await authApi.setup2FA();
+      setQrDataUrl(res.data.qrCode);
+      setTwoFASecret(res.data.secret);
+      setSetupStep('qr');
+    } catch (err) {
+      setTwoFAError(err.response?.data?.message || 'Failed to setup 2FA');
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const handleVerify2FA = async () => {
+    setTwoFALoading(true);
+    setTwoFAError(null);
+    try {
+      const res = await authApi.verify2FA(twoFACode);
+      setBackupCodes(res.data.backupCodes || []);
+      setTwoFAEnabled(true);
+      setBackupCodesRemaining(res.data.backupCodes?.length || 10);
+      setSetupStep('backup');
+      setTwoFACode('');
+    } catch (err) {
+      setTwoFAError(err.response?.data?.message || 'Invalid code');
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    setTwoFALoading(true);
+    setTwoFAError(null);
+    try {
+      await authApi.disable2FA(disablePassword);
+      setTwoFAEnabled(false);
+      setSetupStep(null);
+      setDisablePassword('');
+      toast.success('2FA disabled');
+    } catch (err) {
+      setTwoFAError(err.response?.data?.message || 'Failed to disable 2FA');
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const handleRegenerateBackup = async () => {
+    setTwoFALoading(true);
+    setTwoFAError(null);
+    try {
+      const res = await authApi.regenerateBackupCodes(disablePassword);
+      setBackupCodes(res.data.backupCodes || []);
+      setBackupCodesRemaining(res.data.backupCodes?.length || 10);
+      setSetupStep('backup');
+      setDisablePassword('');
+    } catch (err) {
+      setTwoFAError(err.response?.data?.message || 'Failed to regenerate codes');
+    } finally {
+      setTwoFALoading(false);
+    }
   };
 
   const togglePrivacy = (key) => {
@@ -652,10 +741,251 @@ export default function SettingsPage() {
                 ))}
               </div>
             </div>
+
+            {/* Language */}
+            <div className="mt-6">
+              <p className="text-sm font-medium text-txt-secondary mb-3">Language</p>
+              <div className="flex gap-3">
+                {[
+                  { code: 'en', label: 'English', flag: '🇺🇸' },
+                  { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
+                ].map((lang) => (
+                  <motion.button
+                    key={lang.code}
+                    type="button"
+                    onClick={() => i18n.changeLanguage(lang.code)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all duration-150 cursor-pointer flex items-center justify-center gap-2 ${
+                      i18n.language?.startsWith(lang.code)
+                        ? 'bg-accent-primary/10 border-accent-primary/50 text-accent-primary shadow-[0_0_12px_rgba(59,130,246,0.15)]'
+                        : 'bg-elevated border-surface-divider text-txt-muted hover:border-surface-active hover:text-txt-secondary'
+                    }`}
+                  >
+                    <span>{lang.flag}</span>
+                    {lang.label}
+                  </motion.button>
+                ))}
+              </div>
+            </div>
           </GlassCard>
         </motion.div>
 
-        {/* ══════════════════ 5. DANGER ZONE ══════════════════ */}
+        {!isGuest && (
+          <motion.div variants={sectionVariants}>
+            <GlassCard animate={false} padding="p-6">
+              <SectionHeader
+                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>}
+                title="Security"
+                description="Two-factor authentication for extra protection"
+              />
+
+              {/* Status indicator */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-elevated border border-surface-divider mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-2.5 h-2.5 rounded-full ${twoFAEnabled ? 'bg-accent-success shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-txt-muted'}`} />
+                  <div>
+                    <p className="text-sm font-medium text-txt-primary">
+                      Two-Factor Authentication
+                    </p>
+                    <p className="text-xs text-txt-muted">
+                      {twoFAEnabled ? `Enabled · ${backupCodesRemaining} backup codes remaining` : 'Not enabled'}
+                    </p>
+                  </div>
+                </div>
+                {!setupStep && (
+                  <Button
+                    size="sm"
+                    variant={twoFAEnabled ? 'ghost' : 'primary'}
+                    loading={twoFALoading}
+                    onClick={twoFAEnabled ? () => setSetupStep('disable') : handleSetup2FA}
+                  >
+                    {twoFAEnabled ? 'Manage' : 'Enable'}
+                  </Button>
+                )}
+              </div>
+
+              <AnimatePresence mode="wait">
+                {twoFAError && (
+                  <motion.p
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="text-sm text-accent-danger bg-accent-danger/10 border border-accent-danger/20 px-3 py-2.5 rounded-xl mb-4"
+                  >
+                    {twoFAError}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence mode="wait">
+                {/* ── QR Code Setup Step ── */}
+                {setupStep === 'qr' && (
+                  <motion.div
+                    key="qr"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-4"
+                  >
+                    <div className="text-center space-y-3">
+                      <p className="text-sm text-txt-secondary">
+                        Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
+                      </p>
+                      {qrDataUrl && (
+                        <div className="inline-block p-3 bg-white rounded-xl">
+                          <img src={qrDataUrl} alt="2FA QR Code" className="w-48 h-48" />
+                        </div>
+                      )}
+                      <div className="p-3 rounded-xl bg-elevated border border-surface-divider">
+                        <p className="text-xs text-txt-muted mb-1">Or enter this secret manually:</p>
+                        <p className="font-mono text-sm text-txt-primary select-all break-all">{twoFASecret}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button size="sm" onClick={() => setSetupStep('verify')} className="flex-1">
+                        Next
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setSetupStep(null); setTwoFAError(null); }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ── Verify Code Step ── */}
+                {setupStep === 'verify' && (
+                  <motion.div
+                    key="verify"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-4"
+                  >
+                    <p className="text-sm text-txt-secondary">
+                      Enter the 6-digit code from your authenticator app to verify setup:
+                    </p>
+                    <Input
+                      label="Verification Code"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="000000"
+                      value={twoFACode}
+                      onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      maxLength={6}
+                      autoFocus
+                    />
+                    <div className="flex gap-3">
+                      <Button
+                        size="sm"
+                        loading={twoFALoading}
+                        disabled={twoFACode.length < 6}
+                        onClick={handleVerify2FA}
+                        className="flex-1"
+                      >
+                        Verify & Enable
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setSetupStep('qr'); setTwoFAError(null); }}>
+                        Back
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ── Backup Codes Display ── */}
+                {setupStep === 'backup' && (
+                  <motion.div
+                    key="backup"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-4"
+                  >
+                    <div className="p-3 rounded-xl bg-accent-warning/10 border border-accent-warning/20">
+                      <p className="text-sm font-medium text-accent-warning mb-1">Save your backup codes</p>
+                      <p className="text-xs text-txt-muted">
+                        Store these codes in a safe place. Each code can only be used once. If you lose access to your authenticator app, you can use these to sign in.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 p-4 rounded-xl bg-elevated border border-surface-divider">
+                      {backupCodes.map((code, i) => (
+                        <p key={i} className="font-mono text-sm text-txt-primary text-center py-1">
+                          {code}
+                        </p>
+                      ))}
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          navigator.clipboard.writeText(backupCodes.join('\n'));
+                          toast.success('Backup codes copied!');
+                        }}
+                      >
+                        Copy All
+                      </Button>
+                      <Button size="sm" onClick={() => { setSetupStep(null); setBackupCodes([]); setTwoFAError(null); }} className="flex-1">
+                        Done
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ── Disable / Manage Step ── */}
+                {setupStep === 'disable' && (
+                  <motion.div
+                    key="disable"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-3">
+                      <Input
+                        label="Enter your password to continue"
+                        type="password"
+                        placeholder="Current password"
+                        value={disablePassword}
+                        onChange={(e) => setDisablePassword(e.target.value)}
+                        autoFocus
+                      />
+                      <div className="flex gap-3">
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          loading={twoFALoading}
+                          disabled={!disablePassword}
+                          onClick={handleDisable2FA}
+                        >
+                          Disable 2FA
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          loading={twoFALoading}
+                          disabled={!disablePassword}
+                          onClick={handleRegenerateBackup}
+                        >
+                          Regenerate Backup Codes
+                        </Button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setSetupStep(null); setDisablePassword(''); setTwoFAError(null); }}
+                        className="text-sm text-txt-muted hover:text-txt-secondary transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </GlassCard>
+          </motion.div>
+        )}
+
+        {/* ══════════════════ 6. DANGER ZONE ══════════════════ */}
         <motion.div variants={sectionVariants}>
           <GlassCard animate={false} padding="p-6" className="border-accent-danger/20 shadow-[0_0_40px_rgba(239,68,68,0.05)]">
             <SectionHeader

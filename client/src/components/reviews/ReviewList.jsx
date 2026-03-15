@@ -62,8 +62,201 @@ function EmptyReviews() {
   );
 }
 
+/* ─── Photo Gallery ─────────────────────────────────────────────────────── */
+function PhotoGallery({ photos }) {
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  if (!photos?.length) return null;
+
+  return (
+    <>
+      <div className={`pl-11 flex gap-2 flex-wrap`}>
+        {photos.map((url, i) => (
+          <motion.button
+            key={url}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setLightboxIndex(i)}
+            className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-surface-divider hover:ring-accent-primary/40 transition-all"
+          >
+            <img src={url} alt={`Review photo ${i + 1}`} className="w-full h-full object-cover" />
+          </motion.button>
+        ))}
+      </div>
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightboxIndex !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLightboxIndex(null)}
+            className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4"
+          >
+            <motion.img
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              src={photos[lightboxIndex]}
+              alt="Review photo"
+              className="max-w-full max-h-[85vh] rounded-xl object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            {/* Nav arrows */}
+            {photos.length > 1 && (
+              <>
+                {lightboxIndex > 0 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => i - 1); }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+                  </button>
+                )}
+                {lightboxIndex < photos.length - 1 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => i + 1); }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
+                  </button>
+                )}
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+/* ─── Owner Response ────────────────────────────────────────────────────── */
+function OwnerResponse({ response, pinOwnerId, currentUserId, pinId, reviewId, onResponseChange }) {
+  const [showReplyForm, setShowReplyForm] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const isOwner = currentUserId && pinOwnerId === currentUserId;
+
+  const handleSubmitResponse = async () => {
+    if (!replyText.trim()) return;
+    setSubmitting(true);
+    try {
+      const res = await reviewApi.respondToReview(pinId, reviewId, { text: replyText.trim() });
+      const updated = res.data?.review ?? res.data;
+      onResponseChange?.(updated);
+      setShowReplyForm(false);
+      setReplyText('');
+      toast.success('Response posted!');
+    } catch {
+      toast.error('Failed to post response.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteResponse = async () => {
+    if (!window.confirm('Delete your response?')) return;
+    setSubmitting(true);
+    try {
+      const res = await reviewApi.deleteResponse(pinId, reviewId);
+      const updated = res.data?.review ?? res.data;
+      onResponseChange?.(updated);
+      toast.success('Response deleted.');
+    } catch {
+      toast.error('Failed to delete response.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const formattedDate = response?.respondedAt
+    ? (() => { try { return formatDistanceToNow(new Date(response.respondedAt), { addSuffix: true }); } catch { return ''; } })()
+    : '';
+
+  return (
+    <div className="pl-11 space-y-2">
+      {/* Existing response */}
+      {response?.text && (
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-accent-primary/5 border border-accent-primary/15 rounded-lg p-3 space-y-1.5"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-accent-primary">Owner Response</span>
+            <div className="flex items-center gap-2">
+              {formattedDate && <span className="text-[10px] text-txt-muted">{formattedDate}</span>}
+              {isOwner && (
+                <button
+                  onClick={handleDeleteResponse}
+                  disabled={submitting}
+                  className="text-[10px] text-accent-danger hover:underline disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              )}
+            </div>
+          </div>
+          <p className="text-sm text-txt-secondary leading-relaxed">{response.text}</p>
+        </motion.div>
+      )}
+
+      {/* Reply button (for pin owner, when no response exists) */}
+      {isOwner && !response?.text && !showReplyForm && (
+        <button
+          onClick={() => setShowReplyForm(true)}
+          className="text-xs text-accent-primary hover:text-accent-primary/80 transition-colors flex items-center gap-1"
+        >
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 00-4-4H4" />
+          </svg>
+          Reply to this review
+        </button>
+      )}
+
+      {/* Reply form */}
+      <AnimatePresence>
+        {showReplyForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-2"
+          >
+            <textarea
+              value={replyText}
+              onChange={(e) => e.target.value.length <= 500 && setReplyText(e.target.value)}
+              placeholder="Write your response..."
+              rows={3}
+              className="w-full bg-elevated border border-surface-divider rounded-lg px-3 py-2 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-accent-primary/50 resize-none"
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-txt-muted">{replyText.length}/500</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setShowReplyForm(false); setReplyText(''); }}
+                  className="text-xs text-txt-muted hover:text-txt-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitResponse}
+                  disabled={submitting || !replyText.trim()}
+                  className="text-xs text-accent-primary hover:text-accent-primary/80 font-medium disabled:opacity-50"
+                >
+                  {submitting ? 'Posting...' : 'Post Response'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 /* ─── Single Review Card ────────────────────────────────────────────────── */
-function ReviewCard({ review, currentUserId, onDelete, onVoteHelpful }) {
+function ReviewCard({ review, currentUserId, pinOwnerId, pinId, onDelete, onVoteHelpful, onResponseChange }) {
   const [deleting, setDeleting] = useState(false);
   const isOwner = currentUserId && review.user?._id === currentUserId;
   const hasVoted = !!(currentUserId && review.helpfulVotes?.includes(currentUserId));
@@ -132,35 +325,12 @@ function ReviewCard({ review, currentUserId, onDelete, onVoteHelpful }) {
             >
               {deleting ? (
                 <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
               ) : (
-                <svg
-                  className="w-3.5 h-3.5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                  <path d="M10 11v6m4-6v6" />
-                  <path d="M9 6V4h6v2" />
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6m4-6v6" /><path d="M9 6V4h6v2" />
                 </svg>
               )}
             </motion.button>
@@ -179,6 +349,19 @@ function ReviewCard({ review, currentUserId, onDelete, onVoteHelpful }) {
 
       {/* Review text */}
       <p className="text-sm text-txt-secondary leading-relaxed pl-11">{review.text}</p>
+
+      {/* Review photos */}
+      <PhotoGallery photos={review.photos} />
+
+      {/* Owner response */}
+      <OwnerResponse
+        response={review.ownerResponse}
+        pinOwnerId={pinOwnerId}
+        currentUserId={currentUserId}
+        pinId={pinId}
+        reviewId={review._id}
+        onResponseChange={onResponseChange}
+      />
 
       {/* Footer: helpful vote */}
       <div className="flex items-center pl-11 pt-1">
@@ -203,7 +386,7 @@ function ReviewCard({ review, currentUserId, onDelete, onVoteHelpful }) {
 }
 
 /* ─── Main Component ────────────────────────────────────────────────────── */
-export default function ReviewList({ pinId, newReview }) {
+export default function ReviewList({ pinId, pinOwnerId, newReview }) {
   const user = useSelector((state) => state.auth.user);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -242,9 +425,9 @@ export default function ReviewList({ pinId, newReview }) {
 
       try {
         const res = await reviewApi.getReviews(pinId, { page: pageNum, limit: LIMIT });
-        const data = res.data;
-        const list = data?.reviews ?? data ?? [];
-        const total = data?.total ?? list.length;
+        const body = res.data;
+        const list = Array.isArray(body?.data) ? body.data : Array.isArray(body?.reviews) ? body.reviews : Array.isArray(body) ? body : [];
+        const total = body?.meta?.total ?? body?.total ?? list.length;
 
         setReviews((prev) => (append ? [...prev, ...list] : list));
         setHasMore(pageNum * LIMIT < total);
@@ -317,6 +500,12 @@ export default function ReviewList({ pinId, newReview }) {
     [pinId, user, requireAuth],
   );
 
+  const handleResponseChange = useCallback((updatedReview) => {
+    setReviews((prev) =>
+      prev.map((r) => (r._id === updatedReview._id ? { ...r, ownerResponse: updatedReview.ownerResponse } : r)),
+    );
+  }, []);
+
   /* ── Render ── */
   if (loading) {
     return (
@@ -385,8 +574,11 @@ export default function ReviewList({ pinId, newReview }) {
             key={review._id}
             review={review}
             currentUserId={user?._id}
+            pinOwnerId={pinOwnerId}
+            pinId={pinId}
             onDelete={handleDelete}
             onVoteHelpful={handleVoteHelpful}
+            onResponseChange={handleResponseChange}
           />
         ))}
       </AnimatePresence>

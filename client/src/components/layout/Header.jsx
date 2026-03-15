@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { toggleSidebar, setActivePanel } from '../../features/ui/uiSlice';
 import Avatar from '../ui/Avatar';
 import LiveIndicator from '../ui/LiveIndicator';
@@ -11,6 +12,7 @@ export default function Header() {
   const { user } = useSelector((state) => state.auth);
   const { unreadCount } = useSelector((state) => state.notifications);
   const { unreadCount: unreadMessages } = useSelector((state) => state.messages);
+  const { t } = useTranslation();
 
   return (
     <motion.header
@@ -35,7 +37,7 @@ export default function Header() {
           tabIndex={0}
           onKeyDown={(e) => { if (e.key === 'Enter') navigate('/'); }}
         >
-          GeoConnect
+          {t('common.appName')}
         </h1>
         <LiveIndicator className="hidden sm:flex" />
       </div>

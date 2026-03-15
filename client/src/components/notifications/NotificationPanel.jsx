@@ -19,9 +19,10 @@
  *   • Loading skeleton (6 items) + empty state
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
+import { List } from 'react-window';
 import {
   fetchNotifications,
   markAsRead,
@@ -32,6 +33,7 @@ import {
 import { closePanel } from '../../features/ui/uiSlice';
 import { formatDistanceToNow } from 'date-fns';
 import { PanelSkeleton, EmptyState } from '../ui';
+import LoadMoreButton from '../common/LoadMoreButton';
 
 // ─── Spring ───────────────────────────────────────────────────────────────────
 
@@ -129,7 +131,7 @@ const CheckAllIcon = () => (
 
 // ─── Notification item ────────────────────────────────────────────────────────
 
-function NotificationItem({ notification, onRead, onDelete }) {
+const NotificationItem = memo(function NotificationItem({ notification, onRead, onDelete, style }) {
   const { _id, type = 'comment', message, actor, read, createdAt, targetType, targetId } = notification;
   const { color, bg, Icon } = getTypeConfig(type);
 
@@ -154,67 +156,79 @@ function NotificationItem({ notification, onRead, onDelete }) {
   }
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, x: -12 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, scale: 0.97 }}
-      whileHover={{ scale: 1.012, x: 2 }}
-      whileTap={{ scale: 0.985 }}
-      onClick={() => onRead(_id, targetType, targetId)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && onRead(_id, targetType, targetId)}
-      className={[
-        'group w-full flex items-start gap-3 p-3.5 rounded-xl text-left',
-        'border transition-all duration-200 cursor-pointer',
-        read
-          ? 'border-[var(--glass-border)] bg-surface-hover hover:bg-surface-active'
-          : 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-surface-active hover:border-[var(--glass-border)]',
-      ].join(' ')}
-    >
-      {/* Type icon bubble */}
+    <div style={style}>
       <div
-        className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-        style={{ backgroundColor: bg, color }}
+        onClick={() => onRead(_id, targetType, targetId)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === 'Enter' && onRead(_id, targetType, targetId)}
+        className={[
+          'group w-full flex items-start gap-3 p-3.5 rounded-xl text-left mx-0 mb-1.5',
+          'border transition-all duration-200 cursor-pointer hover:scale-[1.012] hover:translate-x-0.5',
+          read
+            ? 'border-[var(--glass-border)] bg-surface-hover hover:bg-surface-active'
+            : 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-surface-active hover:border-[var(--glass-border)]',
+        ].join(' ')}
       >
-        <Icon />
-      </div>
-
-      {/* Text content */}
-      <div className="flex-1 min-w-0">
-        <p
-          className={[
-            'text-[13px] leading-snug font-body',
-            read ? 'text-txt-secondary' : 'text-txt-primary font-medium',
-          ].join(' ')}
+        {/* Type icon bubble */}
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+          style={{ backgroundColor: bg, color }}
         >
-          {displayText}
-        </p>
-        {timeAgo && (
-          <p className="text-[11px] text-txt-muted mt-1 font-body">{timeAgo}</p>
-        )}
-      </div>
+          <Icon />
+        </div>
 
-      {/* Unread dot + per-item delete button (shown on hover) */}
-      <div className="flex-shrink-0 mt-1.5 relative flex items-center justify-center w-5 h-5">
-        {!read && (
-          <span
-            className="w-2 h-2 rounded-full block group-hover:opacity-0 transition-opacity duration-150"
-            style={{ backgroundColor: '#3b82f6', boxShadow: '0 0 6px rgba(59,130,246,0.6)' }}
-          />
-        )}
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(_id); }}
-          aria-label="Delete notification"
-          className="absolute inset-0 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 text-txt-muted hover:text-accent-danger transition-all duration-150"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
+        {/* Text content */}
+        <div className="flex-1 min-w-0">
+          <p
+            className={[
+              'text-[13px] leading-snug font-body',
+              read ? 'text-txt-secondary' : 'text-txt-primary font-medium',
+            ].join(' ')}
+          >
+            {displayText}
+          </p>
+          {timeAgo && (
+            <p className="text-[11px] text-txt-muted mt-1 font-body">{timeAgo}</p>
+          )}
+        </div>
+
+        {/* Unread dot + per-item delete button (shown on hover) */}
+        <div className="flex-shrink-0 mt-1.5 relative flex items-center justify-center w-5 h-5">
+          {!read && (
+            <span
+              className="w-2 h-2 rounded-full block group-hover:opacity-0 transition-opacity duration-150"
+              style={{ backgroundColor: '#3b82f6', boxShadow: '0 0 6px rgba(59,130,246,0.6)' }}
+            />
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(_id); }}
+            aria-label="Delete notification"
+            className="absolute inset-0 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 text-txt-muted hover:text-accent-danger transition-all duration-150"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
-    </motion.div>
+    </div>
+  );
+});
+
+// ─── Virtualization ───────────────────────────────────────────────────────────
+
+const ITEM_HEIGHT = 80; // px per notification row (padding + icon + text)
+
+// react-window v2: rowProps are spread directly onto the row component
+function VirtualRow({ index, style, items, onRead, onDelete }) {
+  return (
+    <NotificationItem
+      notification={items[index]}
+      onRead={onRead}
+      onDelete={onDelete}
+      style={style}
+    />
   );
 }
 
@@ -222,14 +236,14 @@ function NotificationItem({ notification, onRead, onDelete }) {
 
 export default function NotificationPanel() {
   const dispatch = useDispatch();
-  const { items, unreadCount, loading } = useSelector((s) => s.notifications);
-  const { activePanel, isMobile }       = useSelector((s) => s.ui);
+  const { items, unreadCount, loading, hasMore, page } = useSelector((s) => s.notifications);
+  const { activePanel, isMobile }                      = useSelector((s) => s.ui);
 
   const isOpen = activePanel === 'notifications';
 
-  // Fetch on open
+  // Fetch page 1 on open
   useEffect(() => {
-    if (isOpen) dispatch(fetchNotifications());
+    if (isOpen) dispatch(fetchNotifications({ page: 1, limit: 20 }));
   }, [isOpen, dispatch]);
 
   // Mark one as read and optionally navigate
@@ -255,6 +269,11 @@ export default function NotificationPanel() {
   );
 
   const handleClose = useCallback(() => dispatch(closePanel()), [dispatch]);
+
+  // Load next page and append to existing items
+  const handleLoadMore = useCallback(() => {
+    dispatch(fetchNotifications({ page: page + 1, limit: 20 }));
+  }, [dispatch, page]);
 
   // ── Responsive layout ─────────────────────────────────────────────────────
 
@@ -354,11 +373,9 @@ export default function NotificationPanel() {
             </div>
           </div>
 
-          {/* ── Scrollable list ───────────────────────────────────────────── */}
-          <div
-            className="flex-1 overflow-y-auto px-3 pt-3 pb-6 min-h-0"
-            style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.07) transparent' }}
-          >
+          {/* ── Scrollable list + Load More ───────────────────────────── */}
+          {/* react-window v2: List auto-measures height via ResizeObserver */}
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden px-3 pt-3">
             {/* Loading skeletons */}
             {loading && items.length === 0 && <PanelSkeleton />}
 
@@ -371,42 +388,35 @@ export default function NotificationPanel() {
               />
             )}
 
-            {/* Notification list */}
+            {/* Virtualized notification list */}
             {items.length > 0 && (
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.div className="space-y-1.5">
-                  {items.map((notification, i) => (
-                    <motion.div
-                      key={notification._id}
-                      initial={{ opacity: 0, y: 14 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -20, scale: 0.96 }}
-                      transition={{
-                        delay: i < 8 ? i * 0.04 : 0,
-                        duration: 0.2,
-                        ease: 'easeOut',
-                      }}
-                    >
-                      <NotificationItem
-                        notification={notification}
-                        onRead={handleRead}
-                        onDelete={handleDelete}
-                      />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </AnimatePresence>
+              <>
+                {/* flex-1 container lets react-window v2 auto-fill available height */}
+                <div className="flex-1 min-h-0">
+                  <List
+                    rowCount={items.length}
+                    rowHeight={ITEM_HEIGHT}
+                    overscanCount={5}
+                    rowComponent={VirtualRow}
+                    rowProps={{ items, onRead: handleRead, onDelete: handleDelete }}
+                    defaultHeight={400}
+                  />
+                </div>
+
+                {/* "All caught up" hint only when no more pages */}
+                {!loading && !hasMore && items.every((n) => n.read) && (
+                  <p className="text-txt-muted text-[11px] font-body text-center pt-3">
+                    You're all caught up ✓
+                  </p>
+                )}
+              </>
             )}
 
-            {/* Section divider for read/unread if mixed */}
-            {!loading && items.length > 0 && items.every((n) => n.read) && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-txt-muted text-[11px] font-body text-center pt-5"
-              >
-                You're all caught up ✓
-              </motion.p>
+            {/* Load More */}
+            {items.length > 0 && (
+              <div className="flex-shrink-0 pb-3 pt-2">
+                <LoadMoreButton onClick={handleLoadMore} loading={loading} hasMore={hasMore} />
+              </div>
             )}
           </div>
         </motion.aside>

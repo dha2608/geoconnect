@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -44,7 +44,7 @@ const CATEGORY_COLORS = {
 
 // ── Sub-components ────────────────────────────────────────────────────
 
-function SectionHeader({ title, subtitle, action, onAction }) {
+const SectionHeader = memo(function SectionHeader({ title, subtitle, action, onAction }) {
   return (
     <div className="flex items-end justify-between mb-4">
       <div>
@@ -58,9 +58,9 @@ function SectionHeader({ title, subtitle, action, onAction }) {
       )}
     </div>
   );
-}
+});
 
-function CategoryChip({ category, count, isActive, onClick }) {
+const CategoryChip = memo(function CategoryChip({ category, count, isActive, onClick }) {
   const colorClass = CATEGORY_COLORS[category] || CATEGORY_COLORS.other;
   return (
     <motion.button
@@ -77,9 +77,9 @@ function CategoryChip({ category, count, isActive, onClick }) {
       </div>
     </motion.button>
   );
-}
+});
 
-function TrendingPinCard({ pin, onClick }) {
+const TrendingPinCard = memo(function TrendingPinCard({ pin, onClick }) {
   return (
     <motion.div
       variants={cardVariants}
@@ -119,9 +119,9 @@ function TrendingPinCard({ pin, onClick }) {
       </div>
     </motion.div>
   );
-}
+});
 
-function EventCard({ event, onClick }) {
+const EventCard = memo(function EventCard({ event, onClick }) {
   const startDate = event.startDate ? new Date(event.startDate) : null;
   return (
     <motion.div
@@ -148,9 +148,9 @@ function EventCard({ event, onClick }) {
       </div>
     </motion.div>
   );
-}
+});
 
-function UserCard({ user, onClick }) {
+const UserCard = memo(function UserCard({ user, onClick }) {
   return (
     <motion.div
       variants={cardVariants}
@@ -174,9 +174,9 @@ function UserCard({ user, onClick }) {
       </div>
     </motion.div>
   );
-}
+});
 
-function RecommendedPinCard({ pin, onClick }) {
+const RecommendedPinCard = memo(function RecommendedPinCard({ pin, onClick }) {
   return (
     <motion.div
       variants={cardVariants}
@@ -211,7 +211,7 @@ function RecommendedPinCard({ pin, onClick }) {
       </div>
     </motion.div>
   );
-}
+});
 
 function LoadingGrid({ count = 6, type = 'card' }) {
   if (type === 'category') {
@@ -255,52 +255,49 @@ export default function ExplorePage() {
   const [discoverFeed, setDiscoverFeed] = useState(null);
 
   // Loading states
-  const [loadingCategories, setLoadingCategories] = useState(true);
-  const [loadingTrending, setLoadingTrending] = useState(true);
-  const [loadingRecommended, setLoadingRecommended] = useState(true);
-  const [loadingSuggested, setLoadingSuggested] = useState(true);
-  const [loadingFeed, setLoadingFeed] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   // Active category filter
   const [activeCategory, setActiveCategory] = useState(null);
   const [filteredPins, setFilteredPins] = useState([]);
   const [loadingFiltered, setLoadingFiltered] = useState(false);
 
-  // Fetch all data on mount
+  // Fetch all data on mount — single batch via Promise.allSettled
   useEffect(() => {
-    discoverApi.getPopularCategories({})
-      .then((res) => setCategories(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setCategories([]))
-      .finally(() => setLoadingCategories(false));
+    let cancelled = false;
 
-    pinApi.getTrending()
-      .then((res) => {
-        const items = res.data?.data || res.data;
+    Promise.allSettled([
+      discoverApi.getPopularCategories({}),
+      pinApi.getTrending(),
+      discoverApi.getRecommended({ limit: 8 }),
+      discoverApi.getSuggestedUsers(),
+      discoverApi.getFeed(),
+    ]).then(([catResult, trendResult, recResult, sugResult, feedResult]) => {
+      if (cancelled) return;
+
+      if (catResult.status === 'fulfilled') {
+        setCategories(Array.isArray(catResult.value.data) ? catResult.value.data : []);
+      }
+      if (trendResult.status === 'fulfilled') {
+        const items = trendResult.value.data?.data || trendResult.value.data;
         setTrendingPins(Array.isArray(items) ? items.slice(0, 8) : []);
-      })
-      .catch(() => setTrendingPins([]))
-      .finally(() => setLoadingTrending(false));
-
-    discoverApi.getRecommended({ limit: 8 })
-      .then((res) => {
-        const items = res.data?.data || res.data;
+      }
+      if (recResult.status === 'fulfilled') {
+        const items = recResult.value.data?.data || recResult.value.data;
         setRecommendedPins(Array.isArray(items) ? items : []);
-      })
-      .catch(() => setRecommendedPins([]))
-      .finally(() => setLoadingRecommended(false));
-
-    discoverApi.getSuggestedUsers()
-      .then((res) => {
-        const items = res.data?.data || res.data;
+      }
+      if (sugResult.status === 'fulfilled') {
+        const items = sugResult.value.data?.data || sugResult.value.data;
         setSuggestedUsers(Array.isArray(items) ? items : []);
-      })
-      .catch(() => setSuggestedUsers([]))
-      .finally(() => setLoadingSuggested(false));
+      }
+      if (feedResult.status === 'fulfilled') {
+        setDiscoverFeed(feedResult.value.data);
+      }
 
-    discoverApi.getFeed()
-      .then((res) => setDiscoverFeed(res.data))
-      .catch(() => setDiscoverFeed(null))
-      .finally(() => setLoadingFeed(false));
+      setLoading(false);
+    });
+
+    return () => { cancelled = true; };
   }, []);
 
   // Handle category filter
@@ -320,6 +317,16 @@ export default function ExplorePage() {
       .catch(() => setFilteredPins([]))
       .finally(() => setLoadingFiltered(false));
   }, [activeCategory]);
+
+  // Stable navigation callbacks
+  const navigateToMap = useCallback(() => navigate('/'), [navigate]);
+  const navigateToSettings = useCallback(() => navigate('/settings'), [navigate]);
+  const navigateToTrending = useCallback(() => navigate('/?filter=trending'), [navigate]);
+  const navigateToEvents = useCallback(() => navigate('/?panel=events'), [navigate]);
+  const navigateToPin = useCallback((id) => navigate(`/?pin=${id}`), [navigate]);
+  const navigateToProfile = useCallback((id) => navigate(`/profile/${id}`), [navigate]);
+  const navigateToEvent = useCallback((id) => navigate(`/?event=${id}`), [navigate]);
+  const clearFilter = useCallback(() => { setActiveCategory(null); setFilteredPins([]); }, []);
 
   const feedEvents = discoverFeed?.sections?.find(s => s.type === 'upcoming_events')?.data || [];
 
@@ -343,10 +350,10 @@ export default function ExplorePage() {
               Explore trending places, upcoming events, and connect with people around you.
             </p>
             <div className="flex gap-3 mt-4">
-              <button onClick={() => navigate('/')} className="px-4 py-2 rounded-xl bg-accent-primary text-white text-sm font-medium hover:bg-accent-primary/90 transition-colors">
+              <button onClick={navigateToMap} className="px-4 py-2 rounded-xl bg-accent-primary text-white text-sm font-medium hover:bg-accent-primary/90 transition-colors">
                 Open Map
               </button>
-              <button onClick={() => navigate('/settings')} className="px-4 py-2 rounded-xl glass border border-surface-divider text-txt-secondary text-sm font-medium hover:bg-surface-hover transition-colors">
+              <button onClick={navigateToSettings} className="px-4 py-2 rounded-xl glass border border-surface-divider text-txt-secondary text-sm font-medium hover:bg-surface-hover transition-colors">
                 Settings
               </button>
             </div>
@@ -356,7 +363,7 @@ export default function ExplorePage() {
         {/* ── Popular Categories ── */}
         <motion.section variants={sectionVariants}>
           <SectionHeader title="Popular Categories" subtitle="Explore places by category" />
-          {loadingCategories ? (
+          {loading ? (
             <LoadingGrid count={6} type="category" />
           ) : categories.length > 0 ? (
             <motion.div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin" variants={pageVariants}>
@@ -385,14 +392,14 @@ export default function ExplorePage() {
               <SectionHeader
                 title={`${activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)} Places`}
                 action="Clear filter"
-                onAction={() => { setActiveCategory(null); setFilteredPins([]); }}
+                onAction={clearFilter}
               />
               {loadingFiltered ? (
                 <LoadingGrid count={6} />
               ) : filteredPins.length > 0 ? (
                 <motion.div className="grid grid-cols-2 md:grid-cols-3 gap-4" variants={pageVariants} initial="hidden" animate="visible">
                   {filteredPins.map((pin) => (
-                    <TrendingPinCard key={pin._id} pin={pin} onClick={() => navigate(`/?pin=${pin._id}`)} />
+                    <TrendingPinCard key={pin._id} pin={pin} onClick={() => navigateToPin(pin._id)} />
                   ))}
                 </motion.div>
               ) : (
@@ -404,13 +411,13 @@ export default function ExplorePage() {
 
         {/* ── Trending Places ── */}
         <motion.section variants={sectionVariants}>
-          <SectionHeader title="Trending Places" subtitle="Most popular spots right now" action="View all" onAction={() => navigate('/?filter=trending')} />
-          {loadingTrending ? (
+          <SectionHeader title="Trending Places" subtitle="Most popular spots right now" action="View all" onAction={navigateToTrending} />
+          {loading ? (
             <LoadingGrid count={6} />
           ) : trendingPins.length > 0 ? (
             <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4" variants={pageVariants}>
               {trendingPins.map((pin) => (
-                <TrendingPinCard key={pin._id} pin={pin} onClick={() => navigate(`/?pin=${pin._id}`)} />
+                <TrendingPinCard key={pin._id} pin={pin} onClick={() => navigateToPin(pin._id)} />
               ))}
             </motion.div>
           ) : (
@@ -423,12 +430,12 @@ export default function ExplorePage() {
           {/* Recommended for You */}
           <motion.section variants={sectionVariants} className="md:col-span-3">
             <SectionHeader title="Recommended for You" subtitle="Based on your interests" />
-            {loadingRecommended ? (
+            {loading ? (
               <LoadingGrid count={4} type="list" />
             ) : recommendedPins.length > 0 ? (
               <div className="glass rounded-2xl border border-surface-divider divide-y divide-surface-divider">
                 {recommendedPins.map((pin) => (
-                  <RecommendedPinCard key={pin._id} pin={pin} onClick={() => navigate(`/?pin=${pin._id}`)} />
+                  <RecommendedPinCard key={pin._id} pin={pin} onClick={() => navigateToPin(pin._id)} />
                 ))}
               </div>
             ) : (
@@ -438,13 +445,13 @@ export default function ExplorePage() {
 
           {/* Upcoming Events */}
           <motion.section variants={sectionVariants} className="md:col-span-2">
-            <SectionHeader title="Upcoming Events" subtitle="Don't miss out" action="View all" onAction={() => navigate('/?panel=events')} />
-            {loadingFeed ? (
+            <SectionHeader title="Upcoming Events" subtitle="Don't miss out" action="View all" onAction={navigateToEvents} />
+            {loading ? (
               <LoadingGrid count={3} type="list" />
             ) : feedEvents.length > 0 ? (
               <div className="space-y-3">
                 {feedEvents.map((event) => (
-                  <EventCard key={event._id} event={event} onClick={() => navigate(`/?event=${event._id}`)} />
+                  <EventCard key={event._id} event={event} onClick={() => navigateToEvent(event._id)} />
                 ))}
               </div>
             ) : (
@@ -456,14 +463,14 @@ export default function ExplorePage() {
         {/* ── People You Might Know ── */}
         <motion.section variants={sectionVariants}>
           <SectionHeader title="People You Might Know" subtitle="Connect with the community" />
-          {loadingSuggested ? (
+          {loading ? (
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-2xl" />)}
             </div>
           ) : suggestedUsers.length > 0 ? (
             <motion.div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3" variants={pageVariants}>
               {suggestedUsers.map((u) => (
-                <UserCard key={u._id} user={u} onClick={() => navigate(`/profile/${u._id}`)} />
+                <UserCard key={u._id} user={u} onClick={() => navigateToProfile(u._id)} />
               ))}
             </motion.div>
           ) : (

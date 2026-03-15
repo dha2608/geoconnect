@@ -109,7 +109,7 @@ function FabButton({ completedCount, total, onClick }) {
           fill="none"
           strokeLinecap="round"
           strokeDasharray={125.66}
-          style={{ strokeDashoffset: 125.66 }}
+          initial={{ strokeDashoffset: 125.66 }}
           animate={{ strokeDashoffset: 125.66 * (1 - completedCount / total) }}
           transition={{ type: 'spring', damping: 22, stiffness: 180 }}
         />

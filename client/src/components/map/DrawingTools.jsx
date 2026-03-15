@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
-import * as turf from '@turf/turf';
+import { polygon as turfPolygon, area as turfArea, length as turfLength, lineString as turfLineString } from '@turf/turf';
 import toast from 'react-hot-toast';
 
 const SHAPE_TOOLS = [
@@ -135,9 +135,9 @@ export default function DrawingTools({ onClose }) {
       if (type === 'polygon') {
         const coords = layer.getLatLngs()[0].map((ll) => [ll.lng, ll.lat]);
         coords.push(coords[0]);
-        const poly = turf.polygon([coords]);
-        area = turf.area(poly);
-        perimeter = turf.length(turf.lineString(coords), { units: 'meters' });
+        const poly = turfPolygon([coords]);
+        area = turfArea(poly);
+        perimeter = turfLength(turfLineString(coords), { units: 'meters' });
         geoData = { latlngs: layer.getLatLngs()[0].map((ll) => [ll.lat, ll.lng]) };
       } else if (type === 'circle') {
         const r = layer.getRadius();
@@ -154,9 +154,9 @@ export default function DrawingTools({ onClose }) {
           [bounds.getWest(), bounds.getNorth()],
           [bounds.getWest(), bounds.getSouth()],
         ];
-        const poly = turf.polygon([coords]);
-        area = turf.area(poly);
-        perimeter = turf.length(turf.lineString(coords), { units: 'meters' });
+        const poly = turfPolygon([coords]);
+        area = turfArea(poly);
+        perimeter = turfLength(turfLineString(coords), { units: 'meters' });
         geoData = { bounds: [[bounds.getSouth(), bounds.getWest()], [bounds.getNorth(), bounds.getEast()]] };
       }
 

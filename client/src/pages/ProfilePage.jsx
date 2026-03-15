@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchUserProfile, toggleFollow } from '../features/users/userSlice';
+import { fetchUserProfile, toggleFollow, selectUserProfile, selectUserLoading } from '../features/users/userSlice';
+import { selectPostsByAuthor } from '../features/posts/postSlice';
+import { selectPinsByCreator } from '../features/pins/pinSlice';
 import { setUser } from '../features/auth/authSlice';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useForm } from 'react-hook-form';
@@ -11,7 +13,7 @@ import { z } from 'zod';
 import Avatar from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
 import GlassCard from '../components/ui/GlassCard';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { ProfileSkeleton } from '../components/ui/Skeleton';
 import { userApi } from '../api/userApi';
 
 /* ─────────────────────────── animation variants ─────────────────────────── */
@@ -316,9 +318,10 @@ export default function ProfilePage() {
   const { userId } = useParams();
   const dispatch = useDispatch();
   const { user: currentUser } = useSelector((s) => s.auth);
-  const { profile, loading } = useSelector((s) => s.users);
-  const allPosts = useSelector((s) => s.posts.posts);
-  const allPins = useSelector((s) => s.pins.pins);
+  const profile = useSelector(selectUserProfile);
+  const loading = useSelector(selectUserLoading);
+  const userPosts = useSelector(selectPostsByAuthor(profile?._id));
+  const userPins = useSelector(selectPinsByCreator(profile?._id));
 
   const profileId = userId || currentUser?._id;
   const isOwnProfile = !userId || userId === currentUser?._id;
@@ -372,18 +375,12 @@ export default function ProfilePage() {
   const isFollowing = currentUser?.following?.some(
     (id) => id === profile?._id || id?._id === profile?._id
   );
-  const userPosts = allPosts.filter(
-    (p) => (p.author?._id ?? p.author) === profile?._id
-  );
-  const userPins = allPins.filter(
-    (p) => (p.creator?._id ?? p.creator) === profile?._id
-  );
 
   /* ── handlers ── */
   const handleFollow = async () => {
     if (!profile) return;
     setFollowLoading(true);
-    await dispatch(toggleFollow(profile._id));
+    await dispatch(toggleFollow({ id: profile._id, isCurrentlyFollowing: isFollowing }));
     setFollowLoading(false);
   };
 
@@ -428,8 +425,8 @@ export default function ProfilePage() {
   /* ── loading / 404 guards ── */
   if (loading && !profile) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="lg" />
+      <div className="max-w-2xl mx-auto px-4 pt-10">
+        <ProfileSkeleton />
       </div>
     );
   }

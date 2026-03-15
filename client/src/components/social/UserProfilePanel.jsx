@@ -8,7 +8,7 @@ import { closePanel } from '../../features/ui/uiSlice';
 import { flyToLocation } from '../../features/map/mapSlice';
 import Avatar from '../ui/Avatar';
 import GlassCard from '../ui/GlassCard';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import { PanelSkeleton } from '../ui/Skeleton';
 import FollowButton from './FollowButton';
 import { getUserPosts } from '../../api/postApi';
 import { getSavedPins } from '../../api/pinApi';
@@ -299,7 +299,7 @@ export default function UserProfilePanel({ userId }) {
       try {
         if (activeTab === 'posts') {
           const res = await getUserPosts(userId);
-          if (!cancelled) setPosts(res.data);
+          if (!cancelled) setPosts(Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data) ? res.data : []);
         } else {
           const res = await getSavedPins(userId);
           if (!cancelled) setSavedPins(res.data);
@@ -493,16 +493,14 @@ export default function UserProfilePanel({ userId }) {
             {/* ── Tab content ── */}
             <AnimatePresence mode="wait">
               {tabLoading ? (
-                /* Loading spinner */
+                /* Loading skeleton */
                 <motion.div
                   key="tab-loading"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  <GlassCard padding="p-8" animate={false}>
-                    <LoadingSpinner size="md" />
-                  </GlassCard>
+                  <PanelSkeleton />
                 </motion.div>
 
               ) : tabError ? (
@@ -539,7 +537,7 @@ export default function UserProfilePanel({ userId }) {
                     exit={{ opacity: 0 }}
                     className="space-y-2"
                   >
-                    {posts.map((post) => (
+                    {Array.isArray(posts) && posts.map((post) => (
                       <PostCard key={post._id} post={post} />
                     ))}
                   </motion.div>

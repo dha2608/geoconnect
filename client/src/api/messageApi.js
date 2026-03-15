@@ -1,12 +1,25 @@
-import API from './axios';
+import api from './axios';
 
-export const messageApi = {
-  getConversations: () => API.get('/messages/conversations'),
-  createConversation: (recipientId) => API.post('/messages/conversations', { recipientId }),
-  getUnreadCount: () => API.get('/messages/unread-count'),
-  getMessages: (conversationId, params) => API.get(`/messages/${conversationId}`, { params }),
-  sendMessage: (conversationId, data) => API.post(`/messages/${conversationId}`, data),
-  markConversationRead: (conversationId) => API.put(`/messages/${conversationId}/read`),
-  deleteMessage: (conversationId, messageId) =>
-    API.delete(`/messages/${conversationId}/messages/${messageId}`),
-};
+export const getConversations = (params) => api.get('/messages/conversations', { params });
+export const createConversation = (data) => api.post('/messages/conversations', data);
+export const getUnreadCount = () => api.get('/messages/unread-count');
+export const getMessages = (conversationId, params) =>
+  api.get(`/messages/${conversationId}`, { params });
+export const sendMessage = (conversationId, data) =>
+  api.post(`/messages/${conversationId}`, data, {
+    headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {},
+  });
+export const markConversationRead = (conversationId) =>
+  api.put(`/messages/${conversationId}/read`);
+export const deleteMessage = (conversationId, messageId) =>
+  api.delete(`/messages/${conversationId}/messages/${messageId}`);
+
+// New: Edit message
+export const editMessage = (messageId, data) =>
+  api.put(`/messages/messages/${messageId}`, data);
+
+// New: Reactions
+export const addReaction = (messageId, emoji) =>
+  api.post(`/messages/messages/${messageId}/reactions`, { emoji });
+export const removeReaction = (messageId) =>
+  api.delete(`/messages/messages/${messageId}/reactions`);

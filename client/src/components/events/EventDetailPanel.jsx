@@ -17,7 +17,7 @@
  *  • Backdrop click closes the panel
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, formatDistanceToNow, isPast, isFuture } from 'date-fns';
@@ -26,7 +26,7 @@ import toast from 'react-hot-toast';
 import Avatar        from '../ui/Avatar';
 import Badge         from '../ui/Badge';
 import Button        from '../ui/Button';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import Skeleton from '../ui/Skeleton';
 import ImageLightbox from '../ui/ImageLightbox';
 
 import {
@@ -35,6 +35,15 @@ import {
   deleteEvent,
   clearSelectedEvent,
   selectEventsLoading,
+  fetchEventComments,
+  addEventComment,
+  editEventComment,
+  deleteEventComment,
+  likeEventComment,
+  unlikeEventComment,
+  clearEventComments,
+  selectEventComments,
+  selectCommentsLoading,
 } from '../../features/events/eventSlice';
 import { closeModal, openModal } from '../../features/ui/uiSlice';
 import useRequireAuth from '../../hooks/useRequireAuth';
@@ -70,13 +79,18 @@ export default function EventDetailPanel() {
   const dispatch = useDispatch();
   const requireAuth = useRequireAuth();
   const [coverLightbox, setCoverLightbox] = useState(false);
+  const [commentText, setCommentText]     = useState('');
+  const [editingId, setEditingId]         = useState(null);
+  const [editText, setEditText]           = useState('');
 
   const modalOpen    = useSelector((s) => s.ui.modalOpen);
   const modalData    = useSelector((s) => s.ui.modalData);
   const { isMobile } = useSelector((s) => s.ui);
   const event        = useSelector((s) => s.events.selectedEvent);
-  const loading  = useSelector(selectEventsLoading);
+  const loading      = useSelector(selectEventsLoading);
   const currentUser  = useSelector((s) => s.auth.user);
+  const comments     = useSelector(selectEventComments);
+  const commentsLoading = useSelector(selectCommentsLoading);
 
   const isOpen  = modalOpen === 'eventDetail';
   const eventId = modalData?.eventId;
@@ -87,6 +101,14 @@ export default function EventDetailPanel() {
       dispatch(fetchEvent(eventId));
     }
   }, [isOpen, eventId, event?._id, dispatch]);
+
+  // ── Fetch comments when event loads ─────────────────────────────────────
+  useEffect(() => {
+    if (isOpen && event?._id) {
+      dispatch(fetchEventComments(event._id));
+    }
+    return () => { dispatch(clearEventComments()); };
+  }, [isOpen, event?._id, dispatch]);
 
   // ── Derived state ──────────────────────────────────────────────────────────
   const cat           = event ? getCat(event.category) : null;
@@ -116,7 +138,7 @@ export default function EventDetailPanel() {
     if (!requireAuth('RSVP to events')) return;
     if (!event) return;
     try {
-      await dispatch(toggleRsvp(event._id)).unwrap();
+      await dispatch(toggleRsvp({ id: event._id, userId: currentUser._id })).unwrap();
       toast.success(isAttending ? 'RSVP cancelled' : "You're going! 🎉");
     } catch (err) {
       toast.error(err?.message ?? 'Failed to update RSVP');
@@ -140,9 +162,47 @@ export default function EventDetailPanel() {
 
   const handleEdit = () => {
     if (!event) return;
-    // Close detail panel and open CreateEventModal in edit mode
     dispatch(clearSelectedEvent());
     dispatch(openModal({ modal: 'createEvent', data: { editEvent: event } }));
+  };
+
+  // ── Comment handlers ────────────────────────────────────────────────────
+  const handleAddComment = async () => {
+    if (!requireAuth('comment on events')) return;
+    if (!commentText.trim() || !event) return;
+    try {
+      await dispatch(addEventComment({ eventId: event._id, text: commentText.trim() })).unwrap();
+      setCommentText('');
+    } catch (err) { toast.error(err?.message ?? 'Failed to add comment'); }
+  };
+
+  const handleEditComment = async (commentId) => {
+    if (!editText.trim() || !event) return;
+    try {
+      await dispatch(editEventComment({ eventId: event._id, commentId, text: editText.trim() })).unwrap();
+      setEditingId(null);
+      setEditText('');
+    } catch (err) { toast.error(err?.message ?? 'Failed to edit comment'); }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!event) return;
+    try {
+      await dispatch(deleteEventComment({ eventId: event._id, commentId })).unwrap();
+    } catch (err) { toast.error(err?.message ?? 'Failed to delete comment'); }
+  };
+
+  const handleLikeComment = async (comment) => {
+    if (!requireAuth('like comments')) return;
+    if (!event) return;
+    const isLiked = comment.likes?.some((l) => (l._id ?? l) === myId);
+    try {
+      if (isLiked) {
+        await dispatch(unlikeEventComment({ eventId: event._id, commentId: comment._id })).unwrap();
+      } else {
+        await dispatch(likeEventComment({ eventId: event._id, commentId: comment._id })).unwrap();
+      }
+    } catch (err) { toast.error(err?.message ?? 'Failed to update like'); }
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -181,10 +241,38 @@ export default function EventDetailPanel() {
             style={{ boxShadow: '-8px 0 40px rgba(0,0,0,0.45)' }}
           >
 
-            {/* ── Loading ───────────────────────────────────────────────── */}
+            {/* ── Loading skeleton ─────────────────────────────────────── */}
             {loading && !event && (
-              <div className="flex-1 flex items-center justify-center">
-                <LoadingSpinner size="lg" />
+              <div className="flex-1 p-4 space-y-4">
+                {/* Cover image placeholder */}
+                <Skeleton variant="image" className="h-48 rounded-xl" />
+                {/* Title + badge */}
+                <div className="space-y-2">
+                  <Skeleton variant="title" width="75%" height={24} />
+                  <Skeleton variant="text" width="35%" height={14} />
+                </div>
+                {/* Date / address */}
+                <div className="space-y-2 mt-4">
+                  <Skeleton variant="text" width="60%" height={14} />
+                  <Skeleton variant="text" width="50%" height={14} />
+                </div>
+                {/* Organizer */}
+                <div className="flex items-center gap-3 mt-4">
+                  <Skeleton variant="avatar" size={40} />
+                  <Skeleton variant="text" width="30%" height={14} />
+                </div>
+                {/* Description lines */}
+                <div className="space-y-2 mt-4">
+                  <Skeleton variant="text" width="100%" height={13} />
+                  <Skeleton variant="text" width="90%" height={13} />
+                  <Skeleton variant="text" width="70%" height={13} />
+                </div>
+                {/* Attendees row */}
+                <div className="flex gap-2 mt-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} variant="avatar" size={32} />
+                  ))}
+                </div>
               </div>
             )}
 
@@ -277,6 +365,21 @@ export default function EventDetailPanel() {
 
                       {/* Times */}
                       <div className="mt-2.5 space-y-1">
+                        {/* Recurring badge */}
+                        {(event.recurrence?.type && event.recurrence.type !== 'none') && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                                           text-[10px] font-semibold bg-purple-500/15 text-purple-400
+                                           border border-purple-500/25 mr-2">
+                            🔁 {event.recurrence.type}{event.recurrence.interval > 1 ? ` (every ${event.recurrence.interval})` : ''}
+                          </span>
+                        )}
+                        {event.parentEvent && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                                           text-[10px] font-semibold bg-purple-500/15 text-purple-400
+                                           border border-purple-500/25 mr-2">
+                            🔁 Part of series
+                          </span>
+                        )}
                         {event.startTime && (
                           <p className="flex items-center gap-2 text-sm text-slate-400">
                             <span className="text-slate-600">🗓</span>
@@ -347,6 +450,21 @@ export default function EventDetailPanel() {
                       </div>
                     )}
 
+                    {/* ── Tags ──────────────────────────────────────────── */}
+                    {event.tags?.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {event.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="px-2.5 py-1 rounded-full text-xs font-medium
+                                       bg-blue-500/15 text-blue-300 border border-blue-500/20"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     {/* ── Attendees + capacity ──────────────────────────── */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
@@ -414,6 +532,142 @@ export default function EventDetailPanel() {
                         ? <><span>🌍</span> Public event — anyone can join</>
                         : <><span>🔒</span> Private event</>}
                     </p>
+
+                    {/* ── Comments / Discussion ────────────────────────── */}
+                    <div>
+                      <SectionLabel>Discussion ({event.commentCount ?? comments.length})</SectionLabel>
+
+                      {/* Comment input */}
+                      <div className="flex gap-2 mb-3">
+                        <input
+                          value={commentText}
+                          onChange={(e) => setCommentText(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAddComment()}
+                          placeholder="Join the discussion…"
+                          maxLength={500}
+                          className="flex-1 px-3 py-2 rounded-lg text-sm
+                                     bg-[var(--glass-bg)] border border-[var(--glass-border)]
+                                     text-slate-200 placeholder:text-slate-600
+                                     focus:outline-none focus:border-blue-500/40 transition-colors"
+                        />
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={handleAddComment}
+                          disabled={!commentText.trim()}
+                        >
+                          Post
+                        </Button>
+                      </div>
+
+                      {/* Comment list */}
+                      {commentsLoading ? (
+                        <div className="space-y-3 py-4">
+                          {Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="flex items-start gap-2">
+                              <Skeleton variant="avatar" size={28} />
+                              <div className="flex-1 space-y-1">
+                                <Skeleton variant="text" width="30%" height={12} />
+                                <Skeleton variant="text" width={`${70 + (i % 3) * 10}%`} height={12} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : comments.length > 0 ? (
+                        <div className="space-y-3 max-h-60 overflow-y-auto">
+                          <AnimatePresence>
+                            {comments.map((c) => {
+                              const isAuthor = myId && (c.user?._id ?? c.user) === myId;
+                              const isLiked = c.likes?.some((l) => (l._id ?? l) === myId);
+                              return (
+                                <motion.div
+                                  key={c._id}
+                                  initial={{ opacity: 0, y: 8 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, y: -8 }}
+                                  className="group flex gap-2.5"
+                                >
+                                  <Avatar
+                                    src={c.user?.avatar}
+                                    name={c.user?.name ?? '?'}
+                                    size="xs"
+                                    className="mt-0.5 flex-shrink-0"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-semibold text-slate-300 truncate">
+                                        {c.user?.name ?? 'User'}
+                                      </span>
+                                      <span className="text-[10px] text-slate-600">
+                                        {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
+                                      </span>
+                                      {c.isEdited && (
+                                        <span className="text-[10px] text-slate-600 italic">edited</span>
+                                      )}
+                                    </div>
+
+                                    {editingId === c._id ? (
+                                      <div className="flex gap-1.5 mt-1">
+                                        <input
+                                          value={editText}
+                                          onChange={(e) => setEditText(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleEditComment(c._id);
+                                            if (e.key === 'Escape') { setEditingId(null); setEditText(''); }
+                                          }}
+                                          className="flex-1 px-2 py-1 rounded text-xs
+                                                     bg-[var(--glass-bg)] border border-blue-500/30
+                                                     text-slate-200 focus:outline-none"
+                                          maxLength={500}
+                                          autoFocus
+                                        />
+                                        <button
+                                          onClick={() => handleEditComment(c._id)}
+                                          className="text-green-400 text-xs hover:underline"
+                                        >Save</button>
+                                        <button
+                                          onClick={() => { setEditingId(null); setEditText(''); }}
+                                          className="text-slate-500 text-xs hover:underline"
+                                        >Cancel</button>
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-slate-400 mt-0.5 break-words">{c.text}</p>
+                                    )}
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-3 mt-1">
+                                      <button
+                                        onClick={() => handleLikeComment(c)}
+                                        className={`text-[10px] flex items-center gap-0.5 transition-colors
+                                          ${isLiked ? 'text-red-400' : 'text-slate-600 hover:text-red-400'}`}
+                                      >
+                                        {isLiked ? '❤️' : '🤍'} {c.likes?.length || ''}
+                                      </button>
+                                      {isAuthor && editingId !== c._id && (
+                                        <button
+                                          onClick={() => { setEditingId(c._id); setEditText(c.text); }}
+                                          className="text-[10px] text-slate-600 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
+                                        >Edit</button>
+                                      )}
+                                      {(isAuthor || isOrganizer) && (
+                                        <button
+                                          onClick={() => handleDeleteComment(c._id)}
+                                          className="text-[10px] text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                                        >Delete</button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </AnimatePresence>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-600 italic text-center py-3">
+                          No comments yet — start the discussion!
+                        </p>
+                      )}
+                    </div>
 
                   </div>
                 </div>

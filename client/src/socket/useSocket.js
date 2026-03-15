@@ -11,7 +11,7 @@ import { useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { connectSocket, disconnectSocket, getSocket } from './socket';
 import { addNotification } from '../features/notifications/notificationSlice';
-import { addMessage, setTyping } from '../features/messages/messageSlice';
+import { addMessage, updateMessage, setTyping } from '../features/messages/messageSlice';
 
 export default function useSocket() {
   const dispatch = useDispatch();
@@ -51,8 +51,16 @@ export default function useSocket() {
       dispatchRef.current(addNotification(notification));
     };
 
-    const handleNewMessage = (message) => {
-      dispatchRef.current(addMessage(message));
+    const handleNewMessage = ({ message }) => {
+      if (message) dispatchRef.current(addMessage(message));
+    };
+
+    const handleMessageEdited = ({ message }) => {
+      if (message) dispatchRef.current(updateMessage(message));
+    };
+
+    const handleReactionUpdated = ({ message }) => {
+      if (message) dispatchRef.current(updateMessage(message));
     };
 
     const handleTyping = ({ userId, isTyping }) => {
@@ -67,12 +75,16 @@ export default function useSocket() {
 
     socket.on('notification', handleNotification);
     socket.on('new_message', handleNewMessage);
+    socket.on('message_edited', handleMessageEdited);
+    socket.on('reaction_updated', handleReactionUpdated);
     socket.on('typing', handleTyping);
     socket.on('reconnect', handleReconnect);
 
     return () => {
       socket.off('notification', handleNotification);
       socket.off('new_message', handleNewMessage);
+      socket.off('message_edited', handleMessageEdited);
+      socket.off('reaction_updated', handleReactionUpdated);
       socket.off('typing', handleTyping);
       socket.off('reconnect', handleReconnect);
       // Do NOT disconnect — socket survives re-renders.

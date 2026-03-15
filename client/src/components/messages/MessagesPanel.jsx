@@ -35,15 +35,19 @@ import {
   fetchConversations,
   fetchMessages,
   sendMessage,
+  editMessage,
+  addReaction,
+  removeReaction,
   setActiveConversation,
   createConversation,
   markConversationRead,
   fetchUnreadCount,
   removeMessage,
+  updateMessage,
 } from '../../features/messages/messageSlice';
 import { closePanel } from '../../features/ui/uiSlice';
-import { messageApi } from '../../api/messageApi';
-import { userApi } from '../../api/userApi';
+import * as messageApi from '../../api/messageApi';
+import * as userApi from '../../api/userApi';
 import useRequireAuth from '../../hooks/useRequireAuth';
 import { formatDistanceToNow, format, isToday, isYesterday, isSameDay } from 'date-fns';
 import Avatar from '../ui/Avatar';
@@ -132,6 +136,46 @@ const UserPlusIcon = () => (
   </svg>
 );
 
+const ImageIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    <circle cx="8.5" cy="8.5" r="1.5" />
+    <polyline points="21 15 16 10 5 21" />
+  </svg>
+);
+
+const PencilIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+);
+
+const SmileIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+    <line x1="9" y1="9" x2="9.01" y2="9" />
+    <line x1="15" y1="9" x2="15.01" y2="9" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const XSmallIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const ALLOWED_REACTIONS = ['❤️', '😂', '👍', '👎', '😮', '😢', '🔥'];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Returns the other participant in a 1-on-1 conversation */
@@ -217,12 +261,20 @@ const DoubleCheckIcon = ({ read }) => (
 
 // ─── Single message bubble ────────────────────────────────────────────────────
 
-function MessageBubble({ message, isOwn, otherParticipantId, onDelete }) {
+function MessageBubble({ message, isOwn, otherParticipantId, currentUserId, onDelete, onEdit, onReaction, onRemoveReaction }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState('');
+  const [showReactions, setShowReactions] = useState(false);
+  const [showImageLightbox, setShowImageLightbox] = useState(null);
+  const editInputRef = useRef(null);
+
   const time = message.createdAt
     ? format(new Date(message.createdAt), 'h:mm a')
     : '';
 
-  const isLocation = message.type === 'location' || message.type === 'pin';
+  const isLocation = message.type === 'location' || message.type === 'pin' || message.locationPin;
+  const hasImages = message.images && message.images.length > 0;
+  const hasText = message.text && message.text.trim().length > 0;
 
   // Determine read status for own messages
   const readBy = message.readBy || [];
@@ -230,67 +282,220 @@ function MessageBubble({ message, isOwn, otherParticipantId, onDelete }) {
     ? readBy.some(id => (id._id ?? id).toString() === otherParticipantId.toString())
     : false;
 
+  // Group reactions by emoji
+  const reactionGroups = useMemo(() => {
+    if (!message.reactions || message.reactions.length === 0) return [];
+    const groups = {};
+    message.reactions.forEach(r => {
+      const emoji = r.emoji;
+      if (!groups[emoji]) groups[emoji] = { emoji, users: [], hasOwn: false };
+      groups[emoji].users.push(r.user);
+      if ((r.user?._id ?? r.user) === currentUserId) groups[emoji].hasOwn = true;
+    });
+    return Object.values(groups);
+  }, [message.reactions, currentUserId]);
+
+  // Start editing
+  const handleStartEdit = useCallback(() => {
+    setEditText(message.text || '');
+    setIsEditing(true);
+    setTimeout(() => editInputRef.current?.focus(), 50);
+  }, [message.text]);
+
+  // Confirm edit
+  const handleConfirmEdit = useCallback(() => {
+    const trimmed = editText.trim();
+    if (!trimmed || trimmed === message.text) {
+      setIsEditing(false);
+      return;
+    }
+    onEdit?.(message._id, trimmed);
+    setIsEditing(false);
+  }, [editText, message._id, message.text, onEdit]);
+
+  // Cancel edit
+  const handleCancelEdit = useCallback(() => {
+    setIsEditing(false);
+    setEditText('');
+  }, []);
+
+  // Edit key handler
+  const handleEditKeyDown = useCallback((e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleConfirmEdit(); }
+    if (e.key === 'Escape') handleCancelEdit();
+  }, [handleConfirmEdit, handleCancelEdit]);
+
+  // Handle reaction click
+  const handleReactionClick = useCallback((emoji) => {
+    // Check if user already reacted with this emoji
+    const hasReacted = reactionGroups.find(g => g.emoji === emoji)?.hasOwn;
+    if (hasReacted) {
+      onRemoveReaction?.(message._id);
+    } else {
+      onReaction?.(message._id, emoji);
+    }
+    setShowReactions(false);
+  }, [reactionGroups, message._id, onReaction, onRemoveReaction]);
+
+  const bubbleBaseClass = isOwn
+    ? 'rounded-br-sm text-white'
+    : 'rounded-bl-sm text-txt-primary border border-[var(--glass-border)]';
+
+  const bubbleStyle = isOwn
+    ? { background: '#3b82f6', boxShadow: '0 2px 12px rgba(59,130,246,0.3)' }
+    : { background: 'var(--glass-bg)' };
+
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 8, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}
-      className={`flex items-end gap-1.5 ${isOwn ? 'justify-end' : 'justify-start'} group`}
+      className={`flex items-end gap-1.5 ${isOwn ? 'justify-end' : 'justify-start'} group relative`}
     >
-      {/* Delete button — own messages only, slides in on hover */}
-      {isOwn && onDelete && (
-        <button
-          onClick={onDelete}
-          aria-label="Delete message"
-          className="opacity-0 group-hover:opacity-100 transition-opacity duration-150
-                     w-6 h-6 flex items-center justify-center rounded-lg flex-shrink-0
-                     text-txt-muted hover:text-accent-danger hover:bg-surface-hover"
-        >
-          <TrashIcon />
-        </button>
+      {/* Action buttons — own messages: delete + edit */}
+      {isOwn && (
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center gap-0.5 flex-shrink-0">
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              aria-label="Delete message"
+              className="w-6 h-6 flex items-center justify-center rounded-lg
+                         text-txt-muted hover:text-accent-danger hover:bg-surface-hover"
+            >
+              <TrashIcon />
+            </button>
+          )}
+          {hasText && onEdit && (
+            <button
+              onClick={handleStartEdit}
+              aria-label="Edit message"
+              className="w-6 h-6 flex items-center justify-center rounded-lg
+                         text-txt-muted hover:text-accent-primary hover:bg-surface-hover"
+            >
+              <PencilIcon />
+            </button>
+          )}
+        </div>
       )}
 
       <div className={`max-w-[75%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
-        {/* Bubble */}
-        {isLocation ? (
-          // Location pin message
-          <div
-            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-[13px] font-body ${
-              isOwn
-                ? 'rounded-br-sm text-white'
-                : 'rounded-bl-sm text-txt-primary border border-[var(--glass-border)]'
-            }`}
-            style={
-              isOwn
-                ? { background: '#3b82f6', boxShadow: '0 2px 12px rgba(59,130,246,0.35)' }
-                : { background: 'var(--glass-bg)' }
-            }
-          >
-            <MapPinIcon />
-            <span className="font-medium">
-              {message.location?.name || message.text || 'Shared a location'}
-            </span>
-          </div>
-        ) : (
-          // Text message
-          <div
-            className={`px-3.5 py-2.5 rounded-2xl text-[13px] font-body leading-relaxed break-words ${
-              isOwn
-                ? 'rounded-br-sm text-white'
-                : 'rounded-bl-sm text-txt-primary border border-[var(--glass-border)]'
-            }`}
-            style={
-              isOwn
-                ? { background: '#3b82f6', boxShadow: '0 2px 12px rgba(59,130,246,0.3)' }
-                : { background: 'var(--glass-bg)' }
-            }
-          >
-            {message.text}
+        {/* Image grid */}
+        {hasImages && (
+          <div className={`rounded-2xl overflow-hidden ${bubbleBaseClass} ${
+            message.images.length === 1 ? 'w-52' : 'w-52 grid grid-cols-2 gap-0.5'
+          }`}>
+            {message.images.map((img, idx) => (
+              <button
+                key={idx}
+                onClick={() => setShowImageLightbox(idx)}
+                className="block overflow-hidden focus:outline-none"
+              >
+                <img
+                  src={img}
+                  alt={`Attachment ${idx + 1}`}
+                  className={`w-full object-cover ${
+                    message.images.length === 1 ? 'max-h-64' : 'h-24'
+                  } hover:opacity-90 transition-opacity`}
+                  loading="lazy"
+                />
+              </button>
+            ))}
           </div>
         )}
 
-        {/* Timestamp + read receipt */}
+        {/* Location pin message */}
+        {isLocation && !hasImages && (
+          <div
+            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-[13px] font-body ${bubbleBaseClass}`}
+            style={bubbleStyle}
+          >
+            <MapPinIcon />
+            <span className="font-medium">
+              {message.locationPin?.label || message.text || 'Shared a location'}
+            </span>
+          </div>
+        )}
+
+        {/* Text bubble / Edit mode */}
+        {hasText && !isLocation && (
+          isEditing ? (
+            <div
+              className={`px-3 py-2 rounded-2xl text-[13px] font-body ${bubbleBaseClass} w-full`}
+              style={bubbleStyle}
+            >
+              <textarea
+                ref={editInputRef}
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onKeyDown={handleEditKeyDown}
+                rows={1}
+                className="w-full bg-transparent text-[13px] font-body resize-none outline-none leading-relaxed
+                           max-h-24 overflow-y-auto placeholder-white/50"
+                style={{ scrollbarWidth: 'none', color: isOwn ? 'white' : 'var(--txt-primary)' }}
+                onInput={(e) => {
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 96)}px`;
+                }}
+              />
+              <div className="flex items-center justify-end gap-1 mt-1">
+                <button
+                  onClick={handleCancelEdit}
+                  className={`w-5 h-5 flex items-center justify-center rounded ${
+                    isOwn ? 'text-white/60 hover:text-white' : 'text-txt-muted hover:text-txt-primary'
+                  }`}
+                  aria-label="Cancel edit"
+                >
+                  <XSmallIcon />
+                </button>
+                <button
+                  onClick={handleConfirmEdit}
+                  className={`w-5 h-5 flex items-center justify-center rounded ${
+                    isOwn ? 'text-white/60 hover:text-white' : 'text-txt-muted hover:text-accent-primary'
+                  }`}
+                  aria-label="Confirm edit"
+                >
+                  <CheckIcon />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              className={`px-3.5 py-2.5 rounded-2xl text-[13px] font-body leading-relaxed break-words ${bubbleBaseClass}`}
+              style={bubbleStyle}
+            >
+              {message.text}
+              {message.isEdited && (
+                <span className={`text-[10px] ml-1.5 ${isOwn ? 'text-white/50' : 'text-txt-muted'}`}>(edited)</span>
+              )}
+            </div>
+          )
+        )}
+
+        {/* Reaction display */}
+        {reactionGroups.length > 0 && (
+          <div className="flex flex-wrap gap-1 px-1">
+            {reactionGroups.map(({ emoji, users, hasOwn }) => (
+              <button
+                key={emoji}
+                onClick={() => handleReactionClick(emoji)}
+                className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] border transition-colors ${
+                  hasOwn
+                    ? 'border-accent-primary/40 bg-accent-primary/15'
+                    : 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-surface-hover'
+                }`}
+                title={users.map(u => u?.name || 'User').join(', ')}
+              >
+                <span>{emoji}</span>
+                {users.length > 1 && (
+                  <span className="text-txt-muted font-body">{users.length}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Timestamp + read receipt + edited indicator */}
         <div className="flex items-center gap-1 px-1">
           <span className="text-[10px] text-txt-muted font-body">{time}</span>
           {isOwn && (
@@ -300,6 +505,83 @@ function MessageBubble({ message, isOwn, otherParticipantId, onDelete }) {
           )}
         </div>
       </div>
+
+      {/* Reaction button — for other's messages (non-own), or own without edit */}
+      {!isEditing && (
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center gap-0.5 flex-shrink-0 relative">
+          {!isOwn && onDelete && (
+            <button
+              onClick={onDelete}
+              aria-label="Delete message"
+              className="w-6 h-6 flex items-center justify-center rounded-lg
+                         text-txt-muted hover:text-accent-danger hover:bg-surface-hover"
+            >
+              <TrashIcon />
+            </button>
+          )}
+          <button
+            onClick={() => setShowReactions(prev => !prev)}
+            aria-label="React to message"
+            className="w-6 h-6 flex items-center justify-center rounded-lg
+                       text-txt-muted hover:text-accent-warning hover:bg-surface-hover"
+          >
+            <SmileIcon />
+          </button>
+
+          {/* Reaction picker popup */}
+          <AnimatePresence>
+            {showReactions && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 4 }}
+                transition={{ duration: 0.12 }}
+                className={`absolute bottom-full mb-1 ${isOwn ? 'right-0' : 'left-0'} flex items-center gap-0.5
+                           rounded-xl px-2 py-1.5 shadow-lg z-10`}
+                style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', backdropFilter: 'blur(20px)' }}
+              >
+                {ALLOWED_REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleReactionClick(emoji)}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-base
+                               hover:bg-surface-hover hover:scale-125 transition-all duration-100"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Image lightbox */}
+      <AnimatePresence>
+        {showImageLightbox !== null && hasImages && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+            onClick={() => setShowImageLightbox(null)}
+          >
+            <img
+              src={message.images[showImageLightbox]}
+              alt="Full size"
+              className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setShowImageLightbox(null)}
+              className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-xl
+                         bg-white/10 text-white hover:bg-white/20 transition-colors"
+            >
+              <XIcon />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -659,6 +941,8 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation, on
                           ? truncate(lastMsg.text, 40)
                           : lastMsg?.type === 'location'
                           ? '📍 Shared a location'
+                          : lastMsg?.text === '' && lastMsg?.sender
+                          ? '📷 Photo'
                           : 'No messages yet'}
                       </p>
                       {hasUnread && (
@@ -686,14 +970,16 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
   const requireAuth = useRequireAuth();
   const { messages, loading, typingUsers } = useSelector((s) => s.messages);
 
-  const { joinConversation, sendMessage: socketSend, startTyping, stopTyping } =
+  const { joinConversation, sendMessage: socketSend, startTyping, stopTyping, emitEditMessage, emitReaction } =
     useMessaging();
 
   const [inputText, setInputText]     = useState('');
   const [isSending, setIsSending]     = useState(false);
+  const [selectedImages, setSelectedImages] = useState([]);
   const messagesEndRef                = useRef(null);
   const typingTimeoutRef              = useRef(null);
   const inputRef                      = useRef(null);
+  const imageInputRef                 = useRef(null);
 
   const other     = getOtherParticipant(conversation, currentUserId);
   const name      = other?.name || 'User';
@@ -745,6 +1031,21 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
+  const handleImageSelect = useCallback((e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    // Max 4 images
+    const remaining = 4 - selectedImages.length;
+    const toAdd = files.slice(0, remaining);
+    setSelectedImages(prev => [...prev, ...toAdd]);
+    // Reset input so same file can be re-selected
+    if (imageInputRef.current) imageInputRef.current.value = '';
+  }, [selectedImages.length]);
+
+  const handleRemoveImage = useCallback((idx) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== idx));
+  }, []);
+
   const handleInputChange = useCallback(
     (e) => {
       setInputText(e.target.value);
@@ -760,9 +1061,12 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
   const handleSend = useCallback(async () => {
     if (!requireAuth('send messages')) return;
     const text = inputText.trim();
-    if (!text || isSending) return;
+    if (!text && selectedImages.length === 0) return;
+    if (isSending) return;
 
     setInputText('');
+    const imagesToSend = [...selectedImages];
+    setSelectedImages([]);
     setIsSending(true);
 
     // Stop typing indicator immediately
@@ -770,18 +1074,29 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
     stopTyping(convId);
 
     try {
+      // Build FormData if images present
+      let data;
+      if (imagesToSend.length > 0) {
+        data = new FormData();
+        if (text) data.append('text', text);
+        imagesToSend.forEach((file) => data.append('images', file));
+      } else {
+        data = { text };
+      }
+
       // HTTP persist
-      await dispatch(sendMessage({ conversationId: convId, text }));
+      const result = await dispatch(sendMessage({ conversationId: convId, data })).unwrap();
       // Real-time socket broadcast
-      socketSend({ conversationId: convId, text });
+      socketSend({ conversationId: convId, message: result });
     } catch {
       // Restore input on failure
       setInputText(text);
+      setSelectedImages(imagesToSend);
     } finally {
       setIsSending(false);
       inputRef.current?.focus();
     }
-  }, [inputText, isSending, convId, dispatch, socketSend, stopTyping]);
+  }, [inputText, selectedImages, isSending, convId, dispatch, socketSend, stopTyping, requireAuth]);
 
   const handleKeyDown = useCallback(
     (e) => {
@@ -804,6 +1119,42 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
       }
     },
     [convId, dispatch],
+  );
+
+  const handleEditMessage = useCallback(
+    async (messageId, newText) => {
+      try {
+        const result = await dispatch(editMessage({ messageId, text: newText })).unwrap();
+        emitEditMessage?.({ conversationId: convId, message: result });
+      } catch {
+        toast.error('Failed to edit message');
+      }
+    },
+    [convId, dispatch, emitEditMessage],
+  );
+
+  const handleAddReaction = useCallback(
+    async (messageId, emoji) => {
+      try {
+        const result = await dispatch(addReaction({ messageId, emoji })).unwrap();
+        emitReaction?.({ conversationId: convId, message: result });
+      } catch {
+        toast.error('Failed to add reaction');
+      }
+    },
+    [convId, dispatch, emitReaction],
+  );
+
+  const handleRemoveReaction = useCallback(
+    async (messageId) => {
+      try {
+        const result = await dispatch(removeReaction(messageId)).unwrap();
+        emitReaction?.({ conversationId: convId, message: result });
+      } catch {
+        toast.error('Failed to remove reaction');
+      }
+    },
+    [convId, dispatch, emitReaction],
   );
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -893,7 +1244,11 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
                 message={msg}
                 isOwn={isOwn}
                 otherParticipantId={other?._id}
+                currentUserId={currentUserId}
                 onDelete={isOwn ? () => handleDeleteMessage(msg._id) : undefined}
+                onEdit={isOwn ? handleEditMessage : undefined}
+                onReaction={handleAddReaction}
+                onRemoveReaction={handleRemoveReaction}
               />
             );
           })}
@@ -918,61 +1273,112 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
       </div>
 
       {/* ── Input bar ────────────────────────────────────────────────────── */}
-      <div
-        className="flex-shrink-0 flex items-end gap-2 p-3
-                   border-t border-surface-divider"
-      >
-        <div
-          className="flex-1 flex items-end rounded-xl px-3.5 py-2.5 min-h-[42px]"
-          style={{
-            background: 'var(--glass-bg)',
-            border: '1px solid var(--glass-border)',
-          }}
-        >
-          <textarea
-            ref={inputRef}
-            value={inputText}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message…"
-            rows={1}
-            aria-label="Message input"
-            className="flex-1 bg-transparent text-[13px] text-txt-primary font-body
-                       placeholder-txt-muted resize-none outline-none leading-relaxed
-                       max-h-24 overflow-y-auto"
-            style={{ scrollbarWidth: 'none' }}
-            onInput={(e) => {
-              // Auto-grow textarea
-              e.target.style.height = 'auto';
-              e.target.style.height = `${Math.min(e.target.scrollHeight, 96)}px`;
-            }}
-          />
-        </div>
+      <div className="flex-shrink-0 border-t border-surface-divider">
+        {/* Image preview strip */}
+        {selectedImages.length > 0 && (
+          <div className="flex items-center gap-2 px-3 pt-2 pb-1 overflow-x-auto"
+               style={{ scrollbarWidth: 'thin' }}>
+            {selectedImages.map((file, idx) => (
+              <div key={idx} className="relative flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-[var(--glass-border)]">
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt={`Preview ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  onClick={() => handleRemoveImage(idx)}
+                  className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center
+                             rounded-full bg-accent-danger text-white text-[8px]"
+                  aria-label="Remove image"
+                >
+                  <XSmallIcon />
+                </button>
+              </div>
+            ))}
+            {selectedImages.length < 4 && (
+              <button
+                onClick={() => imageInputRef.current?.click()}
+                className="flex-shrink-0 w-14 h-14 rounded-lg border border-dashed border-[var(--glass-border)]
+                           flex items-center justify-center text-txt-muted hover:text-accent-primary
+                           hover:border-accent-primary/30 transition-colors"
+              >
+                <span className="text-lg">+</span>
+              </button>
+            )}
+          </div>
+        )}
 
-        {/* Send button */}
-        <motion.button
-          whileHover={inputText.trim() ? { scale: 1.06 } : {}}
-          whileTap={inputText.trim() ? { scale: 0.92 } : {}}
-          onClick={handleSend}
-          disabled={!inputText.trim() || isSending}
-          aria-label="Send message"
-          className={[
-            'w-10 h-10 flex items-center justify-center rounded-xl flex-shrink-0',
-            'transition-all duration-150',
-            inputText.trim() && !isSending
-              ? 'bg-accent-primary text-white shadow-[0_0_16px_rgba(59,130,246,0.4)] hover:bg-blue-500'
-              : 'bg-surface-hover text-txt-muted cursor-not-allowed',
-          ].join(' ')}
-        >
-          {isSending ? (
-            <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-          ) : (
-            <SendIcon />
-          )}
-        </motion.button>
+        <div className="flex items-end gap-2 p-3">
+          {/* Image upload button */}
+          <button
+            onClick={() => imageInputRef.current?.click()}
+            aria-label="Attach images"
+            className="w-10 h-10 flex items-center justify-center rounded-xl flex-shrink-0
+                       text-txt-muted hover:text-accent-primary hover:bg-accent-primary/10 transition-all duration-150"
+          >
+            <ImageIcon />
+          </button>
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+
+          <div
+            className="flex-1 flex items-end rounded-xl px-3.5 py-2.5 min-h-[42px]"
+            style={{
+              background: 'var(--glass-bg)',
+              border: '1px solid var(--glass-border)',
+            }}
+          >
+            <textarea
+              ref={inputRef}
+              value={inputText}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Type a message…"
+              rows={1}
+              aria-label="Message input"
+              className="flex-1 bg-transparent text-[13px] text-txt-primary font-body
+                         placeholder-txt-muted resize-none outline-none leading-relaxed
+                         max-h-24 overflow-y-auto"
+              style={{ scrollbarWidth: 'none' }}
+              onInput={(e) => {
+                // Auto-grow textarea
+                e.target.style.height = 'auto';
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 96)}px`;
+              }}
+            />
+          </div>
+
+          {/* Send button */}
+          <motion.button
+            whileHover={(inputText.trim() || selectedImages.length > 0) ? { scale: 1.06 } : {}}
+            whileTap={(inputText.trim() || selectedImages.length > 0) ? { scale: 0.92 } : {}}
+            onClick={handleSend}
+            disabled={(!inputText.trim() && selectedImages.length === 0) || isSending}
+            aria-label="Send message"
+            className={[
+              'w-10 h-10 flex items-center justify-center rounded-xl flex-shrink-0',
+              'transition-all duration-150',
+              (inputText.trim() || selectedImages.length > 0) && !isSending
+                ? 'bg-accent-primary text-white shadow-[0_0_16px_rgba(59,130,246,0.4)] hover:bg-blue-500'
+                : 'bg-surface-hover text-txt-muted cursor-not-allowed',
+            ].join(' ')}
+          >
+            {isSending ? (
+              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <SendIcon />
+            )}
+          </motion.button>
+        </div>
       </div>
     </motion.div>
   );

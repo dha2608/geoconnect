@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
-import * as turf from '@turf/turf';
+import { distance, point } from '@turf/turf';
 
 function formatDist(km) {
   return km < 1
@@ -63,9 +63,9 @@ export default function DistanceTool({ onClose }) {
 
       let total = 0;
       for (let i = 1; i < pts.length; i++) {
-        const from = turf.point([pts[i - 1].lng, pts[i - 1].lat]);
-        const to = turf.point([pts[i].lng, pts[i].lat]);
-        const dist = turf.distance(from, to, { units: 'kilometers' });
+        const from = point([pts[i - 1].lng, pts[i - 1].lat]);
+        const to = point([pts[i].lng, pts[i].lat]);
+        const dist = distance(from, to, { units: 'kilometers' });
         total += dist;
 
         // Line

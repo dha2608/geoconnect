@@ -3,7 +3,9 @@
  *
  * Responsibilities:
  *  • joinConversation(id) — join conversation room for messages + typing events
- *  • sendMessage({ conversationId, text, locationPin }) — emit message
+ *  • sendMessage({ conversationId, message }) — emit message with full data
+ *  • emitEditMessage({ conversationId, message }) — broadcast edited message
+ *  • emitReaction({ conversationId, message }) — broadcast reaction change
  *  • startTyping / stopTyping — typing indicators with 3s auto-stop
  */
 
@@ -33,15 +35,25 @@ export default function useMessaging() {
     socket.emit('join_conversation', { conversationId });
   }, []);
 
-  const sendMessage = useCallback(({ conversationId, text, locationPin }) => {
+  const sendMessage = useCallback(({ conversationId, message }) => {
     const socket = getSocket();
     if (!socket?.connected || !conversationId) return;
 
-    socket.emit('message_send', {
-      conversationId,
-      text: text ?? '',
-      locationPin: locationPin ?? null,
-    });
+    socket.emit('message_send', { conversationId, message });
+  }, []);
+
+  const emitEditMessage = useCallback(({ conversationId, message }) => {
+    const socket = getSocket();
+    if (!socket?.connected || !conversationId) return;
+
+    socket.emit('message_edit', { conversationId, message });
+  }, []);
+
+  const emitReaction = useCallback(({ conversationId, message }) => {
+    const socket = getSocket();
+    if (!socket?.connected || !conversationId) return;
+
+    socket.emit('reaction_add', { conversationId, message });
   }, []);
 
   const startTyping = useCallback((conversationId) => {
@@ -68,5 +80,5 @@ export default function useMessaging() {
     socket.emit('typing_stop', { conversationId });
   }, []);
 
-  return { joinConversation, sendMessage, startTyping, stopTyping };
+  return { joinConversation, sendMessage, emitEditMessage, emitReaction, startTyping, stopTyping };
 }

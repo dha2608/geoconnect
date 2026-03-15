@@ -35,6 +35,24 @@ const AlertCircle = ({ size = 24, className, ...props }) => (
     <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
   </svg>
 );
+const GlobeIcon = ({ className, size = 24, ...props }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+);
+const UsersIcon = ({ className, size = 24, ...props }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+);
+const LockIcon = ({ className, size = 24, ...props }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+);
+const ChevronDown = ({ className, size = 24, ...props }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}><path d="m6 9 6 6 6-6"/></svg>
+);
+
+const VISIBILITY_OPTIONS = [
+  { value: 'public', label: 'Public', icon: GlobeIcon, desc: 'Everyone can see' },
+  { value: 'followers', label: 'Followers', icon: UsersIcon, desc: 'Only followers' },
+  { value: 'private', label: 'Only me', icon: LockIcon, desc: 'Only you' },
+];
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MAX_CONTENT = 500;
@@ -178,6 +196,8 @@ export default function EditPostModal() {
 
   const [submitting,   setSubmitting]   = useState(false);
   const [submitError,  setSubmitError]  = useState(null);
+  const [visibility,   setVisibility]   = useState('public');
+  const [visDropdownOpen, setVisDropdownOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   const {
@@ -201,6 +221,8 @@ export default function EditPostModal() {
       setExistingUrls(post.images ?? []);
       setNewItems([]);
       setSubmitError(null);
+      setVisibility(post.visibility ?? 'public');
+      setVisDropdownOpen(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, post?._id]);
@@ -214,6 +236,8 @@ export default function EditPostModal() {
     setExistingUrls([]);
     setNewItems([]);
     setSubmitError(null);
+    setVisibility('public');
+    setVisDropdownOpen(false);
   }, [submitting, dispatch, reset]);
 
   const handleFileChange = (e) => {
@@ -250,6 +274,7 @@ export default function EditPostModal() {
     try {
       const formData = new FormData();
       formData.append('content', data.content);
+      formData.append('visibility', visibility);
 
       // Tell backend which existing images to keep
       existingUrls.forEach((url) => formData.append('keepImages', url));
@@ -374,6 +399,57 @@ export default function EditPostModal() {
             className="hidden"
             onChange={handleFileChange}
           />
+
+          {/* Visibility selector */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setVisDropdownOpen((v) => !v)}
+              disabled={submitting}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-body transition-all
+                text-txt-secondary hover:text-accent-primary hover:bg-accent-primary/10
+                disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {(() => {
+                const opt = VISIBILITY_OPTIONS.find((o) => o.value === visibility);
+                const Icon = opt.icon;
+                return <><Icon size={15} /><span>{opt.label}</span></>;
+              })()}
+              <ChevronDown size={12} className={`transition-transform ${visDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+              {visDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute bottom-full left-0 mb-1 w-44 bg-elevated border border-surface-divider rounded-xl shadow-lg z-20 overflow-hidden"
+                >
+                  {VISIBILITY_OPTIONS.map((opt) => {
+                    const Icon = opt.icon;
+                    const isActive = visibility === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => { setVisibility(opt.value); setVisDropdownOpen(false); }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-body transition-colors
+                          ${isActive ? 'bg-accent-primary/10 text-accent-primary' : 'text-txt-secondary hover:bg-surface-hover hover:text-txt-primary'}`}
+                      >
+                        <Icon size={14} />
+                        <div className="text-left">
+                          <p className="font-medium">{opt.label}</p>
+                          <p className="text-[10px] opacity-60">{opt.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           <div className="flex-1" />
 

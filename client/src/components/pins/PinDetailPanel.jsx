@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { togglePinLike, togglePinSave, clearSelectedPin, fetchPin, checkInPin, selectSelectedPin } from '../../features/pins/pinSlice';
 import { closeModal, openModal, setActiveMapTool } from '../../features/ui/uiSlice';
 import { setRoutingDestination } from '../../features/map/mapSlice';
-import * as turf from '@turf/turf';
+import { distance, point } from '@turf/turf';
 import useRequireAuth from '../../hooks/useRequireAuth';
 import Modal from '../ui/Modal';
 import Avatar from '../ui/Avatar';
@@ -238,9 +238,9 @@ export default function PinDetailPanel() {
   const distanceText = useMemo(() => {
     if (!userLocation || !pin?.location?.coordinates) return null;
     const [pinLng, pinLat] = pin.location.coordinates;
-    const dist = turf.distance(
-      turf.point([userLocation.lng, userLocation.lat]),
-      turf.point([pinLng, pinLat]),
+    const dist = distance(
+      point([userLocation.lng, userLocation.lat]),
+      point([pinLng, pinLat]),
       { units: 'kilometers' }
     );
     return dist < 1
@@ -283,7 +283,7 @@ export default function PinDetailPanel() {
     setLikeLoading(true);
     const wasLiked = isLiked;
     try {
-      await dispatch(togglePinLike(pin._id)).unwrap();
+      await dispatch(togglePinLike({ id: pin._id, userId: user._id })).unwrap();
       toast.success(wasLiked ? 'Like removed' : 'Liked! ❤️');
     } catch {
       toast.error('Failed to update like.');
@@ -677,6 +677,7 @@ export default function PinDetailPanel() {
                   {/* Review list */}
                   <ReviewList
                     pinId={pin._id}
+                    pinOwnerId={pin.createdBy?._id}
                     newReview={latestReview}
                   />
                 </div>

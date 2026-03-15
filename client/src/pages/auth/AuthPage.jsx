@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { login, register as registerUser, guestLogin, clearError } from '../../features/auth/authSlice';
+import { login, login2FA, loginWithBackupCode, register as registerUser, guestLogin, clearError, clear2FA } from '../../features/auth/authSlice';
 import { authApi } from '../../api/authApi';
 import GlassCard from '../../components/ui/GlassCard';
 import Button from '../../components/ui/Button';
@@ -58,6 +59,7 @@ const contentVariants = {
 // ─── Login Form ───────────────────────────────────────────────────────────────
 
 function LoginForm({ onSuccess }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { loading, error } = useSelector((state) => state.auth);
 
@@ -67,7 +69,7 @@ function LoginForm({ onSuccess }) {
 
   const onSubmit = async (data) => {
     const result = await dispatch(login(data));
-    if (login.fulfilled.match(result)) onSuccess();
+    if (login.fulfilled.match(result) && !result.payload.requires2FA) onSuccess();
   };
 
   return (
@@ -83,21 +85,21 @@ function LoginForm({ onSuccess }) {
       )}
 
       <Input
-        label="Email"
+        label={t('auth.email')}
         type="email"
         placeholder="you@example.com"
         error={errors.email?.message}
         {...register('email')}
       />
       <Input
-        label="Password"
+        label={t('auth.password')}
         type="password"
         placeholder="Enter your password"
         error={errors.password?.message}
         {...register('password')}
       />
       <Button type="submit" loading={loading} className="w-full">
-        Sign In
+        {t('auth.signIn')}
       </Button>
     </form>
   );
@@ -106,6 +108,7 @@ function LoginForm({ onSuccess }) {
 // ─── Register Form ────────────────────────────────────────────────────────────
 
 function RegisterForm({ onSuccess }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { loading, error } = useSelector((state) => state.auth);
 
@@ -230,35 +233,146 @@ function RegisterForm({ onSuccess }) {
       </div>
 
       <Input
-        label="Full Name"
+        label={t('auth.fullName')}
         placeholder="Your full name"
         error={errors.name?.message}
         {...register('name')}
       />
       <Input
-        label="Email"
+        label={t('auth.email')}
         type="email"
         placeholder="you@example.com"
         error={errors.email?.message}
         {...register('email')}
       />
       <Input
-        label="Password"
+        label={t('auth.password')}
         type="password"
         placeholder="Create a password"
         error={errors.password?.message}
         {...register('password')}
       />
       <Input
-        label="Confirm Password"
+        label={t('auth.confirmPassword')}
         type="password"
         placeholder="Confirm your password"
         error={errors.confirmPassword?.message}
         {...register('confirmPassword')}
       />
       <Button type="submit" loading={loading} className="w-full">
-        Create Account
+        {t('auth.createAccount')}
       </Button>
+    </form>
+  );
+}
+
+// ─── Two-Factor Auth Form ─────────────────────────────────────────────────────
+
+function TwoFactorForm({ onSuccess, onBack }) {
+  const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const { loading, error, tempToken } = useSelector((state) => state.auth);
+  const [useBackup, setUseBackup] = useState(false);
+  const [code, setCode] = useState('');
+  const [backupCode, setBackupCode] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    let result;
+    if (useBackup) {
+      result = await dispatch(loginWithBackupCode({ tempToken, backupCode: backupCode.trim() }));
+      if (loginWithBackupCode.fulfilled.match(result)) onSuccess();
+    } else {
+      result = await dispatch(login2FA({ tempToken, code: code.trim() }));
+      if (login2FA.fulfilled.match(result)) onSuccess();
+    }
+  };
+
+  const handleBack = () => {
+    dispatch(clear2FA());
+    dispatch(clearError());
+    onBack();
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Header */}
+      <div className="text-center space-y-1">
+        <div className="w-12 h-12 mx-auto rounded-full bg-accent-primary/10 flex items-center justify-center mb-3">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent-primary">
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-txt-primary">{t('auth.twoFactor', 'Two-Factor Authentication')}</h3>
+        <p className="text-sm text-txt-muted">
+          {useBackup
+            ? 'Enter one of your backup codes'
+            : 'Enter the 6-digit code from your authenticator app'}
+        </p>
+      </div>
+
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="p-3 rounded-xl bg-accent-danger/10 border border-accent-danger/20 text-accent-danger text-sm"
+        >
+          {error}
+        </motion.div>
+      )}
+
+      {useBackup ? (
+        <Input
+          label="Backup Code"
+          type="text"
+          placeholder="Enter 8-character backup code"
+          value={backupCode}
+          onChange={(e) => setBackupCode(e.target.value)}
+          maxLength={8}
+          autoFocus
+        />
+      ) : (
+        <Input
+          label="Authentication Code"
+          type="text"
+          inputMode="numeric"
+          placeholder="000000"
+          value={code}
+          onChange={(e) => {
+            const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+            setCode(val);
+          }}
+          maxLength={6}
+          autoFocus
+        />
+      )}
+
+      <Button
+        type="submit"
+        loading={loading}
+        disabled={useBackup ? backupCode.trim().length < 8 : code.length < 6}
+        className="w-full"
+      >
+        {t('common.verify', 'Verify')}
+      </Button>
+
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="text-sm text-txt-muted hover:text-txt-secondary transition-colors"
+        >
+          {t('auth.backToLogin', 'Back to login')}
+        </button>
+        <button
+          type="button"
+          onClick={() => { setUseBackup(!useBackup); dispatch(clearError()); }}
+          className="text-sm text-accent-primary hover:text-accent-primary/80 transition-colors"
+        >
+          {useBackup ? 'Use authenticator app' : 'Use backup code'}
+        </button>
+      </div>
     </form>
   );
 }
@@ -271,10 +385,11 @@ const TABS = [
 ];
 
 export default function AuthPage() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { loading } = useSelector((state) => state.auth);
+  const { loading, requires2FA } = useSelector((state) => state.auth);
 
   // OAuth loading states
   const [oauthLoading, setOauthLoading] = useState(null); // 'google' | 'github' | null
@@ -319,100 +434,106 @@ export default function AuthPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-heading font-bold bg-gradient-to-r from-accent-primary to-accent-secondary bg-clip-text text-transparent mb-2">
-            GeoConnect
+            {t('common.appName', 'GeoConnect')}
           </h1>
-          <p className="text-txt-secondary text-sm">Discover places, connect with people</p>
+          <p className="text-txt-secondary text-sm">{t('auth.tagline')}</p>
         </div>
 
         <GlassCard className="space-y-5">
-          {/* Tab bar */}
-          <div className="relative flex rounded-xl bg-surface-hover border border-surface-divider p-1">
-            {TABS.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => switchTab(tab.id)}
-                  className={`relative flex-1 py-2.5 text-sm font-semibold rounded-lg transition-colors duration-200 z-10 ${
-                    isActive ? 'text-txt-primary' : 'text-txt-muted hover:text-txt-secondary'
-                  }`}
-                >
-                  {tab.label}
-                  {isActive && (
+          {requires2FA ? (
+            <TwoFactorForm onSuccess={handleSuccess} onBack={() => setActiveTab('login')} />
+          ) : (
+            <>
+              {/* Tab bar */}
+              <div className="relative flex rounded-xl bg-surface-hover border border-surface-divider p-1">
+                {TABS.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => switchTab(tab.id)}
+                      className={`relative flex-1 py-2.5 text-sm font-semibold rounded-lg transition-colors duration-200 z-10 ${
+                        isActive ? 'text-txt-primary' : 'text-txt-muted hover:text-txt-secondary'
+                      }`}
+                    >
+                      {tab.id === 'login' ? t('auth.signIn') : t('auth.signUp')}
+                      {isActive && (
+                        <motion.div
+                          layoutId="auth-tab-indicator"
+                          className="absolute inset-0 rounded-lg glass border border-accent-primary/20 shadow-sm"
+                          style={{ zIndex: -1 }}
+                          transition={TAB_SPRING}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Tab content */}
+              <div className="relative overflow-hidden min-h-[280px]">
+                <AnimatePresence mode="wait" custom={direction}>
+                  {activeTab === 'login' ? (
                     <motion.div
-                      layoutId="auth-tab-indicator"
-                      className="absolute inset-0 rounded-lg glass border border-accent-primary/20 shadow-sm"
-                      style={{ zIndex: -1 }}
-                      transition={TAB_SPRING}
-                    />
+                      key="login"
+                      custom={direction}
+                      variants={contentVariants}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                    >
+                      <LoginForm onSuccess={handleSuccess} />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="register"
+                      custom={direction}
+                      variants={contentVariants}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                    >
+                      <RegisterForm onSuccess={handleSuccess} />
+                    </motion.div>
                   )}
-                </button>
-              );
-            })}
-          </div>
+                </AnimatePresence>
+              </div>
 
-          {/* Tab content */}
-          <div className="relative overflow-hidden min-h-[280px]">
-            <AnimatePresence mode="wait" custom={direction}>
-              {activeTab === 'login' ? (
-                <motion.div
-                  key="login"
-                  custom={direction}
-                  variants={contentVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
+              {/* Divider */}
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-px bg-surface-divider" />
+                <span className="text-txt-muted text-xs">{t('auth.orContinueWith')}</span>
+                <div className="flex-1 h-px bg-surface-divider" />
+              </div>
+
+              {/* OAuth */}
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="ghost"
+                  loading={oauthLoading === 'google'}
+                  disabled={!!oauthLoading}
+                  onClick={() => { setOauthLoading('google'); authApi.googleLogin(); }}
                 >
-                  <LoginForm onSuccess={handleSuccess} />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="register"
-                  custom={direction}
-                  variants={contentVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                  Google
+                </Button>
+                <Button
+                  variant="ghost"
+                  loading={oauthLoading === 'github'}
+                  disabled={!!oauthLoading}
+                  onClick={() => { setOauthLoading('github'); authApi.githubLogin(); }}
                 >
-                  <RegisterForm onSuccess={handleSuccess} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                  GitHub
+                </Button>
+              </div>
 
-          {/* Divider */}
-          <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-surface-divider" />
-            <span className="text-txt-muted text-xs">or continue with</span>
-            <div className="flex-1 h-px bg-surface-divider" />
-          </div>
-
-          {/* OAuth */}
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="ghost"
-              loading={oauthLoading === 'google'}
-              disabled={!!oauthLoading}
-              onClick={() => { setOauthLoading('google'); authApi.googleLogin(); }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-              Google
-            </Button>
-            <Button
-              variant="ghost"
-              loading={oauthLoading === 'github'}
-              disabled={!!oauthLoading}
-              onClick={() => { setOauthLoading('github'); authApi.githubLogin(); }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-              GitHub
-            </Button>
-          </div>
-
-          {/* Guest */}
-          <Button variant="ghost" onClick={handleGuestLogin} loading={loading} className="w-full">
-            Continue as Guest
-          </Button>
+              {/* Guest */}
+              <Button variant="ghost" onClick={handleGuestLogin} loading={loading} className="w-full">
+                {t('auth.continueAsGuest')}
+              </Button>
+            </>
+          )}
         </GlassCard>
       </motion.div>
     </div>

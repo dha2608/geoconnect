@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { motion } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { activityApi } from '../api/activityApi';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
+import LoadMoreButton from '../components/common/LoadMoreButton';
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * ActivityPage — Dashboard with stats, heatmap, and recent activity
@@ -104,7 +105,7 @@ function getMonthLabels(weeks) {
 
 /* ── Components ───────────────────────────────────────────────────────────── */
 
-function StatCard({ icon, label, value, color }) {
+const StatCard = memo(function StatCard({ icon, label, value, color }) {
   return (
     <motion.div
       variants={cardVariants}
@@ -119,7 +120,7 @@ function StatCard({ icon, label, value, color }) {
       </div>
     </motion.div>
   );
-}
+});
 
 function ActivityHeatmap({ heatmapData }) {
   const weeks = useMemo(() => buildHeatmapGrid(heatmapData), [heatmapData]);
@@ -179,7 +180,7 @@ function ActivityHeatmap({ heatmapData }) {
   );
 }
 
-function ActivityItem({ item }) {
+const ActivityItem = memo(function ActivityItem({ item }) {
   const badge = TYPE_BADGE[item.type] || TYPE_BADGE.pin;
   const title = item.title || item.text?.slice(0, 80) || 'Untitled';
   const date = new Date(item.createdAt).toLocaleDateString('en-US', {
@@ -224,7 +225,7 @@ function ActivityItem({ item }) {
       )}
     </motion.div>
   );
-}
+});
 
 function LoadingGrid({ count = 4 }) {
   return (
@@ -248,6 +249,9 @@ export default function ActivityPage() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingHeatmap, setLoadingHeatmap] = useState(true);
   const [loadingActivities, setLoadingActivities] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [activityPage, setActivityPage] = useState(1);
+  const [hasMoreActivities, setHasMoreActivities] = useState(true);
 
   // Fetch all data on mount
   useEffect(() => {
@@ -265,7 +269,11 @@ export default function ActivityPage() {
 
     activityApi
       .getRecentActivity({ limit: 20 })
-      .then((res) => setActivities(res.data?.activities || []))
+      .then((res) => {
+        const data = res.data?.activities || [];
+        setActivities(data);
+        setHasMoreActivities(data.length === 20);
+      })
       .catch(() => setActivities([]))
       .finally(() => setLoadingActivities(false));
   }, []);
@@ -278,6 +286,21 @@ export default function ActivityPage() {
         year: 'numeric',
       })
     : null;
+
+  const handleLoadMoreActivities = useCallback(() => {
+    const nextPage = activityPage + 1;
+    setLoadingMore(true);
+    activityApi
+      .getRecentActivity({ page: nextPage, limit: 20 })
+      .then((res) => {
+        const data = res.data?.activities || [];
+        setActivities((prev) => [...prev, ...data]);
+        setActivityPage(nextPage);
+        setHasMoreActivities(data.length === 20);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMore(false));
+  }, [activityPage]);
 
   return (
     <motion.div
@@ -365,16 +388,25 @@ export default function ActivityPage() {
               ))}
             </div>
           ) : activities.length > 0 ? (
-            <motion.div
-              className="space-y-2"
-              variants={pageVariants}
-              initial="hidden"
-              animate="visible"
-            >
-              {activities.map((item) => (
-                <ActivityItem key={item._id} item={item} />
-              ))}
-            </motion.div>
+            <>
+              <motion.div
+                className="space-y-2"
+                variants={pageVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                {activities.map((item) => (
+                  <ActivityItem key={item._id} item={item} />
+                ))}
+              </motion.div>
+              <div className="mt-3">
+                <LoadMoreButton
+                  onClick={handleLoadMoreActivities}
+                  loading={loadingMore}
+                  hasMore={hasMoreActivities}
+                />
+              </div>
+            </>
           ) : (
             <EmptyState
               icon="📋"

@@ -2,10 +2,17 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import API from '../../api/axios';
 import { playNotificationSound, showBrowserNotification } from '../../utils/notificationSound';
 
-export const fetchNotifications = createAsyncThunk('notifications/fetch', async (_, { rejectWithValue }) => {
-  try { const res = await API.get('/users/notifications'); return res.data; }
-  catch (err) { return rejectWithValue(err.response?.data); }
-});
+export const fetchNotifications = createAsyncThunk(
+  'notifications/fetch',
+  async ({ page = 1, limit = 20 } = {}, { rejectWithValue }) => {
+    try {
+      const res = await API.get('/users/notifications', { params: { page, limit } });
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data);
+    }
+  },
+);
 
 export const markAsRead = createAsyncThunk('notifications/markRead', async (id, { rejectWithValue }) => {
   try { const res = await API.put(`/users/notifications/${id}/read`); return res.data; }
@@ -29,7 +36,14 @@ export const clearAllNotifications = createAsyncThunk('notifications/clearAll', 
 
 const notificationSlice = createSlice({
   name: 'notifications',
-  initialState: { items: [], unreadCount: 0, loading: false, latestNotification: null },
+  initialState: {
+    items: [],
+    unreadCount: 0,
+    loading: false,
+    latestNotification: null,
+    hasMore: true,
+    page: 1,
+  },
   reducers: {
     addNotification: (state, action) => {
       state.items.unshift(action.payload);
@@ -54,12 +68,32 @@ const notificationSlice = createSlice({
     clearLatestNotification: (state) => {
       state.latestNotification = null;
     },
+    hydrateNotifications: (state, action) => {
+      if (Array.isArray(action.payload) && action.payload.length > 0) {
+        state.items = action.payload;
+        state.unreadCount = action.payload.filter((n) => !n.read && !n.isRead).length;
+      }
+    },
   },
   extraReducers: (builder) => {
+    builder.addCase(fetchNotifications.pending, (state) => {
+      state.loading = true;
+    });
+    builder.addCase(fetchNotifications.rejected, (state) => {
+      state.loading = false;
+    });
     builder.addCase(fetchNotifications.fulfilled, (state, action) => {
-      const items = action.payload.data || action.payload.notifications || action.payload;
-      state.items = Array.isArray(items) ? items : [];
-      state.unreadCount = state.items.filter(n => !n.read).length;
+      state.loading = false;
+      const { page = 1, limit = 20 } = action.meta.arg || {};
+      const newItems = Array.isArray(action.payload.data) ? action.payload.data : [];
+      if (page === 1) {
+        state.items = newItems;
+      } else {
+        state.items.push(...newItems);
+      }
+      state.page = page;
+      state.hasMore = newItems.length === limit;
+      state.unreadCount = state.items.filter((n) => !n.read).length;
     });
     builder.addCase(markAsRead.fulfilled, (state, action) => {
       const id = action.payload.notification?._id || action.meta.arg;
@@ -89,5 +123,6 @@ export const {
   clearNotifications,
   setLatestNotification,
   clearLatestNotification,
+  hydrateNotifications,
 } = notificationSlice.actions;
 export default notificationSlice.reducer;

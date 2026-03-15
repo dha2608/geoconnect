@@ -1,10 +1,55 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
 import { collectionApi } from '../api/collectionApi';
+import { userApi } from '../api/userApi';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
+
+// ─── icons ──────────────────────────────────────────────────────────────────
+function ShareIcon(props) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+    </svg>
+  );
+}
+
+function UsersIcon(props) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+    </svg>
+  );
+}
+
+function LinkIcon(props) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
+function CopyIcon(props) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+    </svg>
+  );
+}
 
 // ─── animation variants ───────────────────────────────────────────────────────
 const pageVariants = {
@@ -42,8 +87,13 @@ function VisibilityBadge({ isPublic }) {
   );
 }
 
-function CollectionCard({ collection, onDelete, onExpand, isExpanded }) {
+function CollectionCard({ collection, onDelete, onExpand, onShare, isExpanded, currentUserId }) {
   const pinCount = collection.pins?.length ?? 0;
+  const collabCount = collection.collaborators?.length ?? 0;
+  const isOwner = collection.owner === currentUserId || collection.owner?._id === currentUserId;
+  const myRole = isOwner ? 'owner' : collection.collaborators?.find(
+    c => (c.user?._id || c.user) === currentUserId
+  )?.role || null;
   const cover =
     collection.coverImage ||
     collection.pins?.find((p) => p.images?.[0])?.images?.[0] ||
@@ -65,21 +115,50 @@ function CollectionCard({ collection, onDelete, onExpand, isExpanded }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
 
-        {/* Delete button */}
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(collection); }}
-          className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-black/50 backdrop-blur-sm text-white
-                     flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity
-                     hover:bg-red-500/80"
-          title="Delete collection"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
-               strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-            <path d="M10 11v6M14 11v6" />
-          </svg>
-        </button>
+        {/* Top-right actions */}
+        <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {(isOwner || myRole === 'editor') && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onShare(collection); }}
+              className="w-7 h-7 rounded-lg bg-black/50 backdrop-blur-sm text-white
+                         flex items-center justify-center hover:bg-accent-primary/80"
+              title="Share & Collaborate"
+            >
+              <ShareIcon />
+            </button>
+          )}
+          {isOwner && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(collection); }}
+              className="w-7 h-7 rounded-lg bg-black/50 backdrop-blur-sm text-white
+                         flex items-center justify-center hover:bg-red-500/80"
+              title="Delete collection"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+                   strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                <path d="M10 11v6M14 11v6" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Bottom-left badges */}
+        <div className="absolute bottom-2 left-2 flex gap-1.5">
+          {collabCount > 0 && (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/50 backdrop-blur-sm
+                             text-white text-[10px] font-medium">
+              <UsersIcon width="10" height="10" /> {collabCount}
+            </span>
+          )}
+          {collection.shareToken && (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/50 backdrop-blur-sm
+                             text-white text-[10px] font-medium">
+              <LinkIcon width="10" height="10" /> Shared
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Info row */}
@@ -88,7 +167,14 @@ function CollectionCard({ collection, onDelete, onExpand, isExpanded }) {
           <span className="text-xl">{collection.emoji}</span>
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-txt-primary text-sm font-semibold truncate">{collection.name}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-txt-primary text-sm font-semibold truncate">{collection.name}</p>
+            {!isOwner && myRole && (
+              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-accent-secondary/15 text-accent-secondary capitalize">
+                {myRole}
+              </span>
+            )}
+          </div>
           <p className="text-txt-muted text-xs">{pinCount} {pinCount === 1 ? 'pin' : 'pins'}</p>
         </div>
         <VisibilityBadge isPublic={collection.isPublic} />
@@ -314,6 +400,324 @@ function DeleteModal({ collection, onClose, onConfirm }) {
   );
 }
 
+// ─── share & collaborate modal ────────────────────────────────────────────────
+function ShareModal({ collection, currentUserId, onClose, onUpdate }) {
+  const isOwner = collection.owner === currentUserId || collection.owner?._id === currentUserId;
+  const [tab, setTab] = useState('share'); // 'share' | 'collaborators'
+  const [shareLink, setShareLink] = useState(collection.shareToken || '');
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // collaborator add
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [addRole, setAddRole] = useState('viewer');
+
+  const collaborators = collection.collaborators || [];
+
+  const fullShareUrl = shareLink
+    ? `${window.location.origin}/collections/shared/${shareLink}`
+    : '';
+
+  const handleGenerateLink = async () => {
+    setLinkLoading(true);
+    try {
+      const res = await collectionApi.generateShareLink(collection._id);
+      const token = res.data.data.shareToken;
+      setShareLink(token);
+      onUpdate({ ...collection, shareToken: token });
+      toast.success('Share link generated');
+    } catch {
+      toast.error('Failed to generate link');
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const handleRevokeLink = async () => {
+    setLinkLoading(true);
+    try {
+      await collectionApi.revokeShareLink(collection._id);
+      setShareLink('');
+      onUpdate({ ...collection, shareToken: null });
+      toast.success('Share link revoked');
+    } catch {
+      toast.error('Failed to revoke link');
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(fullShareUrl);
+    setCopied(true);
+    toast.success('Link copied');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSearchUsers = useCallback(async (q) => {
+    if (q.length < 2) { setSearchResults([]); return; }
+    setSearchLoading(true);
+    try {
+      const res = await userApi.searchUsers(q);
+      const users = res.data.data || res.data || [];
+      // Filter out owner and existing collaborators
+      const existing = new Set(collaborators.map(c => c.user?._id || c.user));
+      existing.add(currentUserId);
+      setSearchResults(users.filter(u => !existing.has(u._id)));
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [collaborators, currentUserId]);
+
+  useEffect(() => {
+    const t = setTimeout(() => handleSearchUsers(searchQuery), 400);
+    return () => clearTimeout(t);
+  }, [searchQuery, handleSearchUsers]);
+
+  const handleAddCollaborator = async (userId) => {
+    try {
+      const res = await collectionApi.addCollaborator(collection._id, { userId, role: addRole });
+      const updated = res.data.data;
+      onUpdate(updated);
+      setSearchQuery('');
+      setSearchResults([]);
+      toast.success('Collaborator added');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to add');
+    }
+  };
+
+  const handleUpdateRole = async (userId, role) => {
+    try {
+      const res = await collectionApi.updateCollaboratorRole(collection._id, userId, { role });
+      onUpdate(res.data.data);
+      toast.success('Role updated');
+    } catch {
+      toast.error('Failed to update role');
+    }
+  };
+
+  const handleRemoveCollaborator = async (userId) => {
+    try {
+      await collectionApi.removeCollaborator(collection._id, userId);
+      const updated = {
+        ...collection,
+        collaborators: collaborators.filter(c => (c.user?._id || c.user) !== userId),
+      };
+      onUpdate(updated);
+      toast.success('Collaborator removed');
+    } catch {
+      toast.error('Failed to remove');
+    }
+  };
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        className="relative glass rounded-xl border border-surface-divider w-full max-w-md p-5 shadow-2xl max-h-[80vh] flex flex-col"
+        initial={{ scale: 0.92, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1, transition: { type: 'spring', damping: 22, stiffness: 300 } }}
+        exit={{ scale: 0.92, opacity: 0 }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-txt-primary font-bold text-lg">Share &amp; Collaborate</h2>
+          <button onClick={onClose} className="text-txt-muted hover:text-txt-primary transition-colors">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                 strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Tab bar */}
+        <div className="flex gap-1 mb-4 p-0.5 bg-surface-hover rounded-lg">
+          {['share', 'collaborators'].map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-md capitalize transition-all
+                ${tab === t
+                  ? 'bg-base text-txt-primary shadow-sm'
+                  : 'text-txt-muted hover:text-txt-secondary'
+                }`}
+            >
+              {t === 'share' ? 'Share Link' : `Collaborators (${collaborators.length})`}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {/* ── Share Link tab ── */}
+          {tab === 'share' && (
+            <div className="flex flex-col gap-3">
+              <p className="text-txt-muted text-xs">
+                Anyone with the link can view and optionally join as a collaborator.
+              </p>
+              {shareLink ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <input
+                      readOnly
+                      value={fullShareUrl}
+                      className="flex-1 bg-surface-hover border border-surface-divider rounded-lg px-3 py-2
+                                 text-txt-primary text-xs font-mono truncate"
+                    />
+                    <button
+                      onClick={handleCopy}
+                      className="px-3 py-2 rounded-lg bg-accent-primary text-white text-xs font-semibold
+                                 hover:bg-accent-primary/90 flex items-center gap-1.5 transition-colors"
+                    >
+                      <CopyIcon /> {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                  {isOwner && (
+                    <button
+                      onClick={handleRevokeLink}
+                      disabled={linkLoading}
+                      className="text-red-400 text-xs hover:text-red-300 self-start disabled:opacity-60"
+                    >
+                      {linkLoading ? 'Revoking…' : 'Revoke link'}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={handleGenerateLink}
+                  disabled={linkLoading || !isOwner}
+                  className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-accent-primary text-white
+                             text-sm font-semibold hover:bg-accent-primary/90 disabled:opacity-60 transition-colors"
+                >
+                  <LinkIcon /> {linkLoading ? 'Generating…' : 'Generate Share Link'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── Collaborators tab ── */}
+          {tab === 'collaborators' && (
+            <div className="flex flex-col gap-3">
+              {/* Search to add */}
+              {isOwner && (
+                <div>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search users to add…"
+                      className="flex-1 bg-surface-hover border border-surface-divider rounded-lg px-3 py-2
+                                 text-txt-primary placeholder-txt-muted text-sm focus:outline-none
+                                 focus:border-accent-primary transition-colors"
+                    />
+                    <select
+                      value={addRole}
+                      onChange={(e) => setAddRole(e.target.value)}
+                      className="bg-surface-hover border border-surface-divider rounded-lg px-2 py-2
+                                 text-txt-primary text-xs focus:outline-none focus:border-accent-primary"
+                    >
+                      <option value="viewer">Viewer</option>
+                      <option value="editor">Editor</option>
+                    </select>
+                  </div>
+                  {/* Search results */}
+                  {searchLoading && <p className="text-txt-muted text-xs py-1">Searching…</p>}
+                  {searchResults.length > 0 && (
+                    <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
+                      {searchResults.slice(0, 5).map((u) => (
+                        <div key={u._id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-surface-hover">
+                          <img
+                            src={u.avatar || '/default-avatar.png'}
+                            alt={u.name}
+                            className="w-7 h-7 rounded-full object-cover"
+                          />
+                          <span className="flex-1 text-txt-primary text-sm truncate">{u.name}</span>
+                          <button
+                            onClick={() => handleAddCollaborator(u._id)}
+                            className="px-2 py-1 rounded bg-accent-primary text-white text-xs font-semibold
+                                       hover:bg-accent-primary/90 transition-colors"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Current collaborators list */}
+              {collaborators.length === 0 ? (
+                <p className="text-txt-muted text-xs text-center py-4">No collaborators yet</p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {collaborators.map((collab) => {
+                    const u = collab.user || {};
+                    const userId = u._id || collab.user;
+                    return (
+                      <div key={userId} className="flex items-center gap-2 px-2 py-2 rounded-lg bg-surface-hover/50">
+                        <img
+                          src={u.avatar || '/default-avatar.png'}
+                          alt={u.name || 'User'}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-txt-primary text-sm font-medium truncate">{u.name || 'User'}</p>
+                          <p className="text-txt-muted text-[10px] capitalize">{collab.role}</p>
+                        </div>
+                        {isOwner && (
+                          <div className="flex items-center gap-1.5">
+                            <select
+                              value={collab.role}
+                              onChange={(e) => handleUpdateRole(userId, e.target.value)}
+                              className="bg-surface-hover border border-surface-divider rounded px-1.5 py-0.5
+                                         text-txt-primary text-[10px] focus:outline-none"
+                            >
+                              <option value="viewer">Viewer</option>
+                              <option value="editor">Editor</option>
+                            </select>
+                            <button
+                              onClick={() => handleRemoveCollaborator(userId)}
+                              className="text-red-400 hover:text-red-300 transition-colors"
+                              title="Remove"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                   strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                        {!isOwner && userId === currentUserId && (
+                          <button
+                            onClick={() => handleRemoveCollaborator(userId)}
+                            className="text-red-400 hover:text-red-300 text-xs"
+                          >
+                            Leave
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ─── skeleton cards ───────────────────────────────────────────────────────────
 function CollectionSkeleton() {
   return (
@@ -338,6 +742,7 @@ export default function CollectionsPage() {
   const [loading, setLoading]         = useState(true);
   const [showCreate, setShowCreate]   = useState(false);
   const [toDelete, setToDelete]       = useState(null);   // collection object
+  const [toShare, setToShare]         = useState(null);    // collection object for share modal
   const [expandedId, setExpandedId]   = useState(null);
   const [error, setError]             = useState('');
 
@@ -370,6 +775,11 @@ export default function CollectionsPage() {
 
   const handleExpand = (id) => {
     setExpandedId((prev) => (prev === id ? null : id));
+  };
+
+  const handleShareUpdate = (updated) => {
+    setCollections((prev) => prev.map((c) => c._id === updated._id ? updated : c));
+    setToShare(updated);
   };
 
   return (
@@ -454,7 +864,9 @@ export default function CollectionsPage() {
                   collection={col}
                   onDelete={setToDelete}
                   onExpand={handleExpand}
+                  onShare={setToShare}
                   isExpanded={expandedId === col._id}
+                  currentUserId={user?._id}
                 />
               ))}
             </AnimatePresence>
@@ -472,6 +884,14 @@ export default function CollectionsPage() {
             collection={toDelete}
             onClose={() => setToDelete(null)}
             onConfirm={handleDelete}
+          />
+        )}
+        {toShare && (
+          <ShareModal
+            collection={toShare}
+            currentUserId={user?._id}
+            onClose={() => setToShare(null)}
+            onUpdate={handleShareUpdate}
           />
         )}
       </AnimatePresence>

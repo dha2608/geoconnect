@@ -43,7 +43,7 @@ export const deletePin = createAsyncThunk('pins/delete', async (id, { rejectWith
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
-export const togglePinLike = createAsyncThunk('pins/toggleLike', async (id, { rejectWithValue }) => {
+export const togglePinLike = createAsyncThunk('pins/toggleLike', async ({ id, userId }, { rejectWithValue }) => {
   try { const res = await pinApi.toggleLike(id); return res.data; }
   catch (err) { return rejectWithValue(err.response?.data); }
 });
@@ -108,10 +108,30 @@ const pinSlice = createSlice({
     builder.addCase(deletePin.fulfilled, (state, action) => {
       pinsAdapter.removeOne(state, action.payload);
     });
+    builder.addCase(togglePinLike.pending, (state, action) => {
+      const { id, userId } = action.meta.arg;
+      const toggle = (pin) => {
+        if (!pin) return;
+        const likes = pin.likes || [];
+        pin.likes = likes.includes(userId) ? likes.filter((l) => l !== userId) : [...likes, userId];
+      };
+      toggle(state.entities[id]);
+      if (state.selectedPin?._id === id) toggle(state.selectedPin);
+    });
     builder.addCase(togglePinLike.fulfilled, (state, action) => {
       const updated = action.payload.pin || action.payload;
       pinsAdapter.upsertOne(state, updated);
       if (state.selectedPin?._id === updated._id) state.selectedPin = updated;
+    });
+    builder.addCase(togglePinLike.rejected, (state, action) => {
+      const { id, userId } = action.meta.arg;
+      const toggle = (pin) => {
+        if (!pin) return;
+        const likes = pin.likes || [];
+        pin.likes = likes.includes(userId) ? likes.filter((l) => l !== userId) : [...likes, userId];
+      };
+      toggle(state.entities[id]);
+      if (state.selectedPin?._id === id) toggle(state.selectedPin);
     });
     builder.addCase(searchPins.fulfilled, (state, action) => {
       const items = action.payload.data || action.payload.pins || action.payload;
@@ -150,6 +170,11 @@ export const selectPinFilterCategory = (state) => state.pins.filters.category;
 export const selectFilteredPins = createSelector(
   [selectAllPins, selectPinFilterCategory],
   (pins, category) => category === 'all' ? pins : pins.filter((p) => p.category === category)
+);
+
+export const selectPinsByCreator = (userId) => createSelector(
+  [selectAllPins],
+  (pins) => pins.filter((p) => (p.createdBy?._id ?? p.createdBy) === userId)
 );
 
 export default pinSlice.reducer;

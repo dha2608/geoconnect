@@ -2,16 +2,19 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { setActivePanel, openModal } from '../../features/ui/uiSlice';
-
-const navItems = [
-  { id: 'feed', label: 'Feed', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-  { id: 'explore', label: 'Explore', icon: 'M12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2ZM16.24 7.76L14.12 14.12L7.76 16.24L9.88 9.88Z', path: '/explore' },
-  { id: 'create', label: 'Create', icon: 'M12 4v16m8-8H4', isAction: true },
-  { id: 'events', label: 'Events', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-  { id: 'profile', label: 'Profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function MobileNav() {
+  const { t } = useTranslation();
+
+  const navItems = [
+    { id: 'feed', label: t('nav.feed'), icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+    { id: 'explore', label: t('nav.explore'), icon: 'M12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2ZM16.24 7.76L14.12 14.12L7.76 16.24L9.88 9.88Z', path: '/explore' },
+    { id: 'create', label: t('nav.create'), icon: 'M12 4v16m8-8H4', isAction: true },
+    { id: 'events', label: t('nav.events'), icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+    { id: 'profile', label: t('nav.profile'), icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+  ];
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,7 +66,7 @@ export default function MobileNav() {
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
                 <circle cx="12" cy="9" r="2.5" />
               </svg>
-              <span className="text-[10px]">Pin</span>
+              <span className="text-[10px]">{t('pins.pin', 'Pin')}</span>
             </button>
 
             <div className="w-px bg-surface-divider self-stretch" />
@@ -78,7 +81,7 @@ export default function MobileNav() {
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <span className="text-[10px]">Event</span>
+              <span className="text-[10px]">{t('events.event', 'Event')}</span>
             </button>
           </div>
         </>

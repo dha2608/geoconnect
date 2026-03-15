@@ -28,7 +28,13 @@ import { format, isPast, isFuture } from 'date-fns';
 import Button        from '../ui/Button';
 import { EmptyState } from '../ui';
 
-import { fetchViewportEvents, selectAllEvents, selectEventsLoading }    from '../../features/events/eventSlice';
+import {
+  fetchViewportEvents,
+  selectAllEvents,
+  selectEventsLoading,
+  fetchPopularTags,
+  selectPopularTags,
+} from '../../features/events/eventSlice';
 import { openModal, closePanel }  from '../../features/ui/uiSlice';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -171,6 +177,21 @@ function EventCard({ event, onClick }) {
               <span className="text-[11px] text-slate-700">· {capacity - count} spots left</span>
             )}
           </div>
+
+          {/* Tags */}
+          {event.tags?.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {event.tags.slice(0, 3).map((tag) => (
+                <span key={tag} className="px-1.5 py-0.5 rounded-full text-[9px]
+                                           bg-blue-500/10 text-blue-400/70 border border-blue-500/15">
+                  #{tag}
+                </span>
+              ))}
+              {event.tags.length > 3 && (
+                <span className="text-[9px] text-slate-600">+{event.tags.length - 3}</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </motion.article>
@@ -190,13 +211,18 @@ export default function EventListPanel() {
   const currentUser = useSelector((s) => s.auth?.user);
 
   const [activeTab, setActiveTab] = useState('upcoming');
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+
+  const popularTags = useSelector(selectPopularTags);
 
   const isVisible = activePanel === 'events';
 
   // Fetch events when panel opens (or viewport changes while open)
   useEffect(() => {
     if (isVisible && viewport) {
-      // Convert Redux viewport {north,south,east,west} → server format {swLat,swLng,neLat,neLng}
       const serverBounds = {
         swLat: viewport.south,
         swLng: viewport.west,
@@ -207,9 +233,20 @@ export default function EventListPanel() {
     }
   }, [isVisible, viewport, dispatch]);
 
+  // Fetch popular tags when panel opens
+  useEffect(() => {
+    if (isVisible) dispatch(fetchPopularTags());
+  }, [isVisible, dispatch]);
+
   // Reset to Upcoming tab each time the panel opens
   useEffect(() => {
-    if (isVisible) setActiveTab('upcoming');
+    if (isVisible) {
+      setActiveTab('upcoming');
+      setSelectedTags([]);
+      setDateFrom('');
+      setDateTo('');
+      setShowFilters(false);
+    }
   }, [isVisible]);
 
   // ── Tab filtering ──────────────────────────────────────────────────────────
@@ -217,29 +254,52 @@ export default function EventListPanel() {
 
   const filteredEvents = (() => {
     const myId = currentUser?._id;
+    let result;
 
     switch (activeTab) {
       case 'upcoming':
-        return [...events]
+        result = [...events]
           .filter((e) => !e.endTime || new Date(e.endTime) > now)
           .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+        break;
 
       case 'nearby':
-        // All non-ended events; spatial sorting happens server-side via viewport fetch
-        return events.filter((e) => !e.endTime || new Date(e.endTime) > now);
+        result = events.filter((e) => !e.endTime || new Date(e.endTime) > now);
+        break;
 
       case 'mine':
         if (!myId) return [];
-        return events.filter(
+        result = events.filter(
           (e) =>
             e.organizer?._id === myId ||
             e.organizer      === myId ||
             e.attendees?.some((a) => (a._id ?? a) === myId),
         );
+        break;
 
       default:
-        return events;
+        result = [...events];
     }
+
+    // Tag filter
+    if (selectedTags.length > 0) {
+      result = result.filter((e) =>
+        e.tags?.some((t) => selectedTags.includes(t)),
+      );
+    }
+
+    // Date range filter
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      result = result.filter((e) => new Date(e.startTime) >= from);
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      result = result.filter((e) => new Date(e.startTime) <= to);
+    }
+
+    return result;
   })();
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -254,6 +314,20 @@ export default function EventListPanel() {
     (event) => dispatch(openModal({ type: 'eventDetail', data: { eventId: event._id } })),
     [dispatch],
   );
+
+  const toggleTag = useCallback((tag) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setSelectedTags([]);
+    setDateFrom('');
+    setDateTo('');
+  }, []);
+
+  const activeFilterCount = selectedTags.length + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -333,6 +407,107 @@ export default function EventListPanel() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* ── Filters ──────────────────────────────────────────────── */}
+          <div className="flex-shrink-0 px-4 pt-2">
+            <button
+              onClick={() => setShowFilters((p) => !p)}
+              className="flex items-center gap-1.5 text-[11px] font-medium
+                         text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              <span>🔽</span>
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold
+                                 bg-blue-500/20 text-blue-300">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-2 pb-1 space-y-2.5">
+                    {/* Tag chips */}
+                    {popularTags?.length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-slate-600 font-medium uppercase tracking-wider mb-1.5">
+                          Tags
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {popularTags.map((t) => {
+                            const tag = t._id ?? t;
+                            const active = selectedTags.includes(tag);
+                            return (
+                              <button
+                                key={tag}
+                                onClick={() => toggleTag(tag)}
+                                className={[
+                                  'px-2 py-0.5 rounded-full text-[10px] font-medium transition-all border',
+                                  active
+                                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                                    : 'bg-[var(--glass-bg)] text-slate-500 border-[var(--glass-border)] hover:text-slate-300',
+                                ].join(' ')}
+                              >
+                                #{tag} {t.count != null && <span className="text-slate-600">({t.count})</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Date range */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-600 font-medium uppercase tracking-wider">
+                          From
+                        </label>
+                        <input
+                          type="date"
+                          value={dateFrom}
+                          onChange={(e) => setDateFrom(e.target.value)}
+                          className="w-full mt-1 px-2 py-1.5 rounded-lg text-[11px]
+                                     bg-[var(--glass-bg)] border border-[var(--glass-border)]
+                                     text-slate-300 focus:outline-none focus:border-blue-500/40"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-600 font-medium uppercase tracking-wider">
+                          To
+                        </label>
+                        <input
+                          type="date"
+                          value={dateTo}
+                          onChange={(e) => setDateTo(e.target.value)}
+                          className="w-full mt-1 px-2 py-1.5 rounded-lg text-[11px]
+                                     bg-[var(--glass-bg)] border border-[var(--glass-border)]
+                                     text-slate-300 focus:outline-none focus:border-blue-500/40"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Clear filters */}
+                    {activeFilterCount > 0 && (
+                      <button
+                        onClick={clearFilters}
+                        className="text-[10px] text-red-400/70 hover:text-red-400 transition-colors"
+                      >
+                        Clear all filters
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* ── Event count line ────────────────────────────────────────── */}
