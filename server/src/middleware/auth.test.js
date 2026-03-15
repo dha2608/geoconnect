@@ -59,7 +59,13 @@ beforeEach(() => {
   // Happy-path defaults – individual tests override as needed.
   isTokenBlacklisted.mockResolvedValue(false);
   jwt.verify.mockReturnValue(DECODED);
-  User.findById.mockResolvedValue(FAKE_USER);
+
+  // User.findById().select().lean() chain — mock must support chaining
+  const mockQuery = {
+    select: vi.fn().mockReturnThis(),
+    lean: vi.fn().mockResolvedValue(FAKE_USER),
+  };
+  User.findById.mockReturnValue(mockQuery);
 });
 
 afterEach(() => {
@@ -100,14 +106,17 @@ describe('authenticate', () => {
 
     expect(jwt.verify).toHaveBeenCalledWith(VALID_TOKEN, 'test-secret');
     expect(User.findById).toHaveBeenCalledWith(DECODED.userId);
-    expect(req.user).toBe(FAKE_USER);
+    expect(req.user).toEqual(FAKE_USER);
     expect(req.token).toBe(VALID_TOKEN);
     expect(next).toHaveBeenCalledOnce();
     expect(res.status).not.toHaveBeenCalled();
   });
 
   it('returns 401 "User not found" when the decoded userId has no matching user', async () => {
-    User.findById.mockResolvedValue(null);
+    User.findById.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue(null),
+    });
     const { req, res, next } = makeMocks(`Bearer ${VALID_TOKEN}`);
 
     await authenticate(req, res, next);
@@ -175,12 +184,15 @@ describe('optionalAuth', () => {
     await optionalAuth(req, res, next);
 
     expect(jwt.verify).toHaveBeenCalledWith(VALID_TOKEN, 'test-secret');
-    expect(req.user).toBe(FAKE_USER);
+    expect(req.user).toEqual(FAKE_USER);
     expect(next).toHaveBeenCalledOnce();
   });
 
   it('sets req.user = null and calls next() when the decoded userId has no matching user', async () => {
-    User.findById.mockResolvedValue(null);
+    User.findById.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockResolvedValue(null),
+    });
     const { req, res, next } = makeMocks(`Bearer ${VALID_TOKEN}`);
 
     await optionalAuth(req, res, next);
