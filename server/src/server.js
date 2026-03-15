@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import crypto from 'crypto';
+import compression from 'compression';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -34,6 +35,7 @@ import reportRoutes from './routes/reports.js';
 import discoverRoutes from './routes/discover.js';
 import activityRoutes from './routes/activity.js';
 import collectionRoutes from './routes/collections.js';
+import adminRoutes from './routes/admin.js';
 
 dotenv.config();
 
@@ -68,6 +70,7 @@ app.use((req, res, next) => {
 });
 
 // Middleware
+app.use(compression());    // gzip/brotli response compression
 app.use(helmet());
 app.use(mongoSanitize());  // Sanitize data against NoSQL injection
 app.use(xss());            // Prevent XSS attacks
@@ -128,6 +131,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/discover', discoverRoutes);
 app.use('/api/geocode', geocodeRoutes);
 app.use('/api/collections', collectionRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler — catch all unmatched routes
 app.use((req, res) => {

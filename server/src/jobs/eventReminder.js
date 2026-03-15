@@ -6,23 +6,27 @@ import { sendNotification } from '../socket/handler.js';
 /**
  * Event Reminder Job
  * ─────────────────────────────────────────────────────────────────────────────
- * Runs every 15 minutes. Finds events starting in the next 45–60 minute window
- * and sends `event_reminder` notifications to all attendees who haven't been
- * notified yet (de-duplicated by checking existing notifications).
+ * Runs every 5 minutes. Checks each event's configurable `reminders` array
+ * and sends `event_reminder` notifications to attendees at the right time.
  *
- * @param {import('socket.io').Server} io — Socket.io server instance for real-time push
+ * Each event can have multiple reminders (e.g., 60min, 30min, 15min before).
+ * Tracks which reminders have been sent via `remindersSent` array.
+ *
+ * Falls back to 60-minute reminder if no reminders configured.
+ *
+ * @param {import('socket.io').Server} io — Socket.io server instance
  */
 export function startEventReminderJob(io) {
-  // Run every 15 minutes: :00, :15, :30, :45
-  cron.schedule('*/15 * * * *', async () => {
+  // Run every 5 minutes for finer granularity
+  cron.schedule('*/5 * * * *', async () => {
     try {
       const now = new Date();
-      const from = new Date(now.getTime() + 45 * 60 * 1000); // 45 min from now
-      const to = new Date(now.getTime() + 60 * 60 * 1000);   // 60 min from now
+      // Look ahead window: events starting in the next 24 hours
+      const lookAhead = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-      // Find upcoming events in the reminder window with attendees
+      // Find upcoming events with attendees
       const events = await Event.find({
-        startTime: { $gte: from, $lte: to },
+        startTime: { $gte: now, $lte: lookAhead },
         attendees: { $exists: true, $ne: [] },
       }).populate('organizer', 'name avatar');
 
@@ -31,50 +35,99 @@ export function startEventReminderJob(io) {
       let sentCount = 0;
 
       for (const event of events) {
-        for (const attendeeId of event.attendees) {
-          // Check if we already sent a reminder for this event+attendee
-          const existing = await Notification.findOne({
-            recipient: attendeeId,
-            type: 'event_reminder',
-            'data.eventId': event._id.toString(),
-          });
+        // Determine which reminders to check
+        const reminders = event.reminders?.length > 0
+          ? event.reminders
+          : [{ minutesBefore: 60 }]; // Default: 1 hour before
 
-          if (existing) continue; // Already notified
+        for (const reminder of reminders) {
+          const { minutesBefore } = reminder;
 
-          // Create notification
-          const notification = await Notification.create({
-            recipient: attendeeId,
-            sender: event.organizer._id,
-            type: 'event_reminder',
-            data: {
-              eventId: event._id.toString(),
-              eventTitle: event.title,
-              startTime: event.startTime.toISOString(),
-              preview: `${event.title} starts in about 1 hour`,
+          // Check if this reminder was already sent
+          const alreadySent = event.remindersSent?.some(
+            (r) => r.minutesBefore === minutesBefore
+          );
+          if (alreadySent) continue;
+
+          // Calculate the reminder trigger time
+          const triggerTime = new Date(event.startTime.getTime() - minutesBefore * 60 * 1000);
+
+          // Check if we're within the 5-minute window for this reminder
+          const diffMs = triggerTime.getTime() - now.getTime();
+          if (diffMs > 5 * 60 * 1000 || diffMs < -5 * 60 * 1000) continue;
+
+          // Time to send this reminder!
+          const timeLabel = formatTimeBefore(minutesBefore);
+
+          for (const attendeeId of event.attendees) {
+            // De-duplicate: check if notification already exists
+            const existing = await Notification.findOne({
+              recipient: attendeeId,
+              type: 'event_reminder',
+              'data.eventId': event._id.toString(),
+              'data.minutesBefore': minutesBefore,
+            });
+
+            if (existing) continue;
+
+            const notification = await Notification.create({
+              recipient: attendeeId,
+              sender: event.organizer._id,
+              type: 'event_reminder',
+              data: {
+                eventId: event._id.toString(),
+                eventTitle: event.title,
+                startTime: event.startTime.toISOString(),
+                minutesBefore,
+                preview: `${event.title} starts in ${timeLabel}`,
+              },
+            });
+
+            await notification.populate('sender', 'name avatar');
+
+            const payload = {
+              ...notification.toObject(),
+              read: notification.isRead,
+            };
+
+            sendNotification(io, attendeeId, payload);
+            sentCount++;
+          }
+
+          // Mark this reminder as sent on the event
+          await Event.findByIdAndUpdate(event._id, {
+            $push: {
+              remindersSent: {
+                minutesBefore,
+                sentAt: now,
+              },
             },
           });
-
-          // Populate sender for real-time payload
-          await notification.populate('sender', 'name avatar');
-
-          const payload = {
-            ...notification.toObject(),
-            read: notification.isRead,
-          };
-
-          // Push via Socket.io
-          sendNotification(io, attendeeId, payload);
-          sentCount++;
         }
       }
 
       if (sentCount > 0) {
-        console.log(`[EventReminder] Sent ${sentCount} reminder(s) for ${events.length} event(s)`);
+        console.log(`[EventReminder] Sent ${sentCount} reminder(s)`);
       }
     } catch (error) {
       console.error('[EventReminder] Job error:', error.message);
     }
   });
 
-  console.log('[EventReminder] Cron job scheduled (every 15 min)');
+  console.log('[EventReminder] Cron job scheduled (every 5 min)');
+}
+
+/**
+ * Format minutes into human-readable time label
+ */
+function formatTimeBefore(minutes) {
+  if (minutes < 60) return `${minutes} minutes`;
+  if (minutes === 60) return '1 hour';
+  if (minutes < 1440) {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours} hours`;
+  }
+  const days = Math.floor(minutes / 1440);
+  return days === 1 ? '1 day' : `${days} days`;
 }

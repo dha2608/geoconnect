@@ -87,23 +87,28 @@ export const getActivityStats = asyncHandler(async (req, res) => {
 export const getRecentActivity = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const limit = parseInt(req.query.limit, 10) || 20;
+  const page  = parseInt(req.query.page,  10) || 1;
+  const skip  = (page - 1) * limit;
+
+  // Fetch enough items from each collection to cover all pages up to current
+  const fetchLimit = skip + limit;
 
   const [pins, posts, events] = await Promise.all([
     Pin.find({ createdBy: userId })
       .sort({ createdAt: -1 })
-      .limit(10)
+      .limit(fetchLimit)
       .select('title description category address images createdAt likes checkIns')
       .lean(),
 
     Post.find({ author: userId })
       .sort({ createdAt: -1 })
-      .limit(10)
+      .limit(fetchLimit)
       .select('text images address createdAt likes comments')
       .lean(),
 
     Event.find({ organizer: userId })
       .sort({ createdAt: -1 })
-      .limit(5)
+      .limit(fetchLimit)
       .select('title description category address coverImage startTime createdAt attendees')
       .lean(),
   ]);
@@ -114,7 +119,7 @@ export const getRecentActivity = asyncHandler(async (req, res) => {
     ...events.map((e) => ({ ...e, type: 'event' })),
   ]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, limit);
+    .slice(skip, skip + limit);
 
   return ok(res, { activities });
 });

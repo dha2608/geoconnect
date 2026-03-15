@@ -32,7 +32,8 @@ export const getPinsByViewport = asyncHandler(async (req, res) => {
   // Use pagination limit (max 100 from middleware) — viewport bounds already constrain results
   const pins = await Pin.find(filter)
     .populate('createdBy', 'name avatar')
-    .limit(req.pagination.limit);
+    .limit(req.pagination.limit)
+    .lean();
 
   return ok(res, pins);
 });
@@ -49,14 +50,15 @@ export const getNearbyPins = asyncHandler(async (req, res) => {
         $maxDistance: parseFloat(radius) * 1000,
       },
     },
-  }).populate('createdBy', 'name avatar').limit(req.pagination.limit);
+  }).populate('createdBy', 'name avatar').limit(req.pagination.limit).lean();
 
   return ok(res, pins);
 });
 
 export const getPin = asyncHandler(async (req, res) => {
   const pin = await Pin.findById(req.params.id)
-    .populate('createdBy', 'name avatar');
+    .populate('createdBy', 'name avatar')
+    .lean();
   if (!pin) throw new AppError(ERR.PIN_NOT_FOUND);
   return ok(res, pin);
 });
@@ -237,7 +239,8 @@ export const searchPins = asyncHandler(async (req, res) => {
       .populate('createdBy', 'name avatar')
       .sort(sortOpts)
       .skip(skip)
-      .limit(limit),
+      .limit(limit)
+      .lean(),
     Pin.countDocuments(query),
   ]);
 
@@ -249,7 +252,8 @@ export const getSavedPins = asyncHandler(async (req, res) => {
   if (!user) throw AppError.notFound('User not found');
   const pins = await Pin.find({ _id: { $in: user.savedPins || [] } })
     .populate('creator', 'username name avatar')
-    .limit(50);
+    .limit(50)
+    .lean();
   return ok(res, pins);
 });
 

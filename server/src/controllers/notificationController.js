@@ -3,7 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError, ERR } from '../utils/errors.js';
 import { ok, paginated, noContent, message } from '../utils/response.js';
 
-// Normalize a Mongoose notification doc for the client.
+// Normalize a notification doc for the client.
 // The model stores `isRead`; the client Redux slice reads `n.read`.
 const normalize = (doc) => {
   const obj = doc.toObject ? doc.toObject() : { ...doc };
@@ -20,11 +20,14 @@ export const getNotifications = asyncHandler(async (req, res) => {
       .populate('sender', 'name avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit),
+      .limit(limit)
+      .lean(),
     Notification.countDocuments(filter),
   ]);
 
-  return paginated(res, notifications.map(normalize), { page, limit, total });
+  // With .lean(), docs are already plain objects — just add `read` alias
+  const normalized = notifications.map((n) => ({ ...n, read: n.isRead }));
+  return paginated(res, normalized, { page, limit, total });
 });
 
 // PUT /api/users/notifications/:id/read

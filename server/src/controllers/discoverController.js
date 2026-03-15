@@ -20,7 +20,7 @@ const CATEGORY_ICONS = {
   other: '📍',
 };
 
-// Shared $lookup + $project stages to populate createdBy with name/avatar only
+// Shared $lookup + $project stages to populate createdBy with safe public fields only
 const createdByLookup = [
   {
     $lookup: {
@@ -28,19 +28,12 @@ const createdByLookup = [
       localField: 'createdBy',
       foreignField: '_id',
       as: 'createdBy',
+      pipeline: [
+        { $project: { _id: 1, name: 1, avatar: 1 } },
+      ],
     },
   },
   { $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } },
-  {
-    $project: {
-      'createdBy.password': 0,
-      'createdBy.email': 0,
-      'createdBy.followers': 0,
-      'createdBy.following': 0,
-      'createdBy.savedPins': 0,
-      'createdBy.settings': 0,
-    },
-  },
 ];
 
 // ─── GET /api/discover/recommended ───────────────────────────────────────────
@@ -113,7 +106,7 @@ export const getRecommendedPins = asyncHandler(async (req, res) => {
     // Fallback: sort by number of likes descending
     const pipeline = [
       { $match: matchFilter },
-      { $addFields: { likesCount: { $size: '$likes' } } },
+      { $addFields: { likesCount: { $size: { $ifNull: ['$likes', []] } } } },
       { $sort: { likesCount: -1 } },
       { $skip: skip },
       { $limit: limit },
@@ -193,7 +186,7 @@ export const getDiscoverFeed = asyncHandler(async (req, res) => {
     // Top 6 public pins by likes count
     Pin.aggregate([
       { $match: { visibility: 'public' } },
-      { $addFields: { likesCount: { $size: '$likes' } } },
+      { $addFields: { likesCount: { $size: { $ifNull: ['$likes', []] } } } },
       { $sort: { likesCount: -1 } },
       { $limit: 6 },
       ...createdByLookup,
@@ -287,7 +280,7 @@ export const getSuggestedUsers = asyncHandler(async (req, res) => {
             _id: { $nin: [req.user._id, ...alreadyFollowing] },
           },
         },
-        { $addFields: { followersCount: { $size: '$followers' } } },
+        { $addFields: { followersCount: { $size: { $ifNull: ['$followers', []] } } } },
         { $sort: { followersCount: -1 } },
         { $limit: 10 },
         { $project: { name: 1, avatar: 1, bio: 1, followersCount: 1 } },
@@ -296,7 +289,7 @@ export const getSuggestedUsers = asyncHandler(async (req, res) => {
   } else {
     // Anonymous: just return most-followed users globally
     users = await User.aggregate([
-      { $addFields: { followersCount: { $size: '$followers' } } },
+      { $addFields: { followersCount: { $size: { $ifNull: ['$followers', []] } } } },
       { $sort: { followersCount: -1 } },
       { $limit: 10 },
       { $project: { name: 1, avatar: 1, bio: 1, followersCount: 1 } },

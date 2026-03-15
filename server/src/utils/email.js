@@ -166,3 +166,104 @@ export const sendAccountDeletedEmail = async (email, name) => {
     text: `Xin chào ${name},\n\nTài khoản GeoConnect của bạn đã được xoá thành công.\nNếu bạn không thực hiện yêu cầu này, vui lòng liên hệ hỗ trợ.`,
   });
 };
+
+// ---------------------------------------------------------------------------
+// Social notification emails
+// ---------------------------------------------------------------------------
+
+export async function sendNewFollowerEmail(email, followerName) {
+  return sendMail({
+    to: email,
+    subject: `${followerName} started following you on GeoConnect`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; background: #0f1218; color: #e2e8f0; border-radius: 16px; overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); padding: 32px 24px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px; color: white;">New Follower!</h1>
+        </div>
+        <div style="padding: 32px 24px;">
+          <p style="font-size: 16px; line-height: 1.6; color: #cbd5e1;"><strong style="color: #f1f5f9;">${followerName}</strong> started following you on GeoConnect.</p>
+          <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}" style="display: inline-block; margin-top: 16px; padding: 12px 24px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">View Profile</a>
+        </div>
+        <div style="padding: 16px 24px; border-top: 1px solid #1e293b; text-align: center; font-size: 12px; color: #64748b;">GeoConnect — Discover places, connect with people</div>
+      </div>
+    `,
+  });
+}
+
+export async function sendCommentNotificationEmail(email, commenterName, contentType, contentTitle) {
+  return sendMail({
+    to: email,
+    subject: `${commenterName} commented on your ${contentType}`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; background: #0f1218; color: #e2e8f0; border-radius: 16px; overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); padding: 32px 24px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px; color: white;">New Comment</h1>
+        </div>
+        <div style="padding: 32px 24px;">
+          <p style="font-size: 16px; line-height: 1.6; color: #cbd5e1;"><strong style="color: #f1f5f9;">${commenterName}</strong> commented on your ${contentType}${contentTitle ? `: <em>"${contentTitle}"</em>` : ''}.</p>
+          <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}" style="display: inline-block; margin-top: 16px; padding: 12px 24px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">View Comment</a>
+        </div>
+        <div style="padding: 16px 24px; border-top: 1px solid #1e293b; text-align: center; font-size: 12px; color: #64748b;">GeoConnect — Discover places, connect with people</div>
+      </div>
+    `,
+  });
+}
+
+export async function sendLikeNotificationEmail(email, likerName, contentType) {
+  return sendMail({
+    to: email,
+    subject: `${likerName} liked your ${contentType}`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; background: #0f1218; color: #e2e8f0; border-radius: 16px; overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); padding: 32px 24px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px; color: white;">Someone liked your ${contentType}!</h1>
+        </div>
+        <div style="padding: 32px 24px;">
+          <p style="font-size: 16px; line-height: 1.6; color: #cbd5e1;"><strong style="color: #f1f5f9;">${likerName}</strong> liked your ${contentType} on GeoConnect.</p>
+          <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}" style="display: inline-block; margin-top: 16px; padding: 12px 24px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">View</a>
+        </div>
+        <div style="padding: 16px 24px; border-top: 1px solid #1e293b; text-align: center; font-size: 12px; color: #64748b;">GeoConnect — Discover places, connect with people</div>
+      </div>
+    `,
+  });
+}
+
+export async function sendEventReminderEmail(email, eventTitle, eventDate) {
+  return sendMail({
+    to: email,
+    subject: `Reminder: ${eventTitle} is coming up!`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; background: #0f1218; color: #e2e8f0; border-radius: 16px; overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #f59e0b, #ef4444); padding: 32px 24px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px; color: white;">Event Reminder</h1>
+        </div>
+        <div style="padding: 32px 24px;">
+          <p style="font-size: 16px; line-height: 1.6; color: #cbd5e1;"><strong style="color: #f1f5f9;">${eventTitle}</strong> is happening on <strong>${eventDate}</strong>.</p>
+          <p style="font-size: 14px; color: #94a3b8;">Don't forget to check in!</p>
+          <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/events" style="display: inline-block; margin-top: 16px; padding: 12px 24px; background: #f59e0b; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">View Event</a>
+        </div>
+        <div style="padding: 16px 24px; border-top: 1px solid #1e293b; text-align: center; font-size: 12px; color: #64748b;">GeoConnect — Discover places, connect with people</div>
+      </div>
+    `,
+  });
+}
+
+export async function sendWelcomeEmail(email, name) {
+  return sendMail({
+    to: email,
+    subject: `Welcome to GeoConnect, ${name}!`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; background: #0f1218; color: #e2e8f0; border-radius: 16px; overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #10b981, #3b82f6); padding: 32px 24px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px; color: white;">Welcome to GeoConnect!</h1>
+        </div>
+        <div style="padding: 32px 24px;">
+          <p style="font-size: 16px; line-height: 1.6; color: #cbd5e1;">Hi <strong style="color: #f1f5f9;">${name}</strong>, welcome aboard!</p>
+          <p style="font-size: 14px; line-height: 1.6; color: #94a3b8;">Start exploring places, connecting with people, and sharing your discoveries.</p>
+          <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}" style="display: inline-block; margin-top: 16px; padding: 12px 24px; background: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">Get Started</a>
+        </div>
+        <div style="padding: 16px 24px; border-top: 1px solid #1e293b; text-align: center; font-size: 12px; color: #64748b;">GeoConnect — Discover places, connect with people</div>
+      </div>
+    `,
+  });
+}

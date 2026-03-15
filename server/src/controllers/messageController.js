@@ -4,6 +4,13 @@ import User from '../models/User.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError, ERR } from '../utils/errors.js';
 import { ok, created, paginated, noContent, message } from '../utils/response.js';
+import { uploadToCloudinary } from '../middleware/upload.js';
+
+// ─── Allowed reaction emojis ──────────────────────────────────────────────────
+
+const ALLOWED_REACTIONS = ['❤️', '😂', '👍', '👎', '😮', '😢', '🔥'];
+
+// ─── Conversations ────────────────────────────────────────────────────────────
 
 export const createConversation = asyncHandler(async (req, res) => {
   const { recipientId } = req.body;
@@ -43,12 +50,15 @@ export const getConversations = asyncHandler(async (req, res) => {
       .populate('participants', 'name avatar isLiveSharing')
       .sort({ updatedAt: -1 })
       .skip(skip)
-      .limit(limit),
+      .limit(limit)
+      .lean(),
     Conversation.countDocuments(filter),
   ]);
 
   return paginated(res, conversations, { page, limit, total });
 });
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
 
 export const getMessages = asyncHandler(async (req, res) => {
   const conversation = await Conversation.findById(req.params.conversationId);
@@ -62,9 +72,11 @@ export const getMessages = asyncHandler(async (req, res) => {
   const [messages, total] = await Promise.all([
     Message.find(filter)
       .populate('sender', 'name avatar')
+      .populate('reactions.user', 'name avatar')
       .sort({ createdAt: -1 })  // newest first for skip/limit
       .skip(skip)
-      .limit(limit),
+      .limit(limit)
+      .lean(),
     Message.countDocuments(filter),
   ]);
 
@@ -89,16 +101,39 @@ export const sendMessage = asyncHandler(async (req, res) => {
     throw new AppError(ERR.FORBIDDEN, 'Not authorized');
   }
 
+  // Upload images in parallel if present
+  let images = [];
+  if (req.files && req.files.length > 0) {
+    const uploads = await Promise.all(
+      req.files.map((file) => uploadToCloudinary(file.buffer, 'geoconnect/messages'))
+    );
+    images = uploads.map((r) => r.secure_url);
+  }
+
+  // Must have either text or images
+  const hasText = text && text.trim().length > 0;
+  const hasImages = images.length > 0;
+  const hasLocation = locationPin && locationPin.lat && locationPin.lng;
+  if (!hasText && !hasImages && !hasLocation) {
+    throw AppError.badRequest('Message must contain text, images, or a location');
+  }
+
   const msg = await Message.create({
     conversation: conversation._id,
     sender: req.user._id,
-    text,
+    text: hasText ? text : '',
+    images,
     locationPin,
     readBy: [req.user._id],
   });
 
+  // Update lastMessage preview
+  let previewText = hasText ? text : '';
+  if (!previewText && hasImages) previewText = `📷 ${images.length > 1 ? `${images.length} photos` : 'Photo'}`;
+  if (!previewText && hasLocation) previewText = '📍 Shared a location';
+
   conversation.lastMessage = {
-    text,
+    text: previewText,
     sender: req.user._id,
     createdAt: new Date(),
   };
@@ -108,19 +143,120 @@ export const sendMessage = asyncHandler(async (req, res) => {
   return created(res, populated);
 });
 
-export const getUnreadCount = asyncHandler(async (req, res) => {
-  // Count messages across all user's conversations that they haven't read
-  const conversations = await Conversation.find({ participants: req.user._id }).select('_id');
-  const conversationIds = conversations.map(c => c._id);
+// ─── Edit message ─────────────────────────────────────────────────────────────
 
-  const count = await Message.countDocuments({
-    conversation: { $in: conversationIds },
-    sender: { $ne: req.user._id },
-    readBy: { $nin: [req.user._id] },
-  });
+export const editMessage = asyncHandler(async (req, res) => {
+  const { text } = req.body;
+  const msg = await Message.findById(req.params.messageId);
+  if (!msg) throw AppError.notFound('Message not found');
 
-  return ok(res, { unreadCount: count });
+  // Only sender can edit
+  if (msg.sender.toString() !== req.user._id.toString()) {
+    throw new AppError(ERR.FORBIDDEN, 'Not authorized');
+  }
+
+  // Verify participant
+  const conversation = await Conversation.findById(msg.conversation);
+  if (!conversation || !conversation.participants.includes(req.user._id)) {
+    throw new AppError(ERR.FORBIDDEN, 'Not authorized');
+  }
+
+  msg.text = text;
+  msg.isEdited = true;
+  await msg.save();
+
+  const populated = await msg.populate([
+    { path: 'sender', select: 'name avatar' },
+    { path: 'reactions.user', select: 'name avatar' },
+  ]);
+
+  return ok(res, populated);
 });
+
+// ─── Reactions ────────────────────────────────────────────────────────────────
+
+export const addReaction = asyncHandler(async (req, res) => {
+  const { emoji } = req.body;
+  if (!ALLOWED_REACTIONS.includes(emoji)) {
+    throw AppError.badRequest(`Invalid reaction. Allowed: ${ALLOWED_REACTIONS.join(' ')}`);
+  }
+
+  const msg = await Message.findById(req.params.messageId);
+  if (!msg) throw AppError.notFound('Message not found');
+
+  // Verify participant
+  const conversation = await Conversation.findById(msg.conversation);
+  if (!conversation || !conversation.participants.includes(req.user._id)) {
+    throw new AppError(ERR.FORBIDDEN, 'Not authorized');
+  }
+
+  // Remove existing reaction from same user (replace with new one)
+  msg.reactions = msg.reactions.filter(
+    (r) => r.user.toString() !== req.user._id.toString()
+  );
+
+  msg.reactions.push({ user: req.user._id, emoji });
+  await msg.save();
+
+  const populated = await msg.populate([
+    { path: 'sender', select: 'name avatar' },
+    { path: 'reactions.user', select: 'name avatar' },
+  ]);
+
+  return ok(res, populated);
+});
+
+export const removeReaction = asyncHandler(async (req, res) => {
+  const msg = await Message.findById(req.params.messageId);
+  if (!msg) throw AppError.notFound('Message not found');
+
+  // Verify participant
+  const conversation = await Conversation.findById(msg.conversation);
+  if (!conversation || !conversation.participants.includes(req.user._id)) {
+    throw new AppError(ERR.FORBIDDEN, 'Not authorized');
+  }
+
+  msg.reactions = msg.reactions.filter(
+    (r) => r.user.toString() !== req.user._id.toString()
+  );
+  await msg.save();
+
+  const populated = await msg.populate([
+    { path: 'sender', select: 'name avatar' },
+    { path: 'reactions.user', select: 'name avatar' },
+  ]);
+
+  return ok(res, populated);
+});
+
+// ─── Unread count ─────────────────────────────────────────────────────────────
+
+export const getUnreadCount = asyncHandler(async (req, res) => {
+  // Single aggregation: count unread messages across all user's conversations
+  const result = await Message.aggregate([
+    {
+      $lookup: {
+        from: 'conversations',
+        localField: 'conversation',
+        foreignField: '_id',
+        as: 'conv',
+      },
+    },
+    { $unwind: '$conv' },
+    {
+      $match: {
+        'conv.participants': req.user._id,
+        sender: { $ne: req.user._id },
+        readBy: { $nin: [req.user._id] },
+      },
+    },
+    { $count: 'unreadCount' },
+  ]);
+
+  return ok(res, { unreadCount: result[0]?.unreadCount ?? 0 });
+});
+
+// ─── Delete message ───────────────────────────────────────────────────────────
 
 export const deleteMessage = asyncHandler(async (req, res) => {
   const msg = await Message.findById(req.params.messageId);
@@ -155,6 +291,8 @@ export const deleteMessage = asyncHandler(async (req, res) => {
 
   return message(res, 'Message deleted');
 });
+
+// ─── Mark read ────────────────────────────────────────────────────────────────
 
 export const markConversationRead = asyncHandler(async (req, res) => {
   const conversation = await Conversation.findById(req.params.conversationId);

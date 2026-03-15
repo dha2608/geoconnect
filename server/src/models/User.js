@@ -17,6 +17,10 @@ const userSchema = new mongoose.Schema({
   emailVerificationExpires: { type: Date, select: false },
   passwordResetToken: { type: String, select: false },
   passwordResetExpires: { type: Date, select: false },
+  // 2FA fields
+  twoFactorSecret: { type: String, select: false },
+  twoFactorEnabled: { type: Boolean, default: false },
+  twoFactorBackupCodes: [{ type: String, select: false }],
   location: {
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: { type: [Number], default: [0, 0] },
@@ -30,6 +34,11 @@ const userSchema = new mongoose.Schema({
   blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   isGuest: { type: Boolean, default: false },
   role: { type: String, enum: ['user', 'admin', 'moderator'], default: 'user' },
+  // Admin moderation fields
+  isBanned: { type: Boolean, default: false },
+  bannedAt: { type: Date },
+  bannedReason: { type: String, maxlength: 500 },
+  bannedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   settings: {
     privacy: {
       shareLocation: { type: Boolean, default: true },
@@ -51,6 +60,8 @@ const userSchema = new mongoose.Schema({
 
 userSchema.index({ location: '2dsphere' });
 userSchema.index({ name: 'text', bio: 'text' });
+userSchema.index({ followers: 1 });
+userSchema.index({ following: 1 });
 
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password') || !this.password) return next();
@@ -72,6 +83,8 @@ userSchema.methods.toPublicJSON = function() {
   delete obj.emailVerificationExpires;
   delete obj.passwordResetToken;
   delete obj.passwordResetExpires;
+  delete obj.twoFactorSecret;
+  delete obj.twoFactorBackupCodes;
   return obj;
 };
 

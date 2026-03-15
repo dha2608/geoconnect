@@ -69,6 +69,40 @@ export const validateVerifyEmail = [
     .notEmpty().withMessage('Verification token is required'),
 ];
 
+// ─── 2FA ──────────────────────────────────────────────────────────────────────
+
+export const validate2FACode = [
+  body('code')
+    .trim()
+    .notEmpty().withMessage('Verification code is required')
+    .isLength({ min: 6, max: 6 }).withMessage('Code must be 6 digits')
+    .isNumeric().withMessage('Code must contain only numbers'),
+];
+
+export const validate2FALogin = [
+  body('tempToken')
+    .notEmpty().withMessage('Temp token is required'),
+  body('code')
+    .trim()
+    .notEmpty().withMessage('2FA code is required')
+    .isLength({ min: 6, max: 6 }).withMessage('Code must be 6 digits')
+    .isNumeric().withMessage('Code must contain only numbers'),
+];
+
+export const validate2FABackupLogin = [
+  body('tempToken')
+    .notEmpty().withMessage('Temp token is required'),
+  body('backupCode')
+    .trim()
+    .notEmpty().withMessage('Backup code is required')
+    .isLength({ min: 8, max: 8 }).withMessage('Backup code must be 8 characters'),
+];
+
+export const validate2FADisable = [
+  body('password')
+    .notEmpty().withMessage('Password is required to disable 2FA'),
+];
+
 export const validateDeleteAccount = [
   body('password')
     .optional()
@@ -106,6 +140,9 @@ export const validateCreatePost = [
     .optional()
     .trim()
     .isString().withMessage('Location name must be a string'),
+  body('visibility')
+    .optional()
+    .isIn(['public', 'followers', 'private']).withMessage('Visibility must be public, followers, or private'),
 ];
 
 export const validateUpdatePost = [
@@ -115,6 +152,28 @@ export const validateUpdatePost = [
     .trim()
     .isString().withMessage('Text must be a string')
     .isLength({ min: 1, max: 500 }).withMessage('Text must be between 1 and 500 characters'),
+  body('visibility')
+    .optional()
+    .isIn(['public', 'followers', 'private']).withMessage('Visibility must be public, followers, or private'),
+];
+
+export const validateHashtag = [
+  param('tag')
+    .trim()
+    .isString().withMessage('Tag must be a string')
+    .isLength({ min: 1, max: 50 }).withMessage('Tag must be between 1 and 50 characters'),
+];
+
+export const validateRepost = [
+  mongoId('id'),
+  body('text')
+    .optional()
+    .trim()
+    .isString().withMessage('Text must be a string')
+    .isLength({ max: 500 }).withMessage('Text must be at most 500 characters'),
+  body('visibility')
+    .optional()
+    .isIn(['public', 'followers', 'private']).withMessage('Visibility must be public, followers, or private'),
 ];
 
 export const validateAddComment = [
@@ -122,7 +181,45 @@ export const validateAddComment = [
   body('text')
     .trim()
     .isString().withMessage('Text must be a string')
-    .isLength({ min: 1, max: 300 }).withMessage('Comment must be between 1 and 300 characters'),
+    .isLength({ min: 1, max: 500 }).withMessage('Comment must be between 1 and 500 characters'),
+];
+
+export const validateEditComment = [
+  mongoId('id'),
+  mongoId('commentId'),
+  body('text')
+    .trim()
+    .isString().withMessage('Text must be a string')
+    .isLength({ min: 1, max: 500 }).withMessage('Comment must be between 1 and 500 characters'),
+];
+
+export const validateCommentId = [
+  mongoId('id'),
+  mongoId('commentId'),
+];
+
+export const validateReplyToComment = [
+  mongoId('id'),
+  mongoId('commentId'),
+  body('text')
+    .trim()
+    .isString().withMessage('Text must be a string')
+    .isLength({ min: 1, max: 500 }).withMessage('Reply must be between 1 and 500 characters'),
+];
+
+export const validateReplyId = [
+  mongoId('id'),
+  mongoId('commentId'),
+  mongoId('replyId'),
+];
+
+export const validateCommentReaction = [
+  mongoId('id'),
+  mongoId('commentId'),
+  body('emoji')
+    .notEmpty().withMessage('Emoji is required')
+    .isString()
+    .isLength({ max: 8 }).withMessage('Emoji too long'),
 ];
 
 export const validatePostId = [
@@ -228,6 +325,32 @@ export const validateCreateEvent = [
   body('isPublic')
     .optional()
     .isBoolean().withMessage('isPublic must be a boolean'),
+  body('tags')
+    .optional()
+    .isArray({ max: 10 }).withMessage('Tags must be an array with max 10 items'),
+  body('tags.*')
+    .optional()
+    .trim()
+    .isString().withMessage('Each tag must be a string')
+    .isLength({ min: 1, max: 30 }).withMessage('Each tag must be between 1 and 30 characters'),
+  body('recurrence')
+    .optional()
+    .isObject().withMessage('Recurrence must be an object'),
+  body('recurrence.type')
+    .optional()
+    .isIn(['none', 'daily', 'weekly', 'monthly']).withMessage('Recurrence type must be none, daily, weekly, or monthly'),
+  body('recurrence.interval')
+    .optional()
+    .isInt({ min: 1, max: 52 }).withMessage('Recurrence interval must be between 1 and 52'),
+  body('recurrence.endDate')
+    .optional()
+    .isISO8601().withMessage('Recurrence endDate must be a valid ISO 8601 date'),
+  body('reminders')
+    .optional()
+    .isArray({ max: 5 }).withMessage('Reminders must be an array with max 5 items'),
+  body('reminders.*.minutesBefore')
+    .optional()
+    .isInt({ min: 5, max: 10080 }).withMessage('minutesBefore must be between 5 and 10080 (1 week)'),
 ];
 
 export const validateUpdateEvent = [
@@ -269,10 +392,53 @@ export const validateUpdateEvent = [
   body('isPublic')
     .optional()
     .isBoolean().withMessage('isPublic must be a boolean'),
+  body('tags')
+    .optional()
+    .isArray({ max: 10 }).withMessage('Tags must be an array with max 10 items'),
+  body('tags.*')
+    .optional()
+    .trim()
+    .isString().withMessage('Each tag must be a string')
+    .isLength({ min: 1, max: 30 }).withMessage('Each tag must be between 1 and 30 characters'),
+  body('reminders')
+    .optional()
+    .isArray({ max: 5 }).withMessage('Reminders must be an array with max 5 items'),
+  body('reminders.*.minutesBefore')
+    .optional()
+    .isInt({ min: 5, max: 10080 }).withMessage('minutesBefore must be between 5 and 10080 (1 week)'),
 ];
 
 export const validateEventId = [
   mongoId('id'),
+];
+
+export const validateEventComment = [
+  mongoId('id'),
+  body('text')
+    .trim()
+    .isString().withMessage('Text must be a string')
+    .isLength({ min: 1, max: 500 }).withMessage('Comment must be between 1 and 500 characters'),
+];
+
+export const validateEditEventComment = [
+  mongoId('id'),
+  mongoId('commentId'),
+  body('text')
+    .trim()
+    .isString().withMessage('Text must be a string')
+    .isLength({ min: 1, max: 500 }).withMessage('Comment must be between 1 and 500 characters'),
+];
+
+export const validateEventCommentId = [
+  mongoId('id'),
+  mongoId('commentId'),
+];
+
+export const validateEventTag = [
+  param('tag')
+    .trim()
+    .isString().withMessage('Tag must be a string')
+    .isLength({ min: 1, max: 50 }).withMessage('Tag must be between 1 and 50 characters'),
 ];
 
 // ─── Users ────────────────────────────────────────────────────────────────────
@@ -360,9 +526,10 @@ export const validateUserParamId = [
 export const validateSendMessage = [
   mongoId('conversationId'),
   body('text')
+    .optional()
     .trim()
     .isString().withMessage('Text must be a string')
-    .isLength({ min: 1, max: 1000 }).withMessage('Message must be between 1 and 1000 characters'),
+    .isLength({ max: 1000 }).withMessage('Message text must be at most 1000 characters'),
 ];
 
 export const validateCreateConversation = [
@@ -373,6 +540,26 @@ export const validateCreateConversation = [
 
 export const validateConversationId = [
   mongoId('conversationId'),
+];
+
+export const validateEditMessage = [
+  mongoId('messageId'),
+  body('text')
+    .trim()
+    .isString().withMessage('Text must be a string')
+    .isLength({ min: 1, max: 1000 }).withMessage('Message must be between 1 and 1000 characters'),
+];
+
+export const validateMessageReaction = [
+  mongoId('messageId'),
+  body('emoji')
+    .notEmpty().withMessage('Emoji is required')
+    .isString().withMessage('Emoji must be a string')
+    .isLength({ max: 8 }).withMessage('Emoji must be at most 8 characters'),
+];
+
+export const validateMessageId = [
+  mongoId('messageId'),
 ];
 
 // ─── Reviews ──────────────────────────────────────────────────────────────────
@@ -408,6 +595,15 @@ export const validateReviewParams = [
 
 export const validatePinIdParam = [
   mongoId('pinId'),
+];
+
+export const validateReviewResponse = [
+  mongoId('pinId'),
+  mongoId('reviewId'),
+  body('text')
+    .trim()
+    .notEmpty().withMessage('Response text is required')
+    .isLength({ max: 500 }).withMessage('Response must not exceed 500 characters'),
 ];
 
 // ─── Geocode ──────────────────────────────────────────────────────────────────

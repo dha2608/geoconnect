@@ -3,15 +3,23 @@ import User from '../models/User.js';
 import { uploadToCloudinary } from '../middleware/upload.js';
 import { createNotification } from '../utils/createNotification.js';
 import { sendAccountDeletedEmail } from '../utils/email.js';
+import { notifyEmail } from '../utils/notifyWithEmail.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError, ERR } from '../utils/errors.js';
 import { ok, message } from '../utils/response.js';
 
 export const getMe = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id)
-    .populate('followers', 'name avatar')
-    .populate('following', 'name avatar');
-  return ok(res, user.toPublicJSON());
+    .select('-password -googleId -githubId -refreshTokenHash -emailVerificationToken -emailVerificationExpires -passwordResetToken -passwordResetExpires -twoFactorSecret -twoFactorBackupCodes')
+    .lean();
+  if (!user) throw new AppError(ERR.USER_NOT_FOUND);
+  return ok(res, {
+    ...user,
+    followersCount: user.followers?.length ?? 0,
+    followingCount: user.following?.length ?? 0,
+    followers: undefined,
+    following: undefined,
+  });
 });
 
 export const updateMe = asyncHandler(async (req, res) => {
@@ -67,6 +75,9 @@ export const followUser = asyncHandler(async (req, res) => {
     data: {},
   });
 
+  // Fire-and-forget email notification
+  notifyEmail(req.params.id, 'follow', { followerName: req.user.name });
+
   return message(res, 'Followed successfully');
 });
 
@@ -95,7 +106,7 @@ export const getNearbyUsers = asyncHandler(async (req, res) => {
         $maxDistance: parseFloat(radius) * 1000,
       },
     },
-  }).select('name avatar bio location isLiveSharing').limit(50);
+  }).select('name avatar bio location isLiveSharing').limit(50).lean();
 
   return ok(res, users);
 });
@@ -130,7 +141,8 @@ export const searchUsers = asyncHandler(async (req, res) => {
     )
       .sort({ score: { $meta: 'textScore' } })
       .select('name avatar bio followers following')
-      .limit(20);
+      .limit(20)
+      .lean();
   } else {
     // Fallback to regex for very short queries — also searches email
     users = await User.find({
@@ -139,22 +151,28 @@ export const searchUsers = asyncHandler(async (req, res) => {
         { name: { $regex: q, $options: 'i' } },
         { email: { $regex: q, $options: 'i' } },
       ],
-    }).select('name avatar bio followers following').limit(20);
+    }).select('name avatar bio followers following').limit(20).lean();
   }
 
   return ok(res, users);
 });
 
 export const getFollowers = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id).populate('followers', 'name avatar bio');
+  const user = await User.findById(req.params.id).select('followers').lean();
   if (!user) throw new AppError(ERR.USER_NOT_FOUND);
-  return ok(res, user.followers);
+  const followers = await User.find({ _id: { $in: user.followers } })
+    .select('name avatar bio')
+    .lean();
+  return ok(res, followers);
 });
 
 export const getFollowing = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id).populate('following', 'name avatar bio');
+  const user = await User.findById(req.params.id).select('following').lean();
   if (!user) throw new AppError(ERR.USER_NOT_FOUND);
-  return ok(res, user.following);
+  const following = await User.find({ _id: { $in: user.following } })
+    .select('name avatar bio')
+    .lean();
+  return ok(res, following);
 });
 
 // GET /api/users/me/settings
@@ -189,27 +207,25 @@ export const blockUser = asyncHandler(async (req, res) => {
     throw AppError.badRequest('Cannot block yourself');
   }
 
-  const target = await User.findById(targetId);
+  const target = await User.findById(targetId).select('_id').lean();
   if (!target) throw new AppError(ERR.USER_NOT_FOUND);
 
-  const user = await User.findById(req.user._id);
+  // Atomic: add to blockedUsers, remove from following/followers
+  const [updatedUser] = await Promise.all([
+    User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $addToSet: { blockedUsers: targetId },
+        $pull: { following: targetId, followers: targetId },
+      },
+      { new: true },
+    ).select('blockedUsers'),
+    User.findByIdAndUpdate(targetId, {
+      $pull: { following: req.user._id, followers: req.user._id },
+    }),
+  ]);
 
-  // Add to blocked list if not already blocked
-  if (!user.blockedUsers.includes(targetId)) {
-    user.blockedUsers.push(targetId);
-  }
-
-  // Also unfollow in both directions
-  user.following = user.following.filter(id => id.toString() !== targetId);
-  user.followers = user.followers.filter(id => id.toString() !== targetId);
-  await user.save();
-
-  // Remove from target's followers/following too
-  target.following = target.following.filter(id => id.toString() !== req.user._id.toString());
-  target.followers = target.followers.filter(id => id.toString() !== req.user._id.toString());
-  await target.save();
-
-  return ok(res, { message: 'User blocked', blockedUsers: user.blockedUsers });
+  return ok(res, { message: 'User blocked', blockedUsers: updatedUser.blockedUsers });
 });
 
 // DELETE /api/users/:id/block
@@ -234,7 +250,7 @@ export const getBlockedUsers = asyncHandler(async (req, res) => {
 // GET /api/users/:id/stats — activity/content counts
 export const getUserStats = asyncHandler(async (req, res) => {
   const userId = req.params.id;
-  const user = await User.findById(userId);
+  const user = await User.findById(userId).select('followers following').lean();
   if (!user) throw new AppError(ERR.USER_NOT_FOUND);
 
   const [Pin, Post, Event, Review] = await Promise.all([

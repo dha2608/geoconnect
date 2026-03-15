@@ -15,7 +15,9 @@ export const authenticate = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-    const user = await User.findById(decoded.userId);
+    const user = await User.findById(decoded.userId)
+      .select('_id name avatar email role settings isLocationPublic isLiveSharing location blockedUsers followers following')
+      .lean();
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
@@ -40,7 +42,9 @@ export const optionalAuth = async (req, res, next) => {
         return next();
       }
       const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-      req.user = await User.findById(decoded.userId);
+      req.user = await User.findById(decoded.userId)
+        .select('_id name avatar email role settings isLocationPublic isLiveSharing location blockedUsers followers following')
+        .lean();
     }
   } catch (error) {
     if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {

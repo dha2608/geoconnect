@@ -4,6 +4,7 @@ import { createNotification } from '../utils/createNotification.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError, ERR } from '../utils/errors.js';
 import { ok, created, paginated, noContent, message } from '../utils/response.js';
+import { uploadToCloudinary } from '../middleware/upload.js';
 
 const updatePinRating = async (pinId) => {
   const stats = await Review.aggregate([
@@ -43,12 +44,21 @@ export const createReview = asyncHandler(async (req, res) => {
   const pin = await Pin.findById(req.params.pinId);
   if (!pin) throw AppError.notFound('Pin not found');
 
+  // Upload photos if provided
+  const photos = [];
+  if (req.files && req.files.length > 0) {
+    for (const file of req.files) {
+      const url = await uploadToCloudinary(file.buffer, 'geoconnect/reviews');
+      photos.push(url);
+    }
+  }
+
   const review = await Review.create({
     pin: req.params.pinId,
     user: req.user._id,
     rating: req.body.rating,
     text: req.body.text,
-    photo: req.body.photo || '',
+    photos,
   });
 
   await updatePinRating(review.pin);
@@ -74,6 +84,21 @@ export const updateReview = asyncHandler(async (req, res) => {
 
   if (req.body.rating) review.rating = req.body.rating;
   if (req.body.text !== undefined) review.text = req.body.text;
+
+  // Handle new photos
+  if (req.files && req.files.length > 0) {
+    const newPhotos = [];
+    for (const file of req.files) {
+      const url = await uploadToCloudinary(file.buffer, 'geoconnect/reviews');
+      newPhotos.push(url);
+    }
+    // Keep existing photos user wants to keep + add new ones
+    const keepPhotos = req.body.keepPhotos ? JSON.parse(req.body.keepPhotos) : [];
+    review.photos = [...keepPhotos, ...newPhotos];
+  } else if (req.body.keepPhotos) {
+    review.photos = JSON.parse(req.body.keepPhotos);
+  }
+
   await review.save();
 
   await updatePinRating(review.pin);
@@ -113,4 +138,49 @@ export const unvoteHelpful = asyncHandler(async (req, res) => {
   ).populate('user', 'name avatar');
   if (!review) throw AppError.notFound('Review not found');
   return ok(res, review);
+});
+
+export const respondToReview = asyncHandler(async (req, res) => {
+  const review = await Review.findById(req.params.reviewId).populate('user', 'name avatar');
+  if (!review) throw AppError.notFound('Review not found');
+
+  // Only pin owner can respond
+  const pin = await Pin.findById(review.pin);
+  if (!pin) throw AppError.notFound('Pin not found');
+  if (pin.createdBy.toString() !== req.user._id.toString()) {
+    throw new AppError(ERR.FORBIDDEN, 'Only pin owner can respond to reviews');
+  }
+
+  review.ownerResponse = {
+    text: req.body.text,
+    respondedAt: new Date(),
+  };
+  await review.save();
+
+  // Notify reviewer
+  await createNotification(req, {
+    recipientId: review.user._id,
+    senderId: req.user._id,
+    type: 'review',
+    data: { pinId: pin._id, pinTitle: pin.title, message: 'Owner responded to your review' },
+  });
+
+  return ok(res, review);
+});
+
+export const deleteResponse = asyncHandler(async (req, res) => {
+  const review = await Review.findById(req.params.reviewId);
+  if (!review) throw AppError.notFound('Review not found');
+
+  const pin = await Pin.findById(review.pin);
+  if (!pin) throw AppError.notFound('Pin not found');
+  if (pin.createdBy.toString() !== req.user._id.toString()) {
+    throw new AppError(ERR.FORBIDDEN, 'Only pin owner can manage responses');
+  }
+
+  review.ownerResponse = undefined;
+  await review.save();
+
+  const populated = await review.populate('user', 'name avatar');
+  return ok(res, populated);
 });

@@ -1,13 +1,42 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 import User from '../models/User.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken, hashToken } from '../utils/jwt.js';
-import { sendPasswordResetEmail, sendEmailVerification } from '../utils/email.js';
+import { sendPasswordResetEmail, sendEmailVerification, sendWelcomeEmail } from '../utils/email.js';
 import { uploadToCloudinary } from '../middleware/upload.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError, ERR } from '../utils/errors.js';
 import { ok, created, message } from '../utils/response.js';
 import { blacklistToken } from '../utils/tokenBlacklist.js';
+
+// ─── 2FA Helpers ──────────────────────────────────────────────────────────────
+
+const TEMP_TOKEN_SECRET = process.env.TEMP_TOKEN_SECRET || process.env.JWT_SECRET || 'temp-2fa-secret';
+const TEMP_TOKEN_EXPIRY = '5m'; // 5 minutes to enter 2FA code
+
+/** Generate a short-lived temp token for 2FA login flow */
+const generateTempToken = (userId) => {
+  return jwt.sign({ userId, purpose: '2fa' }, TEMP_TOKEN_SECRET, { expiresIn: TEMP_TOKEN_EXPIRY });
+};
+
+/** Verify a temp 2FA token */
+const verifyTempToken = (token) => {
+  const decoded = jwt.verify(token, TEMP_TOKEN_SECRET);
+  if (decoded.purpose !== '2fa') throw new Error('Invalid token purpose');
+  return decoded;
+};
+
+/** Generate backup codes (10 codes, 8 chars each) */
+const generateBackupCodes = () => {
+  return Array.from({ length: 10 }, () => crypto.randomBytes(4).toString('hex'));
+};
+
+/** Hash a backup code for secure storage */
+const hashBackupCode = (code) => {
+  return crypto.createHash('sha256').update(code).digest('hex');
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -59,6 +88,7 @@ export const register = asyncHandler(async (req, res) => {
   const verifyToken = user.createToken('emailVerification');
   await user.save({ validateBeforeSave: false });
   await sendEmailVerification(email, verifyToken);
+  sendWelcomeEmail(user.email, user.name); // fire-and-forget
 
   const accessToken = await issueTokens(user, res);
 
@@ -70,7 +100,7 @@ export const register = asyncHandler(async (req, res) => {
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email }).select('+password');
+  const user = await User.findOne({ email }).select('+password +twoFactorEnabled +twoFactorSecret');
   if (!user || !user.password) {
     throw AppError.unauthorized('Invalid email or password');
   }
@@ -78,6 +108,12 @@ export const login = asyncHandler(async (req, res) => {
   const isMatch = await user.comparePassword(password);
   if (!isMatch) {
     throw AppError.unauthorized('Invalid email or password');
+  }
+
+  // If 2FA is enabled, return temp token instead of full auth
+  if (user.twoFactorEnabled) {
+    const tempToken = generateTempToken(user._id);
+    return ok(res, { requires2FA: true, tempToken });
   }
 
   const accessToken = await issueTokens(user, res);
@@ -295,4 +331,214 @@ export const resendVerification = asyncHandler(async (req, res) => {
   await sendEmailVerification(user.email, verifyToken);
 
   return message(res, 'Verification email sent');
+});
+
+// ─── POST /api/auth/2fa/setup ─────────────────────────────────────────────────
+
+export const setup2FA = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select('+twoFactorEnabled +twoFactorSecret');
+  if (!user) throw new AppError(ERR.USER_NOT_FOUND);
+
+  if (user.twoFactorEnabled) {
+    throw AppError.badRequest('2FA is already enabled');
+  }
+
+  // Generate a new secret
+  const secret = speakeasy.generateSecret({
+    name: `GeoConnect:${user.email}`,
+    issuer: 'GeoConnect',
+    length: 32,
+  });
+
+  // Store secret temporarily (not enabled yet until verified)
+  user.twoFactorSecret = secret.base32;
+  await user.save({ validateBeforeSave: false });
+
+  // Generate QR code as data URL
+  const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url);
+
+  return ok(res, {
+    secret: secret.base32,
+    qrCode: qrCodeUrl,
+  });
+});
+
+// ─── POST /api/auth/2fa/verify ────────────────────────────────────────────────
+
+export const verify2FA = asyncHandler(async (req, res) => {
+  const { code } = req.body;
+  const user = await User.findById(req.user._id).select('+twoFactorSecret +twoFactorEnabled');
+  if (!user) throw new AppError(ERR.USER_NOT_FOUND);
+
+  if (user.twoFactorEnabled) {
+    throw AppError.badRequest('2FA is already enabled');
+  }
+
+  if (!user.twoFactorSecret) {
+    throw AppError.badRequest('2FA setup not initiated. Call /2fa/setup first');
+  }
+
+  // Verify the TOTP code
+  const isValid = speakeasy.totp.verify({
+    secret: user.twoFactorSecret,
+    encoding: 'base32',
+    token: code,
+    window: 1, // Allow 1 step before/after for clock skew
+  });
+
+  if (!isValid) {
+    throw AppError.badRequest('Invalid verification code');
+  }
+
+  // Enable 2FA and generate backup codes
+  const rawBackupCodes = generateBackupCodes();
+  user.twoFactorEnabled = true;
+  user.twoFactorBackupCodes = rawBackupCodes.map(hashBackupCode);
+  await user.save({ validateBeforeSave: false });
+
+  return ok(res, {
+    message: '2FA enabled successfully',
+    backupCodes: rawBackupCodes, // Show once, user must save them
+  });
+});
+
+// ─── POST /api/auth/2fa/disable ───────────────────────────────────────────────
+
+export const disable2FA = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+  const user = await User.findById(req.user._id).select('+password +twoFactorEnabled');
+  if (!user) throw new AppError(ERR.USER_NOT_FOUND);
+
+  if (!user.twoFactorEnabled) {
+    throw AppError.badRequest('2FA is not enabled');
+  }
+
+  // Require password confirmation for security
+  const isMatch = await user.comparePassword(password);
+  if (!isMatch) {
+    throw AppError.badRequest('Invalid password');
+  }
+
+  user.twoFactorEnabled = false;
+  user.twoFactorSecret = undefined;
+  user.twoFactorBackupCodes = [];
+  await user.save({ validateBeforeSave: false });
+
+  return message(res, '2FA disabled successfully');
+});
+
+// ─── POST /api/auth/2fa/login ─────────────────────────────────────────────────
+
+export const login2FA = asyncHandler(async (req, res) => {
+  const { tempToken, code } = req.body;
+
+  // Verify temp token
+  let decoded;
+  try {
+    decoded = verifyTempToken(tempToken);
+  } catch {
+    throw AppError.unauthorized('Invalid or expired 2FA session. Please log in again');
+  }
+
+  const user = await User.findById(decoded.userId).select('+twoFactorSecret +twoFactorEnabled');
+  if (!user) throw AppError.unauthorized('User not found');
+
+  if (!user.twoFactorEnabled) {
+    throw AppError.badRequest('2FA is not enabled for this account');
+  }
+
+  // Verify TOTP code
+  const isValid = speakeasy.totp.verify({
+    secret: user.twoFactorSecret,
+    encoding: 'base32',
+    token: code,
+    window: 1,
+  });
+
+  if (!isValid) {
+    throw AppError.unauthorized('Invalid 2FA code');
+  }
+
+  // 2FA verified — issue real tokens
+  const accessToken = await issueTokens(user, res);
+  return ok(res, { user: user.toPublicJSON(), accessToken });
+});
+
+// ─── POST /api/auth/2fa/backup ────────────────────────────────────────────────
+
+export const loginWithBackupCode = asyncHandler(async (req, res) => {
+  const { tempToken, backupCode } = req.body;
+
+  // Verify temp token
+  let decoded;
+  try {
+    decoded = verifyTempToken(tempToken);
+  } catch {
+    throw AppError.unauthorized('Invalid or expired 2FA session. Please log in again');
+  }
+
+  const user = await User.findById(decoded.userId).select('+twoFactorBackupCodes +twoFactorEnabled');
+  if (!user) throw AppError.unauthorized('User not found');
+
+  if (!user.twoFactorEnabled) {
+    throw AppError.badRequest('2FA is not enabled for this account');
+  }
+
+  // Check backup code
+  const hashedCode = hashBackupCode(backupCode.trim());
+  const codeIndex = user.twoFactorBackupCodes.indexOf(hashedCode);
+
+  if (codeIndex === -1) {
+    throw AppError.unauthorized('Invalid backup code');
+  }
+
+  // Remove used backup code (one-time use)
+  user.twoFactorBackupCodes.splice(codeIndex, 1);
+  await user.save({ validateBeforeSave: false });
+
+  // Issue real tokens
+  const accessToken = await issueTokens(user, res);
+  return ok(res, {
+    user: user.toPublicJSON(),
+    accessToken,
+    backupCodesRemaining: user.twoFactorBackupCodes.length,
+  });
+});
+
+// ─── POST /api/auth/2fa/regenerate-backup ─────────────────────────────────────
+
+export const regenerateBackupCodes = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+  const user = await User.findById(req.user._id).select('+password +twoFactorEnabled');
+  if (!user) throw new AppError(ERR.USER_NOT_FOUND);
+
+  if (!user.twoFactorEnabled) {
+    throw AppError.badRequest('2FA is not enabled');
+  }
+
+  const isMatch = await user.comparePassword(password);
+  if (!isMatch) {
+    throw AppError.badRequest('Invalid password');
+  }
+
+  const rawBackupCodes = generateBackupCodes();
+  user.twoFactorBackupCodes = rawBackupCodes.map(hashBackupCode);
+  await user.save({ validateBeforeSave: false });
+
+  return ok(res, {
+    message: 'Backup codes regenerated',
+    backupCodes: rawBackupCodes,
+  });
+});
+
+// ─── GET /api/auth/2fa/status ─────────────────────────────────────────────────
+
+export const get2FAStatus = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select('+twoFactorEnabled +twoFactorBackupCodes');
+  if (!user) throw new AppError(ERR.USER_NOT_FOUND);
+
+  return ok(res, {
+    enabled: user.twoFactorEnabled || false,
+    backupCodesRemaining: user.twoFactorBackupCodes?.length || 0,
+  });
 });

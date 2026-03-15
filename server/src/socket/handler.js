@@ -5,10 +5,51 @@ import { updateLocation, removeLocation, startLocationManager } from './location
 
 const onlineUsers = new Map(); // userId -> socketId
 
+// ─── User cache for socket hot paths (location_update) ──────────────────────
+// TTL-based cache to avoid DB hit on every location ping
+const userCache = new Map(); // userId -> { data, expiresAt }
+const USER_CACHE_TTL = 30_000; // 30 seconds
+
+function getCachedUser(userId) {
+  const entry = userCache.get(userId);
+  if (entry && Date.now() < entry.expiresAt) return entry.data;
+  userCache.delete(userId);
+  return null;
+}
+
+function setCachedUser(userId, data) {
+  userCache.set(userId, { data, expiresAt: Date.now() + USER_CACHE_TTL });
+}
+
+function invalidateUserCache(userId) {
+  userCache.delete(userId);
+}
+
+// ─── Conversation membership cache ───────────────────────────────────────────
+const conversationCache = new Map(); // conversationId -> { participants, expiresAt }
+const CONV_CACHE_TTL = 60_000; // 60 seconds
+
+async function isConversationParticipant(conversationId, userId) {
+  const entry = conversationCache.get(conversationId);
+  if (entry && Date.now() < entry.expiresAt) {
+    return entry.participants.some((p) => p.toString() === userId);
+  }
+  const conversation = await Conversation.findById(conversationId).select('participants').lean();
+  if (!conversation) return false;
+  conversationCache.set(conversationId, {
+    participants: conversation.participants,
+    expiresAt: Date.now() + CONV_CACHE_TTL,
+  });
+  return conversation.participants.some((p) => p.toString() === userId);
+}
+
 // ─── Per-user socket event rate limiter ──────────────────────────────────────
 
 const EVENT_LIMITS = {
   message_send:      { max: 10, windowMs: 1000 },   // 10 msgs/sec
+  message_edit:      { max: 5,  windowMs: 1000 },   // 5 edits/sec
+  reaction_add:      { max: 10, windowMs: 1000 },   // 10 reactions/sec
+  reaction_remove:   { max: 10, windowMs: 1000 },
   typing_start:      { max: 5,  windowMs: 1000 },   // 5/sec
   typing_stop:       { max: 5,  windowMs: 1000 },
   location_update:   { max: 5,  windowMs: 1000 },   // 5 location pings/sec
@@ -46,11 +87,14 @@ export const setupSocket = (io) => {
       if (!token) return next(new Error('Authentication required'));
 
       const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-      const user = await User.findById(decoded.userId);
+      const user = await User.findById(decoded.userId)
+        .select('_id name avatar isLiveSharing isLocationPublic settings followers following')
+        .lean();
       if (!user) return next(new Error('User not found'));
 
       socket.userId = user._id.toString();
       socket.user = user;
+      setCachedUser(socket.userId, user);
       next();
     } catch (error) {
       next(new Error('Authentication failed'));
@@ -69,17 +113,13 @@ export const setupSocket = (io) => {
     });
 
     // Join conversation room for messaging + typing events
-    // Security: verify user is a participant before allowing room join
+    // Security: verify user is a participant before allowing room join (cached)
     socket.on('join_conversation', async ({ conversationId }) => {
       if (isSocketRateLimited(socket.userId, 'join_conversation')) return;
       if (!conversationId) return;
       try {
-        const conversation = await Conversation.findById(conversationId);
-        if (!conversation) return;
-        const isParticipant = conversation.participants.some(
-          (p) => p.toString() === socket.userId
-        );
-        if (!isParticipant) {
+        const allowed = await isConversationParticipant(conversationId, socket.userId);
+        if (!allowed) {
           socket.emit('error', { message: 'Not authorized to join this conversation' });
           return;
         }
@@ -89,7 +129,7 @@ export const setupSocket = (io) => {
       }
     });
 
-    // Location sharing
+    // Location sharing (uses cache to avoid DB hit per ping)
     socket.on('location_update', async ({ lat, lng, heading }) => {
       if (isSocketRateLimited(socket.userId, 'location_update')) return;
       try {
@@ -99,8 +139,17 @@ export const setupSocket = (io) => {
           return;
         }
 
-        const user = await User.findById(socket.userId);
-        if (!user || !user.isLiveSharing) return;
+        // Use cached user data (refreshes every 30s)
+        let user = getCachedUser(socket.userId);
+        if (!user) {
+          user = await User.findById(socket.userId)
+            .select('isLiveSharing isLocationPublic settings followers following')
+            .lean();
+          if (!user) return;
+          setCachedUser(socket.userId, user);
+        }
+
+        if (!user.isLiveSharing) return;
 
         // Respect privacy settings
         if (!user.settings?.privacy?.shareLocation) return;
@@ -130,12 +179,16 @@ export const setupSocket = (io) => {
       }
     });
 
-    // Stop sharing
+    // Stop sharing — single query with $set + return followers
     socket.on('stop_sharing', async () => {
       if (isSocketRateLimited(socket.userId, 'stop_sharing')) return;
       removeLocation(socket.userId);
-      await User.findByIdAndUpdate(socket.userId, { isLiveSharing: false });
-      const user = await User.findById(socket.userId);
+      invalidateUserCache(socket.userId);
+      const user = await User.findByIdAndUpdate(
+        socket.userId,
+        { isLiveSharing: false },
+        { new: true },
+      ).select('followers').lean();
       if (user) {
         for (const followerId of user.followers) {
           const followerSocketId = onlineUsers.get(followerId.toString());
@@ -147,14 +200,37 @@ export const setupSocket = (io) => {
     });
 
     // Messaging
-    socket.on('message_send', ({ conversationId, text, locationPin }) => {
+    socket.on('message_send', ({ conversationId, message }) => {
       if (isSocketRateLimited(socket.userId, 'message_send')) return;
       socket.to(`conversation:${conversationId}`).emit('new_message', {
         conversationId,
-        text,
-        sender: socket.userId,
-        locationPin,
-        timestamp: Date.now(),
+        message,
+      });
+    });
+
+    // Message edit (broadcast edited message to conversation)
+    socket.on('message_edit', ({ conversationId, message }) => {
+      if (isSocketRateLimited(socket.userId, 'message_edit')) return;
+      socket.to(`conversation:${conversationId}`).emit('message_edited', {
+        conversationId,
+        message,
+      });
+    });
+
+    // Reactions (broadcast reaction changes to conversation)
+    socket.on('reaction_add', ({ conversationId, message }) => {
+      if (isSocketRateLimited(socket.userId, 'reaction_add')) return;
+      socket.to(`conversation:${conversationId}`).emit('reaction_updated', {
+        conversationId,
+        message,
+      });
+    });
+
+    socket.on('reaction_remove', ({ conversationId, message }) => {
+      if (isSocketRateLimited(socket.userId, 'reaction_remove')) return;
+      socket.to(`conversation:${conversationId}`).emit('reaction_updated', {
+        conversationId,
+        message,
       });
     });
 
@@ -180,6 +256,7 @@ export const setupSocket = (io) => {
       onlineUsers.delete(socket.userId);
       removeLocation(socket.userId);
       socketRateMap.delete(socket.userId);
+      invalidateUserCache(socket.userId);
     });
   });
 };
