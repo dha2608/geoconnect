@@ -13,6 +13,7 @@ export const userApi = {
   updateLocation: (coords) => API.put('/users/me/location', coords),
   toggleFollow: (id) => API.post(`/users/${id}/follow`),
   getNearbyUsers: (params) => API.get('/users/nearby', { params }),
+  getLiveNearbyUsers: (params) => API.get('/users/live-nearby', { params }),
   searchUsers: (query) => API.get('/users/search', { params: { q: query } }),
   getFollowers: (id) => API.get(`/users/${id}/followers`),
   getFollowing: (id) => API.get(`/users/${id}/following`),

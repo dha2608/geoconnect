@@ -247,6 +247,106 @@ export const searchPins = asyncHandler(async (req, res) => {
   return paginated(res, pins, { page, limit, total });
 });
 
+// Strip Vietnamese/Latin diacritics for accent-insensitive regex matching
+const removeDiacritics = (str) =>
+  str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd');
+
+export const searchNearbyPins = asyncHandler(async (req, res) => {
+  const { q, lat, lng, radius = 10, category } = req.query;
+  if (!q || q.length < 2) throw AppError.badRequest('Query must be at least 2 characters');
+
+  const { limit } = req.pagination;
+
+  // Build an accent-insensitive regex: each char becomes a class of itself + diacritic variants
+  const plainQ = removeDiacritics(q);
+  const buildAccentRegex = (str) =>
+    str.split('').map((ch) => {
+      const lower = ch.toLowerCase();
+      const map = {
+        a: '[aàáảãạăằắẳẵặâầấẩẫậ]',
+        e: '[eèéẻẽẹêềếểễệ]',
+        i: '[iìíỉĩị]',
+        o: '[oòóỏõọôồốổỗộơờớởỡợ]',
+        u: '[uùúủũụưừứửữự]',
+        y: '[yỳýỷỹỵ]',
+        d: '[dđ]',
+      };
+      return map[lower] || ch;
+    }).join('');
+
+  const accentRegex = new RegExp(buildAccentRegex(plainQ), 'i');
+
+  if (lat && lng) {
+    // Geo-aware search: $geoNear + regex text filter, sorted by distance
+    const textMatch = {
+      $or: [
+        { title: accentRegex },
+        { description: accentRegex },
+        { address: accentRegex },
+        { tags: accentRegex },
+        { category: accentRegex },
+      ],
+    };
+    if (category) textMatch.category = category;
+
+    const pipeline = [
+      {
+        $geoNear: {
+          near: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
+          distanceField: 'distance',
+          maxDistance: parseFloat(radius) * 1000,
+          spherical: true,
+          key: 'location',
+          query: { visibility: 'public' },
+        },
+      },
+      { $match: textMatch },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'createdBy',
+          foreignField: '_id',
+          as: 'createdByArr',
+          pipeline: [{ $project: { name: 1, avatar: 1 } }],
+        },
+      },
+      { $addFields: { createdBy: { $arrayElemAt: ['$createdByArr', 0] } } },
+      { $project: { createdByArr: 0 } },
+    ];
+
+    const pins = await Pin.aggregate(pipeline);
+    return ok(res, pins);
+  }
+
+  // No location provided: fallback to text/regex search
+  let filter;
+  let projection = {};
+  let sortOpts = { createdAt: -1 };
+
+  if (q.length >= 3) {
+    filter = { visibility: 'public', $text: { $search: q } };
+    if (category) filter.category = category;
+    projection = { score: { $meta: 'textScore' } };
+    sortOpts = { score: { $meta: 'textScore' } };
+  } else {
+    const regex = { $regex: q, $options: 'i' };
+    filter = {
+      visibility: 'public',
+      $or: [{ title: regex }, { description: regex }, { address: regex }, { tags: regex }],
+    };
+    if (category) filter.category = category;
+  }
+
+  const pins = await Pin.find(filter, projection)
+    .populate('createdBy', 'name avatar')
+    .sort(sortOpts)
+    .limit(limit)
+    .lean();
+
+  return ok(res, pins);
+});
+
 export const getSavedPins = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.userId).select('savedPins');
   if (!user) throw AppError.notFound('User not found');

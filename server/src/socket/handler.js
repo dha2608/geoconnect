@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Conversation from '../models/Conversation.js';
-import { updateLocation, removeLocation, startLocationManager } from './locationManager.js';
+import { updateLocation, removeLocation, getLocation, getNearbyLocations, startLocationManager } from './locationManager.js';
 
 const onlineUsers = new Map(); // userId -> socketId
 
@@ -143,7 +143,7 @@ export const setupSocket = (io) => {
         let user = getCachedUser(socket.userId);
         if (!user) {
           user = await User.findById(socket.userId)
-            .select('isLiveSharing isLocationPublic settings followers following')
+            .select('name avatar isLiveSharing isLocationPublic settings followers following')
             .lean();
           if (!user) return;
           setCachedUser(socket.userId, user);
@@ -174,14 +174,39 @@ export const setupSocket = (io) => {
             });
           }
         }
+
+        // Also broadcast to nearby users for public discovery (not just followers)
+        if (user.isLocationPublic) {
+          const nearbyUsers = getNearbyLocations(lat, lng, 5, socket.userId);
+          for (const entry of nearbyUsers) {
+            // Skip users already notified as mutual followers
+            const isMutualFollower = mutualFollowers.some(f => f.toString() === entry.userId);
+            if (isMutualFollower) continue;
+
+            const nearbySocketId = onlineUsers.get(entry.userId);
+            if (nearbySocketId) {
+              io.to(nearbySocketId).emit('nearby_user_location', {
+                userId: socket.userId,
+                name: user.name,
+                avatar: user.avatar,
+                lat, lng, heading,
+                timestamp: Date.now(),
+              });
+            }
+          }
+        }
       } catch (error) {
         console.error('[Socket] Location update error:', error.message);
       }
     });
 
-    // Stop sharing — single query with $set + return followers
+    // Stop sharing — notify followers and nearby users, then remove from store
     socket.on('stop_sharing', async () => {
       if (isSocketRateLimited(socket.userId, 'stop_sharing')) return;
+
+      // Get current location before removing (needed to find nearby users)
+      const currentLoc = getLocation(socket.userId);
+
       removeLocation(socket.userId);
       invalidateUserCache(socket.userId);
       const user = await User.findByIdAndUpdate(
@@ -194,6 +219,17 @@ export const setupSocket = (io) => {
           const followerSocketId = onlineUsers.get(followerId.toString());
           if (followerSocketId) {
             io.to(followerSocketId).emit('friend_offline', { userId: socket.userId });
+          }
+        }
+      }
+
+      // Notify nearby users too
+      if (currentLoc) {
+        const nearbyUsers = getNearbyLocations(currentLoc.lat, currentLoc.lng, 5, socket.userId);
+        for (const entry of nearbyUsers) {
+          const nearbySocketId = onlineUsers.get(entry.userId);
+          if (nearbySocketId) {
+            io.to(nearbySocketId).emit('nearby_user_offline', { userId: socket.userId });
           }
         }
       }
@@ -253,10 +289,25 @@ export const setupSocket = (io) => {
     // Disconnect
     socket.on('disconnect', () => {
       console.log(`[Socket] User disconnected: ${socket.userId}`);
+
+      // Get location before removing to notify nearby users
+      const currentLoc = getLocation(socket.userId);
+
       onlineUsers.delete(socket.userId);
       removeLocation(socket.userId);
       socketRateMap.delete(socket.userId);
       invalidateUserCache(socket.userId);
+
+      // Notify nearby users about offline
+      if (currentLoc) {
+        const nearbyUsers = getNearbyLocations(currentLoc.lat, currentLoc.lng, 5, socket.userId);
+        for (const entry of nearbyUsers) {
+          const nearbySocketId = onlineUsers.get(entry.userId);
+          if (nearbySocketId) {
+            io.to(nearbySocketId).emit('nearby_user_offline', { userId: socket.userId });
+          }
+        }
+      }
     });
   });
 };

@@ -7,6 +7,7 @@ import { notifyEmail } from '../utils/notifyWithEmail.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError, ERR } from '../utils/errors.js';
 import { ok, message } from '../utils/response.js';
+import { getNearbyLocations } from '../socket/locationManager.js';
 
 export const getMe = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id)
@@ -109,6 +110,42 @@ export const getNearbyUsers = asyncHandler(async (req, res) => {
   }).select('name avatar bio location isLiveSharing').limit(50).lean();
 
   return ok(res, users);
+});
+
+export const getLiveNearbyUsers = asyncHandler(async (req, res) => {
+  const { lat, lng, radius = 5 } = req.query;
+  if (!lat || !lng) throw AppError.badRequest('lat and lng required');
+
+  const userLat = parseFloat(lat);
+  const userLng = parseFloat(lng);
+  const maxDistKm = parseFloat(radius);
+
+  // Get nearby users from in-memory location store (real-time)
+  const nearby = getNearbyLocations(userLat, userLng, maxDistKm, req.user._id.toString());
+  if (nearby.length === 0) return ok(res, []);
+
+  // Exclude blocked users
+  const currentUser = await User.findById(req.user._id).select('blockedUsers');
+  const blockedIds = new Set((currentUser?.blockedUsers || []).map(id => id.toString()));
+  const candidateIds = nearby.map(n => n.userId).filter(id => !blockedIds.has(id));
+
+  // Fetch user details — only public users
+  const users = await User.find({
+    _id: { $in: candidateIds },
+    isLocationPublic: true,
+  }).select('name avatar bio isLiveSharing').lean();
+
+  // Merge user details with live location data
+  const userMap = new Map(users.map(u => [u._id.toString(), u]));
+  const result = nearby
+    .filter(n => userMap.has(n.userId))
+    .map(n => ({
+      ...userMap.get(n.userId),
+      liveLocation: { lat: n.lat, lng: n.lng, heading: n.heading },
+      distance: Math.round(n.distance * 1000), // meters
+    }));
+
+  return ok(res, result);
 });
 
 export const updateLocation = asyncHandler(async (req, res) => {

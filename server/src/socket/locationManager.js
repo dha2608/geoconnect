@@ -85,6 +85,42 @@ export function getLocationsForUsers(userIds) {
   return result;
 }
 
+// ─── Geo helpers ─────────────────────────────────────────────────────────────
+
+/** Haversine distance in kilometers between two lat/lng points. */
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * Get all active users within a radius of a given point.
+ * @param {number} lat  Center latitude
+ * @param {number} lng  Center longitude
+ * @param {number} radiusKm  Search radius in kilometers
+ * @param {string} [excludeUserId]  User ID to exclude (typically the requester)
+ * @returns {{ userId: string, lat: number, lng: number, heading: number|null, distance: number }[]}
+ */
+export function getNearbyLocations(lat, lng, radiusKm, excludeUserId) {
+  const results = [];
+  for (const [userId, entry] of locations) {
+    if (userId === excludeUserId) continue;
+    const dist = haversine(lat, lng, entry.lat, entry.lng);
+    if (dist <= radiusKm) {
+      results.push({ userId, lat: entry.lat, lng: entry.lng, heading: entry.heading, distance: dist });
+    }
+  }
+  results.sort((a, b) => a.distance - b.distance);
+  return results;
+}
+
 // ─── Background tasks ────────────────────────────────────────────────────────
 
 let flushTimer = null;

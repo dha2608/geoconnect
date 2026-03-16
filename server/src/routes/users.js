@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getMe, updateMe, uploadAvatar, getUserById, followUser, unfollowUser, getNearbyUsers, updateLocation, searchUsers, getFollowers, getFollowing, getSettings, updateSettings, blockUser, unblockUser, getBlockedUsers, deleteAccount, getUserStats } from '../controllers/userController.js';
+import { getMe, updateMe, uploadAvatar, getUserById, followUser, unfollowUser, getNearbyUsers, getLiveNearbyUsers, updateLocation, searchUsers, getFollowers, getFollowing, getSettings, updateSettings, blockUser, unblockUser, getBlockedUsers, deleteAccount, getUserStats } from '../controllers/userController.js';
 import { authenticate } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
@@ -16,6 +16,7 @@ router.get('/me/settings', authenticate, getSettings);
 router.put('/me/settings', authenticate, validateUpdateSettings, validate, updateSettings);
 router.get('/me/blocked', authenticate, getBlockedUsers);
 router.get('/nearby', authenticate, validateGetNearbyUsers, validate, getNearbyUsers);
+router.get('/live-nearby', authenticate, validateGetNearbyUsers, validate, getLiveNearbyUsers);
 router.get('/search', authenticate, searchUsers);
 router.get('/:id', validateUserParamId, validate, getUserById);
 router.get('/:id/stats', validateUserParamId, validate, getUserStats);

@@ -13,6 +13,7 @@ export const pinApi = {
   undoCheckIn: (id) => API.delete(`/pins/${id}/checkin`),
   getTrending: () => API.get('/pins/trending'),
   searchPins: (query) => API.get('/pins/search', { params: { q: query } }),
+  searchNearbyPins: (params) => API.get('/pins/search-nearby', { params }),
 };
 
 export const getSavedPins = (userId) => API.get(`/pins/saved/${userId}`);

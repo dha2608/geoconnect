@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { geocodeApi } from '../../api/geocodeApi';
+import { pinApi } from '../../api/pinApi';
 import { flyToLocation, setDestination } from '../../features/map/mapSlice';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -67,6 +68,11 @@ function getResultTypeIcon(type = '', cls = '') {
   if (t.includes('airport')) return '✈️';
   if (t.includes('park') || t.includes('garden')) return '🌳';
   if (t.includes('shop') || t.includes('store') || t.includes('market') || t.includes('supermarket')) return '🛍️';
+  if (t.includes('entertainment') || t.includes('cinema') || t.includes('theatre')) return '🎭';
+  if (t.includes('sports') || t.includes('stadium') || t.includes('gym')) return '⚽';
+  if (t.includes('culture') || t.includes('museum') || t.includes('library')) return '🏛️';
+  if (t.includes('outdoors') || t.includes('nature') || t.includes('trail')) return '🌿';
+  if (t.includes('travel') || t.includes('tourism') || t.includes('attraction')) return '🧳';
   return null;
 }
 
@@ -88,24 +94,65 @@ export default function SearchBar() {
   const debounceRef    = useRef(null);
   const blurTimeoutRef = useRef(null); // cancelable close timer
 
-  // ── Core search ───────────────────────────────────────────────────────────────
+  // ── Core search — queries both DB pins and Nominatim geocoding in parallel ──
   const search = useCallback(async (q) => {
-    if (q.length < 3) {
+    if (q.length < 2) {
       setResults([]);
       setIsOpen(false);
       return;
     }
     setIsLoading(true);
     try {
-      const { data } = await geocodeApi.search(q);
-      setResults(data || []);
+      // Build params for pin search
+      const pinParams = { q };
+      if (userLocation) {
+        pinParams.lat = userLocation.lat;
+        pinParams.lng = userLocation.lng;
+        pinParams.radius = 10; // 10 km
+      }
+
+      // Search both sources in parallel
+      const [pinRes, geoRes] = await Promise.allSettled([
+        pinApi.searchNearbyPins(pinParams),
+        q.length >= 3 ? geocodeApi.search(q) : Promise.resolve({ data: [] }),
+      ]);
+
+      // Normalize pin results to common format
+      const pinData = pinRes.status === 'fulfilled'
+        ? (pinRes.value.data?.data || pinRes.value.data || [])
+        : [];
+      const pins = (Array.isArray(pinData) ? pinData : []).map(p => ({
+        _source: 'pin',
+        _id: p._id,
+        display_name: p.title,
+        lat: String(p.location?.coordinates?.[1] ?? 0),
+        lon: String(p.location?.coordinates?.[0] ?? 0),
+        type: p.category || 'place',
+        class: 'pin',
+        category: p.category,
+        address: p.address,
+        description: p.description,
+        distance: p.distance, // meters from $geoNear
+        images: p.images,
+        createdBy: p.createdBy,
+      }));
+
+      // Normalize geocode results (unwrap server wrapper {success, data})
+      const geoRaw = geoRes.status === 'fulfilled' ? geoRes.value.data : null;
+      const geoData = geoRaw?.data ?? geoRaw ?? [];
+      const geo = (Array.isArray(geoData) ? geoData : []).map(l => ({
+        ...l,
+        _source: 'geocode',
+      }));
+
+      setResults([...pins, ...geo]);
       setIsOpen(true);
     } catch {
       setResults([]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userLocation]);
 
   // Debounced search on every query keystroke
   useEffect(() => {
@@ -137,6 +184,12 @@ export default function SearchBar() {
 
   // ── Distance badge ────────────────────────────────────────────────────────────
   const getDistance = useCallback((result) => {
+    // Pin results from $geoNear already have distance in meters
+    if (result._source === 'pin' && result.distance != null) {
+      const distM = result.distance;
+      if (distM < 1000) return `${Math.round(distM)} m`;
+      return `${(distM / 1000).toFixed(1)} km`;
+    }
     if (!userLocation) return null;
     const dist = haversine(
       userLocation.lat, userLocation.lng,
@@ -263,8 +316,8 @@ export default function SearchBar() {
 
   // ── Derived visibility ────────────────────────────────────────────────────────
   const showHistoryPanel = isOpen && query.length === 0;
-  const showResults      = isOpen && query.length >= 3 && results.length > 0;
-  const showEmpty        = isOpen && query.length >= 3 && results.length === 0 && !isLoading;
+  const showResults      = isOpen && query.length >= 2 && results.length > 0;
+  const showEmpty        = isOpen && query.length >= 2 && results.length === 0 && !isLoading;
   const showDropdown     = showHistoryPanel || showResults || showEmpty;
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -408,75 +461,139 @@ export default function SearchBar() {
               </>
             )}
 
-            {/* ── Search Results (sorted by proximity when user location available) */}
-            {showResults && (
-              <div className="max-h-72 overflow-y-auto">
-                {[...results].sort((a, b) => {
-                  if (!userLocation) return 0;
-                  const dA = haversine(userLocation.lat, userLocation.lng, parseFloat(a.lat), parseFloat(a.lon));
-                  const dB = haversine(userLocation.lat, userLocation.lng, parseFloat(b.lat), parseFloat(b.lon));
-                  return dA - dB;
-                }).map((result, i) => {
-                  const typeIcon = getResultTypeIcon(result.type, result.class);
-                  const dist     = getDistance(result);
+            {/* ── Search Results — pins first, then geocode, sorted by distance ── */}
+            {showResults && (() => {
+              const pinResults = [...results.filter(r => r._source === 'pin')].sort((a, b) => {
+                const dA = a.distance ?? (userLocation ? haversine(userLocation.lat, userLocation.lng, parseFloat(a.lat), parseFloat(a.lon)) * 1000 : 0);
+                const dB = b.distance ?? (userLocation ? haversine(userLocation.lat, userLocation.lng, parseFloat(b.lat), parseFloat(b.lon)) * 1000 : 0);
+                return dA - dB;
+              });
+              const geoResults = [...results.filter(r => r._source !== 'pin')].sort((a, b) => {
+                if (!userLocation) return 0;
+                return haversine(userLocation.lat, userLocation.lng, parseFloat(a.lat), parseFloat(a.lon))
+                     - haversine(userLocation.lat, userLocation.lng, parseFloat(b.lat), parseFloat(b.lon));
+              });
+              // Combined flat list for keyboard navigation
+              const allResults = [...pinResults, ...geoResults];
+              return (
+                <div className="max-h-72 overflow-y-auto">
+                  {/* Nearby places from DB */}
+                  {pinResults.length > 0 && (
+                    <>
+                      <div className="px-3 py-1.5">
+                        <p className="text-[10px] font-body text-txt-muted uppercase tracking-wider">Nearby places</p>
+                      </div>
+                      {pinResults.map((result, i) => {
+                        const typeIcon = getResultTypeIcon(result.type, result.class);
+                        const dist = getDistance(result);
+                        const flatIdx = i;
+                        return (
+                          <div
+                            key={`pin-${result._id || i}`}
+                            className={`flex items-center border-b border-surface-divider last:border-0 transition-colors group ${
+                              activeIndex === flatIdx ? 'bg-surface-hover' : 'hover:bg-surface-hover'
+                            }`}
+                          >
+                            <button
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => handleSelect(result)}
+                              className="flex-1 px-3 py-2.5 flex items-start gap-3 text-left min-w-0"
+                            >
+                              <span className="mt-0.5 flex-shrink-0 w-4 flex items-center justify-center">
+                                {typeIcon ? (
+                                  <span className="text-sm leading-none" role="img">{typeIcon}</span>
+                                ) : (
+                                  <svg className="w-4 h-4 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+                                  </svg>
+                                )}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm text-txt-primary truncate">{result.display_name}</p>
+                                <p className="text-xs text-txt-muted truncate">{result.address || result.description || ''}</p>
+                              </div>
+                              {dist && (
+                                <span className="ml-2 flex-shrink-0 self-center text-xs font-mono text-txt-muted bg-surface-hover rounded px-1.5 py-0.5 whitespace-nowrap">
+                                  {dist}
+                                </span>
+                              )}
+                            </button>
+                            <button
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => handleSetDestination(result)}
+                              title="Set as destination"
+                              className="p-2 mr-2 text-txt-muted hover:text-accent-primary transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                            >
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+                              </svg>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
 
-                  return (
-                    <div
-                      key={result.place_id || i}
-                      className={`flex items-center border-b border-surface-divider last:border-0 transition-colors group ${
-                        activeIndex === i ? 'bg-surface-hover' : 'hover:bg-surface-hover'
-                      }`}
-                    >
-                      {/* Main area — click to fly to location */}
-                      <button
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => handleSelect(result)}
-                        className="flex-1 px-3 py-2.5 flex items-start gap-3 text-left min-w-0"
-                      >
-                        {/* Type-aware icon: emoji or default pin */}
-                        <span className="mt-0.5 flex-shrink-0 w-4 flex items-center justify-center">
-                          {typeIcon ? (
-                            <span className="text-sm leading-none" role="img">{typeIcon}</span>
-                          ) : (
-                            <svg className="w-4 h-4 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-                              <circle cx="12" cy="10" r="3"/>
-                            </svg>
-                          )}
-                        </span>
-
-                        {/* Name + full address */}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm text-txt-primary truncate">
-                            {result.display_name.split(',')[0]}
-                          </p>
-                          <p className="text-xs text-txt-muted truncate">{result.display_name}</p>
-                        </div>
-
-                        {/* Distance badge */}
-                        {dist && (
-                          <span className="ml-2 flex-shrink-0 self-center text-xs font-mono text-txt-muted bg-surface-hover rounded px-1.5 py-0.5 whitespace-nowrap">
-                            {dist}
-                          </span>
-                        )}
-                      </button>
-
-                      {/* Set as destination */}
-                      <button
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => handleSetDestination(result)}
-                        title="Set as destination"
-                        className="p-2 mr-2 text-txt-muted hover:text-accent-primary transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
-                      >
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                          <polygon points="3 11 22 2 13 21 11 13 3 11"/>
-                        </svg>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                  {/* Locations from geocoding */}
+                  {geoResults.length > 0 && (
+                    <>
+                      {pinResults.length > 0 && <div className="border-t border-surface-divider" />}
+                      <div className="px-3 py-1.5">
+                        <p className="text-[10px] font-body text-txt-muted uppercase tracking-wider">Locations</p>
+                      </div>
+                      {geoResults.map((result, i) => {
+                        const typeIcon = getResultTypeIcon(result.type, result.class);
+                        const dist = getDistance(result);
+                        const flatIdx = pinResults.length + i;
+                        return (
+                          <div
+                            key={result.place_id || `geo-${i}`}
+                            className={`flex items-center border-b border-surface-divider last:border-0 transition-colors group ${
+                              activeIndex === flatIdx ? 'bg-surface-hover' : 'hover:bg-surface-hover'
+                            }`}
+                          >
+                            <button
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => handleSelect(result)}
+                              className="flex-1 px-3 py-2.5 flex items-start gap-3 text-left min-w-0"
+                            >
+                              <span className="mt-0.5 flex-shrink-0 w-4 flex items-center justify-center">
+                                {typeIcon ? (
+                                  <span className="text-sm leading-none" role="img">{typeIcon}</span>
+                                ) : (
+                                  <svg className="w-4 h-4 text-accent-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+                                  </svg>
+                                )}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm text-txt-primary truncate">{result.display_name.split(',')[0]}</p>
+                                <p className="text-xs text-txt-muted truncate">{result.display_name}</p>
+                              </div>
+                              {dist && (
+                                <span className="ml-2 flex-shrink-0 self-center text-xs font-mono text-txt-muted bg-surface-hover rounded px-1.5 py-0.5 whitespace-nowrap">
+                                  {dist}
+                                </span>
+                              )}
+                            </button>
+                            <button
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => handleSetDestination(result)}
+                              title="Set as destination"
+                              className="p-2 mr-2 text-txt-muted hover:text-accent-primary transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                            >
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+                              </svg>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ── Empty state ───────────────────────────────────────────────── */}
             {showEmpty && (
