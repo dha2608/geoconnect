@@ -177,9 +177,32 @@ export default function WeatherWidget() {
     };
   }, [userLocation, fetchWeather, map]);
 
-  // ── Early-out: hide completely on API failure with no cached data ──────────
+  // ── Early-out: show subtle error indicator on API failure with no cached data ─
 
-  if (fatalError) return null;
+  if (fatalError) {
+    return (
+      <div
+        className="absolute right-16 bottom-12 z-[1000] select-none"
+        role="region"
+        aria-label="Weather unavailable"
+      >
+        <div
+          className="glass rounded-xl px-3 py-2.5 flex items-center gap-2 cursor-pointer opacity-60 hover:opacity-90 transition-opacity"
+          onClick={() => {
+            setFatalError(false);
+            setLoading(true);
+            const lat = userLocation?.lat ?? map.getCenter().lat;
+            const lng = userLocation?.lng ?? map.getCenter().lng;
+            fetchWeather(lat, lng);
+          }}
+          title="Click to retry"
+        >
+          <span className="text-lg">⚠️</span>
+          <span className="text-xs text-txt-muted">Weather unavailable</span>
+        </div>
+      </div>
+    );
+  }
 
   // ── Derived display values ─────────────────────────────────────────────────
 

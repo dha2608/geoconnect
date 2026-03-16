@@ -7,7 +7,8 @@ export default function ProtectedRoute({ children }) {
   const location = useLocation();
 
   // App.jsx dispatches getMe() globally — just wait for it to resolve here.
-  if (loading || (!initialized && localStorage.getItem('accessToken'))) {
+  // Use only Redux state to avoid race conditions with localStorage checks.
+  if (loading || !initialized) {
     return (
       <div className="h-screen flex items-center justify-center bg-base">
         <LoadingSpinner size="lg" />

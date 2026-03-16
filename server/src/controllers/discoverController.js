@@ -73,8 +73,13 @@ export const getRecommendedPins = asyncHandler(async (req, res) => {
     }
 
     // Enable geo-sorting when the user has stored coordinates
+    // Filter out [0, 0] default coordinates (invalid/unset location)
     const coords = user.location?.coordinates;
-    if (Array.isArray(coords) && coords.length === 2) {
+    if (
+      Array.isArray(coords) &&
+      coords.length === 2 &&
+      !(coords[0] === 0 && coords[1] === 0)
+    ) {
       useGeoNear = true;
       userCoords = coords;
     }
@@ -92,6 +97,7 @@ export const getRecommendedPins = asyncHandler(async (req, res) => {
         distanceField: 'distance',
         spherical: true,
         query: matchFilter,
+        key: 'location',
       },
     };
 

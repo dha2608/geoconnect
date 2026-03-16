@@ -131,7 +131,7 @@ const authSlice = createSlice({
     // Register
     builder.addCase(register.pending, (state) => { state.loading = true; state.error = null; });
     builder.addCase(register.fulfilled, (state, action) => {
-      state.loading = false; state.user = action.payload.user;
+      state.loading = false; state.initialized = true; state.user = action.payload.user;
       state.isAuthenticated = true; state.isGuest = false;
     });
     builder.addCase(register.rejected, (state, action) => { state.loading = false; state.error = action.payload?.message; });
@@ -143,6 +143,7 @@ const authSlice = createSlice({
         state.requires2FA = true;
         state.tempToken = action.payload.tempToken;
       } else {
+        state.initialized = true;
         state.user = action.payload.user;
         state.isAuthenticated = true; state.isGuest = false;
       }
@@ -151,7 +152,7 @@ const authSlice = createSlice({
     // Login 2FA
     builder.addCase(login2FA.pending, (state) => { state.loading = true; state.error = null; });
     builder.addCase(login2FA.fulfilled, (state, action) => {
-      state.loading = false; state.user = action.payload.user;
+      state.loading = false; state.initialized = true; state.user = action.payload.user;
       state.isAuthenticated = true; state.isGuest = false;
       state.requires2FA = false; state.tempToken = null;
     });
@@ -159,7 +160,7 @@ const authSlice = createSlice({
     // Login with backup code
     builder.addCase(loginWithBackupCode.pending, (state) => { state.loading = true; state.error = null; });
     builder.addCase(loginWithBackupCode.fulfilled, (state, action) => {
-      state.loading = false; state.user = action.payload.user;
+      state.loading = false; state.initialized = true; state.user = action.payload.user;
       state.isAuthenticated = true; state.isGuest = false;
       state.requires2FA = false; state.tempToken = null;
     });
@@ -171,7 +172,7 @@ const authSlice = createSlice({
     // Guest
     builder.addCase(guestLogin.pending, (state) => { state.loading = true; state.error = null; });
     builder.addCase(guestLogin.fulfilled, (state, action) => {
-      state.loading = false; state.user = action.payload.user;
+      state.loading = false; state.initialized = true; state.user = action.payload.user;
       state.isAuthenticated = true; state.isGuest = true;
     });
     builder.addCase(guestLogin.rejected, (state, action) => { state.loading = false; state.error = action.payload?.message; });

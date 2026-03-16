@@ -58,6 +58,7 @@
   },
 
   "nav": {
+    "feed": "Feed",
     "map": "Map",
     "explore": "Explore",
     "activity": "Activity",

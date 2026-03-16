@@ -58,6 +58,7 @@
   },
 
   "nav": {
+    "feed": "Bảng tin",
     "map": "Bản đồ",
     "explore": "Khám phá",
     "activity": "Hoạt động",

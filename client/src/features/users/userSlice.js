@@ -1,23 +1,26 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { userApi } from '../../api/userApi';
 
+// Helper to unwrap server response: res.data → { success, data } → extract inner data
+const unwrap = (res) => res.data?.data ?? res.data;
+
 export const fetchUserProfile = createAsyncThunk('users/fetchProfile', async (id, { rejectWithValue }) => {
-  try { const res = await userApi.getProfile(id); return res.data; }
+  try { const res = await userApi.getProfile(id); return unwrap(res); }
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
 export const toggleFollow = createAsyncThunk('users/toggleFollow', async ({ id, isCurrentlyFollowing }, { rejectWithValue }) => {
-  try { const res = await userApi.toggleFollow(id); return res.data; }
+  try { const res = await userApi.toggleFollow(id); return unwrap(res); }
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
 export const fetchNearbyUsers = createAsyncThunk('users/fetchNearby', async (params, { rejectWithValue }) => {
-  try { const res = await userApi.getNearbyUsers(params); return res.data; }
+  try { const res = await userApi.getNearbyUsers(params); return unwrap(res); }
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
 export const searchUsers = createAsyncThunk('users/search', async (query, { rejectWithValue }) => {
-  try { const res = await userApi.searchUsers(query); return res.data; }
+  try { const res = await userApi.searchUsers(query); return unwrap(res); }
   catch (err) { return rejectWithValue(err.response?.data); }
 });
 
