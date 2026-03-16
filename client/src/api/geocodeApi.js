@@ -6,13 +6,19 @@ import API from './axios';
 let searchAbortController = null;
 
 export const geocodeApi = {
-  search: (query) => {
+  search: (query, { lat, lng } = {}) => {
     // Cancel any previous in-flight search
     if (searchAbortController) searchAbortController.abort();
     searchAbortController = new AbortController();
 
+    const params = { q: query };
+    if (lat != null && lng != null) {
+      params.lat = lat;
+      params.lng = lng;
+    }
+
     return API.get('/geocode/search', {
-      params: { q: query },
+      params,
       signal: searchAbortController.signal,
     });
   },

@@ -82,6 +82,8 @@ export default function SearchBar() {
   const dispatch     = useDispatch();
   // User's current GPS location for computing distance badges
   const userLocation = useSelector(state => state.map.userLocation);
+  // Map center as fallback reference point when GPS unavailable
+  const mapCenter    = useSelector(state => state.map.center);
 
   const [query,       setQuery]       = useState('');
   const [results,     setResults]     = useState([]);
@@ -103,18 +105,24 @@ export default function SearchBar() {
     }
     setIsLoading(true);
     try {
+      // Reference location: prefer GPS, fall back to map center
+      const refLoc = userLocation
+        || (mapCenter ? { lat: mapCenter[0], lng: mapCenter[1] } : null);
+
       // Build params for pin search
       const pinParams = { q };
-      if (userLocation) {
-        pinParams.lat = userLocation.lat;
-        pinParams.lng = userLocation.lng;
+      if (refLoc) {
+        pinParams.lat = refLoc.lat;
+        pinParams.lng = refLoc.lng;
         pinParams.radius = 10; // 10 km
       }
 
       // Search both sources in parallel
       const [pinRes, geoRes] = await Promise.allSettled([
         pinApi.searchNearbyPins(pinParams),
-        q.length >= 3 ? geocodeApi.search(q) : Promise.resolve({ data: [] }),
+        q.length >= 3
+          ? geocodeApi.search(q, refLoc ? { lat: refLoc.lat, lng: refLoc.lng } : {})
+          : Promise.resolve({ data: [] }),
       ]);
 
       // Normalize pin results to common format
@@ -140,10 +148,21 @@ export default function SearchBar() {
       // Normalize geocode results (unwrap server wrapper {success, data})
       const geoRaw = geoRes.status === 'fulfilled' ? geoRes.value.data : null;
       const geoData = geoRaw?.data ?? geoRaw ?? [];
-      const geo = (Array.isArray(geoData) ? geoData : []).map(l => ({
+      let geo = (Array.isArray(geoData) ? geoData : []).map(l => ({
         ...l,
         _source: 'geocode',
       }));
+
+      // Filter out far-away geocode results — use GPS or map center as reference
+      if (refLoc && geo.length > 0) {
+        geo = geo
+          .map(l => ({
+            ...l,
+            _distanceKm: haversine(refLoc.lat, refLoc.lng, parseFloat(l.lat), parseFloat(l.lon)),
+          }))
+          .sort((a, b) => a._distanceKm - b._distanceKm)
+          .filter(l => l._distanceKm < 200); // only show results within 200 km
+      }
 
       setResults([...pins, ...geo]);
       setIsOpen(true);
@@ -152,7 +171,7 @@ export default function SearchBar() {
     } finally {
       setIsLoading(false);
     }
-  }, [userLocation]);
+  }, [userLocation, mapCenter]);
 
   // Debounced search on every query keystroke
   useEffect(() => {
