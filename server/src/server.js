@@ -75,8 +75,21 @@ app.use(helmet());
 app.use(mongoSanitize());  // Sanitize data against NoSQL injection
 app.use(xss());            // Prevent XSS attacks
 app.use(hpp());            // Prevent HTTP parameter pollution
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',').map((u) => u.trim())
+  : ['http://localhost:5173'];
+// In development, also allow nearby ports (Vite port fallback)
+if (process.env.NODE_ENV !== 'production') {
+  for (const o of [...allowedOrigins]) {
+    const m = o.match(/^(https?:\/\/.+):(\d+)$/);
+    if (m) {
+      const port = parseInt(m[2], 10);
+      allowedOrigins.push(`${m[1]}:${port + 1}`, `${m[1]}:${port + 2}`);
+    }
+  }
+}
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: allowedOrigins,
   credentials: true,
 }));
 app.use(morgan('dev'));
@@ -92,9 +105,8 @@ app.use(apiLimiter);
 app.use((req, res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   const origin = req.get('origin');
-  const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
   if (!origin) return next();
-  if (origin !== allowedOrigin) {
+  if (!allowedOrigins.includes(origin)) {
     return res.status(403).json({ message: 'Forbidden: invalid origin' });
   }
   next();
