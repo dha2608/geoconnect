@@ -1,4 +1,4 @@
-# GeoConnect - Ke hoach Cai tien & Nang cap Toan dien
+# GeoConnect - Kế hoạch Cải tiến & Nâng cấp Toàn diện
 
 > Tài liệu lập kế hoạch cải tiến dựa trên phân tích sâu client, server, và UX/CSS.
 > Ngày tạo: 2026-03-14
@@ -9,17 +9,17 @@
 
 | Giai đoạn   | Mục tiêu                        | Độ ưu tiên | Ước tính  | Trạng thái       |
 | ----------- | -------------------------------- | ----------- | --------- | ---------------- |
-| **Phase 1** | Security & Stability             | CRITICAL    | 2-3 ngày  | ✅ **HOÀN THÀNH** |
-| **Phase 2** | Performance & State Management   | HIGH        | 3-4 ngày  | ✅ **HOÀN THÀNH** |
-| **Phase 3** | Accessibility & UX               | HIGH        | 2-3 ngày  | ✅ **HOÀN THÀNH** |
-| **Phase 4** | Code Quality & DX                | MEDIUM      | 2-3 ngày  | ✅ **HOÀN THÀNH** |
-| **Phase 5** | Scalability                      | LOW         | 3-5 ngày  | ✅ **HOÀN THÀNH** |
+| **Phase 1** | Security & Stability             | CRITICAL    | 2-3 ngày  | **HOÀN THÀNH** |
+| **Phase 2** | Performance & State Management   | HIGH        | 3-4 ngày  | **HOÀN THÀNH** |
+| **Phase 3** | Accessibility & UX               | HIGH        | 2-3 ngày  | **HOÀN THÀNH** |
+| **Phase 4** | Code Quality & DX                | MEDIUM      | 2-3 ngày  | **HOÀN THÀNH** |
+| **Phase 5** | Scalability                      | LOW         | 3-5 ngày  | **HOÀN THÀNH** |
 
 > **Tất cả 5 giai đoạn đã hoàn thành.** Xem `README.md > Recent Improvements` để biết tóm tắt các thay đổi đã thực hiện cho từng phase. Xem `PROJECT-REPORT.md` để biết báo cáo hoàn thành chi tiết.
 
 ---
 
-## Phase 1: Security & Stability (CRITICAL) — ✅ HOÀN THÀNH
+## Phase 1: Security & Stability (CRITICAL) — HOÀN THÀNH
 
 > Các lỗi bảo mật nghiêm trọng cần fix ngay.
 > **Đã hoàn thành:** Socket authorization, location privacy, CSRF, password policy, input validation.
@@ -71,7 +71,7 @@
 
 ---
 
-## Phase 2: Performance & State Management (HIGH) — ✅ HOÀN THÀNH
+## Phase 2: Performance & State Management (HIGH) — HOÀN THÀNH
 
 > Tối ưu rendering, state, và network.
 > **Đã hoàn thành:** createEntityAdapter, memoized selectors, AbortController, component memoization.
@@ -127,7 +127,7 @@
 
 ---
 
-## Phase 3: Accessibility & UX (HIGH) — ✅ HOÀN THÀNH
+## Phase 3: Accessibility & UX (HIGH) — HOÀN THÀNH
 
 > WCAG 2.1 AA compliance và UX polish.
 > **Đã hoàn thành:** prefers-reduced-motion, ARIA labels, focus-visible, live regions, color contrast, tablet breakpoint, OAuth loading states.
@@ -177,7 +177,7 @@
 
 ---
 
-## Phase 4: Code Quality & DX (MEDIUM) — ✅ HOÀN THÀNH
+## Phase 4: Code Quality & DX (MEDIUM) — HOÀN THÀNH
 
 > Clean code, consistency, developer experience.
 > **Đã hoàn thành:** asyncHandler (removed ~108 try-catch blocks), consistent response format, request ID tracing, AppError class, settings validator.
@@ -217,7 +217,7 @@
 
 ---
 
-## Phase 5: Scalability (LOW - Future) — ✅ HOÀN THÀNH
+## Phase 5: Scalability (LOW - Future) — HOÀN THÀNH
 
 > Chuẩn bị cho scale khi user base tăng.
 > **Đã hoàn thành:** Comments collection, Redis rate limiting, MongoDB transactions, token blacklist, socket rate limiting, compound indexes.
@@ -256,36 +256,36 @@
 
 ## Tóm tắt — Tất cả phases đã hoàn thành
 
-### Phase 1 (Security — CRITICAL): ✅ Hoàn thành
-1. ✅ Socket room authorization
-2. ✅ Location privacy check
-3. ✅ PIN_CATEGORIES sync
-4. ✅ Graceful shutdown
-5. ✅ Password policy upgrade
-6. ✅ Missing validation
+### Phase 1 (Security — CRITICAL): Hoàn thành
+1. Socket room authorization
+2. Location privacy check
+3. PIN_CATEGORIES sync
+4. Graceful shutdown
+5. Password policy upgrade
+6. Missing validation
 
-### Phase 2 (Performance — HIGH): ✅ Hoàn thành
-1. ✅ Redux normalization (createEntityAdapter)
-2. ✅ Memoized selectors
-3. ✅ Component memoization
-4. ✅ API debounce/caching cho map
-5. ✅ Error boundary granularity
+### Phase 2 (Performance — HIGH): Hoàn thành
+1. Redux normalization (createEntityAdapter)
+2. Memoized selectors
+3. Component memoization
+4. API debounce/caching cho map
+5. Error boundary granularity
 
-### Phase 3 (Accessibility — HIGH): ✅ Hoàn thành
-1. ✅ Reduced motion support
-2. ✅ Aria labels
-3. ✅ Focus visible styles
-4. ✅ Live regions
+### Phase 3 (Accessibility — HIGH): Hoàn thành
+1. Reduced motion support
+2. Aria labels
+3. Focus visible styles
+4. Live regions
 
-### Phase 4 (Code Quality — MEDIUM): ✅ Hoàn thành
-1. ✅ Async error wrapper
-2. ✅ Response format standardization
-3. ✅ Request ID tracing
+### Phase 4 (Code Quality — MEDIUM): Hoàn thành
+1. Async error wrapper
+2. Response format standardization
+3. Request ID tracing
 
-### Phase 5 (Scalability — LOW): ✅ Hoàn thành
-1. ✅ Comments collection separation
-2. ✅ Redis rate limiting
-3. ✅ MongoDB transactions
+### Phase 5 (Scalability — LOW): Hoàn thành
+1. Comments collection separation
+2. Redis rate limiting
+3. MongoDB transactions
 
 ---
 
@@ -293,13 +293,13 @@
 
 | Metric                         | Trước upgrade | Mục tiêu  | Sau upgrade         |
 | ------------------------------ | ------------- | --------- | ------------------- |
-| Security vulnerabilities       | 5 critical    | 0         | ✅ 0                |
-| Lighthouse Accessibility       | ~75 (ước tính)| >= 95     | ✅ Improved (WCAG AA)|
-| Lighthouse Performance         | ~70 (ước tính)| >= 90     | ✅ Improved (entity adapters, abort) |
-| Unnecessary re-renders         | Nhiều         | Minimal   | ✅ Minimal (memoized selectors) |
-| WCAG 2.1 AA compliance         | Partial       | Full      | ✅ Full             |
-| Response format consistency    | ~40%          | 100%      | ✅ 100%             |
-| Error handling coverage        | Manual try-catch | 100% async wrapper | ✅ 100% asyncHandler |
+| Security vulnerabilities       | 5 critical    | 0         | 0                |
+| Lighthouse Accessibility       | ~75 (ước tính)| >= 95     | Improved (WCAG AA)|
+| Lighthouse Performance         | ~70 (ước tính)| >= 90     | Improved (entity adapters, abort) |
+| Unnecessary re-renders         | Nhiều         | Minimal   | Minimal (memoized selectors) |
+| WCAG 2.1 AA compliance         | Partial       | Full      | Full             |
+| Response format consistency    | ~40%          | 100%      | 100%             |
+| Error handling coverage        | Manual try-catch | 100% async wrapper | 100% asyncHandler |
 
 ---
 
