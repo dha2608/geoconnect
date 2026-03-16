@@ -31,7 +31,11 @@ const userSlice = createSlice({
     clearProfile: (state) => { state.profile = null; },
     clearSearch: (state) => { state.searchResults = []; },
     hydrateProfile: (state, action) => {
-      if (action.payload) { state.profile = action.payload; }
+      if (action.payload) {
+        // Unwrap stale cache that may still hold the old {success,data} wrapper
+        const p = action.payload;
+        state.profile = (p.success && p.data) ? p.data : p;
+      }
     },
   },
   extraReducers: (builder) => {
