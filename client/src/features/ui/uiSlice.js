@@ -4,6 +4,7 @@ const uiSlice = createSlice({
   name: 'ui',
   initialState: {
     sidebarOpen: false,
+    sidebarExpanded: false, // desktop: false = 72px icon-only, true = 240px with labels
     activePanel: null, // 'feed', 'messages', 'notifications', 'profile', 'search'
     modalOpen: null, // 'createPin', 'createPost', 'createEvent', 'pinDetail', etc.
     modalData: null,
@@ -15,6 +16,8 @@ const uiSlice = createSlice({
   reducers: {
     toggleSidebar: (state) => { state.sidebarOpen = !state.sidebarOpen; },
     setSidebarOpen: (state, action) => { state.sidebarOpen = action.payload; },
+    toggleSidebarExpanded: (state) => { state.sidebarExpanded = !state.sidebarExpanded; },
+    setSidebarExpanded: (state, action) => { state.sidebarExpanded = action.payload; },
     setActivePanel: (state, action) => { state.activePanel = action.payload; state.sidebarOpen = true; },
     closePanel: (state) => { state.activePanel = null; state.sidebarOpen = false; },
     openModal: (state, action) => {
@@ -42,7 +45,8 @@ const uiSlice = createSlice({
 });
 
 export const {
-  toggleSidebar, setSidebarOpen, setActivePanel, closePanel,
+  toggleSidebar, setSidebarOpen, toggleSidebarExpanded, setSidebarExpanded,
+  setActivePanel, closePanel,
   openModal, closeModal, setMapStyle, setIsMobile, setDeviceSize, setActiveMapTool,
 } = uiSlice.actions;
 export default uiSlice.reducer;
