@@ -41,7 +41,7 @@ const LIGHT_TILES = new Set(['street', 'light', 'satellite']);
 
 export default function AppLayout() {
   const dispatch = useDispatch();
-  const { isMobile, isTablet, sidebarOpen, activePanel, modalData } = useSelector((state) => state.ui);
+  const { isMobile, isTablet, sidebarOpen, sidebarExpanded, activePanel, modalData } = useSelector((state) => state.ui);
   const { user } = useSelector((state) => state.auth);
   const { tileLayer } = useSelector((state) => state.map);
 
@@ -114,7 +114,9 @@ export default function AppLayout() {
       <div className="aurora-bg" />
       <Header />
       <Sidebar />
-      <main className={`fixed top-16 bottom-0 right-0 ${isMobile ? 'left-0 pb-16' : isTablet ? 'left-[72px]' : 'left-[72px]'} overflow-hidden`}
+      <main
+        className={`fixed top-16 bottom-0 right-0 overflow-hidden ${isMobile ? 'left-0 pb-16' : ''}`}
+        style={isMobile ? undefined : { left: sidebarExpanded ? 240 : 72, transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}
         role="main"
       >
         <SectionErrorBoundary name="Map">
