@@ -269,6 +269,7 @@ export default function Sidebar() {
   const { sidebarOpen, sidebarExpanded, activePanel, isMobile } = useSelector((state) => state.ui);
   const { user } = useSelector((state) => state.auth);
   const { unreadCount: unreadMessages } = useSelector((state) => state.messages);
+  const { unreadCount: unreadNotifications } = useSelector((state) => state.notifications);
 
   const expanded = !isMobile && sidebarExpanded;
   const isVisible = isMobile ? sidebarOpen : true;
@@ -280,6 +281,7 @@ export default function Sidebar() {
       items: [
         { id: 'feed', label: t('nav.feed', 'Feed'), icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
         { id: 'explore', label: t('nav.explore', 'Explore'), icon: 'M12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2ZM16.24 7.76L14.12 14.12L7.76 16.24L9.88 9.88Z', path: '/explore' },
+        { id: 'search', label: t('nav.search', 'Search'), icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
         { id: 'activity', label: t('nav.activity', 'Activity'), icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', path: '/activity' },
       ],
     },
@@ -293,6 +295,7 @@ export default function Sidebar() {
     {
       label: t('nav.sectionSocial', 'Social'),
       items: [
+        { id: 'notifications', label: t('nav.notifications', 'Notifications'), icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9', badge: 'notifications' },
         { id: 'messages', label: t('nav.messages', 'Messages'), icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', badge: 'messages' },
         { id: 'leaderboard', label: t('nav.leaderboard', 'Leaderboard'), icon: 'M16 8V2H8v6M2 8h20l-2 12H4L2 8zM12 12v4', path: '/leaderboard' },
       ],
@@ -352,7 +355,7 @@ export default function Sidebar() {
                         item={item}
                         isActive={isItemActive(item)}
                         expanded={expanded || isMobile}
-                        badge={item.badge === 'messages' ? unreadMessages : 0}
+                        badge={item.badge === 'messages' ? unreadMessages : item.badge === 'notifications' ? unreadNotifications : 0}
                         onClick={() => handleNavClick(item)}
                       />
                     ))}
