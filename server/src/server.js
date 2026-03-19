@@ -131,6 +131,17 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Root route — friendly API info
+app.get('/', (req, res) => {
+  res.json({
+    name: 'GeoConnect API',
+    version: '1.0.0',
+    status: 'running',
+    health: '/api/health',
+    docs: 'https://github.com/huynhgiabuu/geoconnect',
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users/me/activity', activityRoutes);       // must be before /api/users — prevents generic user router swallowing the path
