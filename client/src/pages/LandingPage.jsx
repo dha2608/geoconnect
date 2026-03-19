@@ -113,9 +113,10 @@ function useTypewriter(text, speed = 45, startDelay = 600) {
 
   useEffect(() => {
     let timeout;
+    let interval;
     let i = 0;
     timeout = setTimeout(() => {
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         if (i < text.length) {
           setDisplay(text.slice(0, i + 1));
           i++;
@@ -124,9 +125,11 @@ function useTypewriter(text, speed = 45, startDelay = 600) {
           clearInterval(interval);
         }
       }, speed);
-      timeout = interval;
     }, startDelay);
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+      if (interval) clearInterval(interval);
+    };
   }, [text, speed, startDelay]);
 
   return { display, done };
@@ -583,24 +586,28 @@ const TESTIMONIALS = [
     name: 'Sarah Chen',
     role: 'Travel Blogger',
     gradient: 'from-blue-400 to-cyan-400',
+    avatar: 'https://i.pravatar.cc/150?img=32',
   },
   {
     quote: 'The real-time location sharing makes it so easy for our friend group to find each other. Incredibly convenient!',
     name: 'Alex Rivera',
     role: 'Software Engineer',
     gradient: 'from-violet-400 to-pink-400',
+    avatar: 'https://i.pravatar.cc/150?img=11',
   },
   {
     quote: 'The geography guessing minigame is so addictive! My whole team plays during lunch break every day.',
     name: 'Emma Wilson',
     role: 'Product Designer',
     gradient: 'from-emerald-400 to-teal-400',
+    avatar: 'https://i.pravatar.cc/150?img=5',
   },
   {
     quote: 'Beautiful dark mode, buttery smooth maps, and the event pinning feature is perfect for event organizers.',
     name: 'James Park',
     role: 'Event Organizer',
     gradient: 'from-orange-400 to-red-400',
+    avatar: 'https://i.pravatar.cc/150?img=68',
   },
 ];
 
@@ -675,10 +682,15 @@ function TestimonialCarousel() {
             </div>
             <p className="mt-6 text-xl font-medium leading-relaxed text-gray-200 sm:text-2xl">&ldquo;{t.quote}&rdquo;</p>
             <div className="mt-8 flex items-center justify-center gap-3">
-              <div className={`h-11 w-11 rounded-full bg-gradient-to-br ${t.gradient} ring-2 ring-white/10`} />
+              <img
+                src={t.avatar}
+                alt={t.name}
+                className={`h-12 w-12 rounded-full object-cover ring-2 ring-white/20 shadow-lg`}
+                loading="lazy"
+              />
               <div className="text-left">
                 <p className="font-heading text-sm font-semibold text-white">{t.name}</p>
-                <p className="text-xs text-gray-500">{t.role}</p>
+                <p className="text-xs text-gray-400">{t.role}</p>
               </div>
             </div>
           </motion.div>
@@ -857,10 +869,13 @@ export default function LandingPage() {
                 </span>
               </motion.h1>
 
-              <motion.p className="mt-4 max-w-lg text-sm leading-relaxed text-gray-400 sm:mt-6 sm:text-base lg:text-lg"
+              <motion.p className="mt-5 max-w-xl text-base leading-relaxed text-gray-300 sm:mt-7 sm:text-lg lg:text-xl"
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5 }}
               >
-                GeoConnect turns every location into a story. Pin your moments, find friends nearby, and explore the world like never before.
+                GeoConnect turns every location into a story.{' '}
+                <span className="text-white/90 font-medium">Pin your moments</span>, find friends nearby, and{' '}
+                <span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent font-medium">explore the world</span>{' '}
+                like never before.
               </motion.p>
 
               <motion.div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-8 sm:gap-4"
@@ -892,9 +907,17 @@ export default function LandingPage() {
               </motion.div>
 
               <motion.div className="mt-6 flex items-center gap-3 sm:mt-10 sm:gap-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
-                <div className="flex -space-x-2">
-                  {['from-blue-400 to-cyan-400', 'from-violet-400 to-pink-400', 'from-emerald-400 to-teal-400', 'from-orange-400 to-red-400'].map((g, i) => (
-                    <motion.div key={i} className={`h-6 w-6 rounded-full bg-gradient-to-br ${g} ring-2 ring-[#050810] sm:h-8 sm:w-8`}
+                <div className="flex -space-x-2.5">
+                  {[
+                    { src: 'https://i.pravatar.cc/80?img=32', name: 'Sarah' },
+                    { src: 'https://i.pravatar.cc/80?img=11', name: 'Alex' },
+                    { src: 'https://i.pravatar.cc/80?img=5', name: 'Emma' },
+                    { src: 'https://i.pravatar.cc/80?img=68', name: 'James' },
+                    { src: 'https://i.pravatar.cc/80?img=47', name: 'Mia' },
+                  ].map((user, i) => (
+                    <motion.img key={i} src={user.src} alt={user.name}
+                      className="h-7 w-7 rounded-full object-cover ring-2 ring-[#050810] sm:h-9 sm:w-9"
+                      loading="lazy"
                       initial={{ x: -10 * i, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 1.1 + i * 0.08 }}
                     />
                   ))}
@@ -907,7 +930,7 @@ export default function LandingPage() {
                       </svg>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500">12,500+ users trust us</p>
+                  <p className="text-xs text-gray-400 font-medium">12,500+ users trust us</p>
                 </div>
               </motion.div>
             </div>
@@ -947,10 +970,10 @@ export default function LandingPage() {
       </div>
 
       {/* ═══ LOGO CLOUD / TRUST ═══════════════════════════════════ */}
-      <div className="relative border-b border-white/[0.04] bg-white/[0.01] py-10">
+      <div className="relative border-b border-white/[0.06] bg-white/[0.02] py-12 sm:py-14">
         <div className="mx-auto max-w-5xl px-6 lg:px-8">
-          <p className="text-center font-mono text-[10px] uppercase tracking-[0.3em] text-white/20 mb-6">Built with leading technologies</p>
-          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
+          <p className="text-center font-mono text-xs uppercase tracking-[0.25em] text-white/40 mb-8 sm:text-sm">Built with leading technologies</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 sm:gap-x-16">
             {[
               { name: 'React', icon: 'M12 10.11c1.03 0 1.87.84 1.87 1.89 0 1-.84 1.85-1.87 1.85S10.13 13 10.13 12c0-1.05.84-1.89 1.87-1.89M7.37 20c.63.38 2.01-.2 3.6-1.7-.52-.59-1.03-1.23-1.51-1.9a22.7 22.7 0 01-2.4-.36c-.51 2.14-.32 3.61.31 3.96m.71-5.74l-.29-.51c-.11.29-.22.58-.29.86.27.06.57.11.88.16l-.3-.51m6.54-.76l.81-1.5-.81-1.5c-.3-.53-.62-1-.91-1.47C13.17 9 12.6 9 12 9c-.6 0-1.17 0-1.71.03-.29.47-.61.94-.91 1.47L8.57 12l.81 1.5c.3.53.62 1 .91 1.47.54.03 1.11.03 1.71.03.6 0 1.17 0 1.71-.03.29-.47.61-.94.91-1.47M12 6.78c-.19.22-.39.45-.59.72h1.18c-.2-.27-.4-.5-.59-.72m0 10.44c.19-.22.39-.45.59-.72h-1.18c.2.27.4.5.59.72M16.62 4c-.62-.38-2 .2-3.59 1.7.52.59 1.03 1.23 1.51 1.9.82.08 1.63.2 2.4.36.51-2.14.32-3.61-.32-3.96m-.7 5.74l.29.51c.11-.29.22-.58.29-.86-.27-.06-.57-.11-.88-.16l.3.51m1.45-7.05c1.47.84 1.63 3.05 1.01 5.63 2.54.75 4.37 1.99 4.37 3.68 0 1.69-1.83 2.93-4.37 3.68.62 2.58.46 4.79-1.01 5.63-1.46.84-3.45-.12-5.37-1.95-1.92 1.83-3.91 2.79-5.38 1.95-1.46-.84-1.62-3.05-1-5.63-2.54-.75-4.37-1.99-4.37-3.68 0-1.69 1.83-2.93 4.37-3.68-.62-2.58-.46-4.79 1-5.63 1.47-.84 3.46.12 5.38 1.95 1.92-1.83 3.91-2.79 5.37-1.95M17.08 12c.34.75.64 1.5.89 2.26 2.1-.63 3.28-1.53 3.28-2.26 0-.73-1.18-1.63-3.28-2.26-.25.76-.55 1.51-.89 2.26M6.92 12c-.34-.75-.64-1.5-.89-2.26-2.1.63-3.28 1.53-3.28 2.26 0 .73 1.18 1.63 3.28 2.26.25-.76.55-1.51.89-2.26m9 2.26l-.3.51c.31-.05.61-.1.88-.16-.07-.28-.18-.57-.29-.86l-.29.51m-2.89 4.04c1.59 1.5 2.97 2.08 3.59 1.7.64-.35.83-1.82.32-3.96-.77.16-1.58.28-2.4.36-.48.67-.99 1.31-1.51 1.9M8.08 9.74l.3-.51c-.31.05-.61.1-.88.16.07.28.18.57.29.86l.29-.51m2.89-4.04C9.38 4.2 8 3.62 7.37 4c-.63.35-.82 1.82-.31 3.96a22.7 22.7 0 012.4-.36c.48-.67.99-1.31 1.51-1.9' },
               { name: 'Leaflet', icon: 'M12 2L3 7v10l9 5 9-5V7l-9-5zm0 2.18l6.75 3.75L12 11.68 5.25 7.93 12 4.18zM5 9.07l6 3.33v6.53l-6-3.33V9.07zm8 9.86v-6.53l6-3.33v6.53l-6 3.33z' },
@@ -958,9 +981,9 @@ export default function LandingPage() {
               { name: 'Node.js', icon: 'M12 1.85c-.27 0-.55.07-.78.2l-7.44 4.3c-.48.28-.78.8-.78 1.36v8.58c0 .56.3 1.08.78 1.36l1.95 1.12c.95.46 1.27.46 1.71.46 1.4 0 2.21-.85 2.21-2.33V8.44c0-.12-.09-.21-.21-.21h-.93c-.12 0-.22.09-.22.21v8.06c0 .66-.68 1.31-1.77.76L4.59 16.1a.26.26 0 01-.12-.22V7.3c0-.09.05-.17.12-.22l7.44-4.3a.26.26 0 01.25 0l7.44 4.3c.07.04.12.13.12.22v8.58c0 .09-.05.17-.12.22l-7.44 4.3c-.04.02-.08.03-.13.03-.04 0-.09-.01-.12-.03l-1.91-1.14c-.06-.03-.13-.05-.2-.02-.53.3-.63.34-1.13.51-.12.04-.31.11.07.32l2.48 1.47c.24.14.52.22.78.22s.54-.08.78-.22l7.44-4.3c.48-.28.78-.8.78-1.36V7.71c0-.56-.3-1.08-.78-1.36l-7.44-4.3c-.23-.13-.5-.2-.78-.2' },
               { name: 'Tailwind', icon: 'M12 6c-2.67 0-4.33 1.33-5 4 1-1.33 2.17-1.83 3.5-1.5.76.19 1.31.74 1.91 1.35C13.36 10.8 14.5 12 17 12c2.67 0 4.33-1.33 5-4-1 1.33-2.17 1.83-3.5 1.5-.76-.19-1.31-.74-1.91-1.35C15.64 7.2 14.5 6 12 6zM7 12c-2.67 0-4.33 1.33-5 4 1-1.33 2.17-1.83 3.5-1.5.76.19 1.31.74 1.91 1.35C8.36 16.8 9.5 18 12 18c2.67 0 4.33-1.33 5-4-1 1.33-2.17 1.83-3.5 1.5-.76-.19-1.31-.74-1.91-1.35C10.64 13.2 9.5 12 7 12z' },
             ].map((tech) => (
-              <div key={tech.name} className="flex items-center gap-2 opacity-30 transition-opacity hover:opacity-60">
-                <svg className="h-4 w-4 text-white/60" viewBox="0 0 24 24" fill="currentColor"><path d={tech.icon} /></svg>
-                <span className="text-xs font-mono text-white/40 tracking-wider">{tech.name}</span>
+              <div key={tech.name} className="group flex items-center gap-2.5 opacity-50 transition-all duration-300 hover:opacity-100 hover:scale-110">
+                <svg className="h-5 w-5 text-white/70 group-hover:text-blue-400 transition-colors duration-300" viewBox="0 0 24 24" fill="currentColor"><path d={tech.icon} /></svg>
+                <span className="text-sm font-mono text-white/60 tracking-wider group-hover:text-white/90 transition-colors duration-300">{tech.name}</span>
               </div>
             ))}
           </div>
