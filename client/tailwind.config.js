@@ -11,6 +11,7 @@ export default {
         accent: {
           primary: '#3b82f6',
           secondary: '#06b6d4',
+          violet: '#8b5cf6',
           success: '#10b981',
           warning: '#f59e0b',
           danger: '#ef4444',
@@ -28,12 +29,12 @@ export default {
         },
       },
       fontFamily: {
-        heading: ['Syne', 'sans-serif'],
-        body: ['DM Sans', 'sans-serif'],
+        heading: ['Outfit', 'sans-serif'],
+        body: ['Nunito', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       backdropBlur: {
-        glass: '20px',
+        glass: '24px',
       },
       borderRadius: {
         glass: '16px',
@@ -42,6 +43,7 @@ export default {
         'pulse-dot': 'pulseDot 2.2s ease-in-out infinite',
         'aurora': 'aurora 18s ease infinite alternate',
         'shimmer': 'shimmer 2s linear infinite',
+        'glow-pulse': 'glowPulse 3s ease-in-out infinite',
       },
       keyframes: {
         pulseDot: {
@@ -56,6 +58,10 @@ export default {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        glowPulse: {
+          '0%, 100%': { opacity: '0.6' },
+          '50%': { opacity: '1' },
         },
       },
     },
