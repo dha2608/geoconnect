@@ -9,7 +9,7 @@ import {
   replyToComment, getReplies, deleteReply,
   addCommentReaction, removeCommentReaction,
 } from '../controllers/postController.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, optionalAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { upload } from '../middleware/upload.js';
 import {
@@ -24,7 +24,7 @@ const router = Router();
 
 // Feed & queries
 router.get('/feed', authenticate, paginate, getFeed);
-router.get('/map', authenticate, getMapPosts);
+router.get('/map', optionalAuth, getMapPosts);
 router.get('/saved', authenticate, paginate, getSavedPosts);
 router.get('/hashtag/:tag', authenticate, validateHashtag, validate, paginate, getPostsByHashtag);
 router.get('/user/:userId', authenticate, validateUserId, validate, paginate, getUserPosts);
