@@ -18,8 +18,8 @@ const uiSlice = createSlice({
     setSidebarOpen: (state, action) => { state.sidebarOpen = action.payload; },
     toggleSidebarExpanded: (state) => { state.sidebarExpanded = !state.sidebarExpanded; },
     setSidebarExpanded: (state, action) => { state.sidebarExpanded = action.payload; },
-    setActivePanel: (state, action) => { state.activePanel = action.payload; state.sidebarOpen = true; },
-    closePanel: (state) => { state.activePanel = null; state.sidebarOpen = false; },
+    setActivePanel: (state, action) => { state.activePanel = action.payload; },
+    closePanel: (state) => { state.activePanel = null; },
     openModal: (state, action) => {
       if (typeof action.payload === 'string') {
         // openModal('createPin')
