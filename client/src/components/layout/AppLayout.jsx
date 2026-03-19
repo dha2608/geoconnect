@@ -8,7 +8,6 @@ import useSocket from '../../socket/useSocket';
 import useGeolocation from '../../hooks/useGeolocation';
 import { useKeyboardShortcuts, ShortcutHelpOverlay } from '../../hooks/useKeyboardShortcuts';
 import useSwipeGesture from '../../hooks/useSwipeGesture';
-import Header from './Header';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
 import { ToastProvider } from '../ui/Toast';
@@ -113,10 +112,9 @@ export default function AppLayout() {
       {...(isMobile ? swipeHandlers : {})}
     >
       <div className="aurora-bg" />
-      <Header />
       <Sidebar />
       <main
-        className={`fixed top-16 bottom-0 right-0 overflow-hidden ${isMobile ? 'left-0 pb-16' : ''}`}
+        className={`fixed top-0 bottom-0 right-0 overflow-hidden ${isMobile ? 'left-0 pb-16' : ''}`}
         style={isMobile ? undefined : { left: sidebarExpanded ? 240 : 72, transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}
         role="main"
       >
@@ -136,7 +134,7 @@ export default function AppLayout() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 26, stiffness: 210 }}
-              className="fixed top-16 bottom-16 left-0 right-0 z-[35] overflow-hidden"
+              className="fixed top-0 bottom-16 left-0 right-0 z-[35] overflow-hidden"
             >
               {activePanel === 'feed' && (
                 <SectionErrorBoundary name="Feed">
@@ -182,7 +180,7 @@ export default function AppLayout() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="fixed top-16 bottom-0 right-0 z-[15] bg-black/20 backdrop-blur-[1px] cursor-pointer"
+                className="fixed top-0 bottom-0 right-0 z-[15] bg-black/20 backdrop-blur-[1px] cursor-pointer"
                 style={{ left: sidebarExpanded ? 240 : 72, transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}
                 onClick={() => dispatch(closePanel())}
               />

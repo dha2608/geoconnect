@@ -332,7 +332,7 @@ export default function Sidebar() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="fixed top-16 left-0 bottom-0 z-30 glass border-r border-surface-divider flex flex-col overflow-hidden"
+            className="fixed top-0 left-0 bottom-0 z-30 glass border-r border-surface-divider flex flex-col overflow-hidden"
             style={{
               width: isMobile ? SIDEBAR_EXPANDED : expanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED,
               transition: isMobile ? undefined : 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
