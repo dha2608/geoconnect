@@ -143,16 +143,30 @@ function useActiveSection(containerRef) {
     const container = containerRef.current;
     if (!container) return;
 
+    // Track the intersection ratio for every observed section
+    const ratios = new Map();
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.2) {
-            const idx = SECTION_IDS.indexOf(entry.target.id);
-            if (idx !== -1) setActive(idx);
-          }
+          ratios.set(entry.target.id, entry.intersectionRatio);
         });
+
+        // Pick the section with the highest visibility
+        let bestIdx = -1;
+        let bestRatio = 0;
+        for (const [id, ratio] of ratios) {
+          if (ratio > bestRatio) {
+            const idx = SECTION_IDS.indexOf(id);
+            if (idx !== -1) {
+              bestIdx = idx;
+              bestRatio = ratio;
+            }
+          }
+        }
+        if (bestIdx !== -1) setActive(bestIdx);
       },
-      { threshold: [0.2, 0.35, 0.5] }
+      { threshold: [0, 0.1, 0.2, 0.35, 0.5, 0.75] }
     );
 
     SECTION_IDS.forEach((id) => {
