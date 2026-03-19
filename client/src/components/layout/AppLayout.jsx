@@ -10,6 +10,7 @@ import { useKeyboardShortcuts, ShortcutHelpOverlay } from '../../hooks/useKeyboa
 import useSwipeGesture from '../../hooks/useSwipeGesture';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
+import Avatar from '../ui/Avatar';
 import { ToastProvider } from '../ui/Toast';
 import UserProfilePanel from '../social/UserProfilePanel';
 import CreatePinModal from '../pins/CreatePinModal';
@@ -121,6 +122,25 @@ export default function AppLayout() {
         <SectionErrorBoundary name="Map">
           <Outlet />
         </SectionErrorBoundary>
+
+        {/* ── Mobile floating menu button (opens sidebar drawer) ── */}
+        {isMobile && !activePanel && !sidebarOpen && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+            onClick={() => dispatch(setSidebarOpen(true))}
+            className="fixed top-3 left-3 z-[25] w-10 h-10 rounded-full glass border border-surface-divider shadow-lg flex items-center justify-center"
+            aria-label="Open menu"
+          >
+            <Avatar
+              src={user?.avatar}
+              name={user?.name || 'Menu'}
+              size="xs"
+            />
+          </motion.button>
+        )}
       </main>
 
       {/* ── Side panels ─────────────────────────────────────────────────────── */}
