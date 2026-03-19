@@ -143,13 +143,13 @@ function useActiveSection(containerRef) {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.35) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.2) {
             const idx = SECTION_IDS.indexOf(entry.target.id);
             if (idx !== -1) setActive(idx);
           }
         });
       },
-      { root: container, threshold: [0.35, 0.5] }
+      { threshold: [0.2, 0.35, 0.5] }
     );
 
     SECTION_IDS.forEach((id) => {
@@ -764,7 +764,7 @@ export default function LandingPage() {
       )}
     <div
       ref={containerRef}
-      className="landing-scroll-container relative h-screen snap-y snap-mandatory overflow-y-auto scroll-smooth bg-[#050810] font-body text-gray-100"
+      className="landing-scroll-container relative h-screen overflow-y-auto scroll-smooth bg-[#050810] font-body text-gray-100"
       tabIndex={-1}
     >
       <ScrollProgress containerRef={containerRef} />
@@ -802,7 +802,7 @@ export default function LandingPage() {
       </motion.nav>
 
       {/* ═══ HERO ═══════════════════════════════════════════════ */}
-      <section id="hero" className="relative flex h-screen snap-start items-center overflow-hidden">
+      <section id="hero" className="relative flex min-h-screen items-center overflow-hidden">
         <motion.div className="absolute inset-0" style={{ x: orbOffsetX, y: orbOffsetY }}>
           <div className="absolute left-[10%] top-[20%] h-[500px] w-[500px] rounded-full bg-blue-500/[0.07] blur-[120px]" />
           <div className="absolute right-[15%] top-[10%] h-[400px] w-[400px] rounded-full bg-violet-500/[0.05] blur-[100px]" />
@@ -968,10 +968,10 @@ export default function LandingPage() {
       </div>
 
       {/* ═══ FEATURES (Bento Grid + Click-to-Expand) ═════════════ */}
-      <section id="features" className="relative h-screen snap-start">
+      <section id="features" className="relative min-h-screen py-16 sm:py-20 lg:py-24">
         <div className="absolute left-[50%] top-[30%] h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-blue-500/[0.03] blur-[120px]" />
-        <div className="relative flex h-full flex-col px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-10">
-          <div className="mx-auto w-full max-w-7xl shrink-0">
+        <div className="relative px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-7xl">
             <Reveal variant="blur-in">
               <div className="mx-auto max-w-2xl text-center">
                 <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-blue-400 sm:text-xs">Features</p>
@@ -984,7 +984,7 @@ export default function LandingPage() {
             </Reveal>
           </div>
 
-          <div className="mx-auto mt-3 w-full max-w-7xl flex-1 min-h-0 overflow-y-auto landing-section-inner sm:mt-4 lg:mt-6">
+          <div className="mx-auto mt-6 w-full max-w-7xl sm:mt-8 lg:mt-10">
             <StaggerContainer className="grid gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3" stagger={0.1}>
               {FEATURES.map((feat, i) => (
                 <StaggerItem key={feat.subtitle} variant="blur" className={feat.large ? 'lg:col-span-2' : ''}>
@@ -1045,9 +1045,9 @@ export default function LandingPage() {
       </section>
 
       {/* ═══ HOW IT WORKS ════════════════════════════════════════ */}
-      <section id="how-works" className="relative h-screen snap-start">
+      <section id="how-works" className="relative min-h-screen py-16 sm:py-20 lg:py-24">
         <div className="absolute right-[20%] top-[50%] h-[400px] w-[400px] rounded-full bg-violet-500/[0.03] blur-[100px]" />
-        <div className="relative flex h-full flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+        <div className="relative flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
           <div className="mx-auto w-full max-w-7xl">
             <Reveal variant="scale-up">
               <div className="mx-auto max-w-2xl text-center">
@@ -1078,10 +1078,10 @@ export default function LandingPage() {
       </section>
 
       {/* ═══ APP PREVIEW ═════════════════════════════════════════ */}
-      <section id="preview" className="relative h-screen snap-start">
+      <section id="preview" className="relative min-h-screen py-16 sm:py-20 lg:py-24">
         <div className="absolute left-[30%] top-[40%] h-[500px] w-[500px] rounded-full bg-cyan-500/[0.03] blur-[100px]" />
-        <div className="relative flex h-full flex-col px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-10">
-          <div className="mx-auto w-full max-w-5xl shrink-0">
+        <div className="relative px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-5xl">
             <Reveal variant="blur-in">
               <div className="mx-auto max-w-2xl text-center">
                 <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400 sm:text-xs">Product</p>
@@ -1094,7 +1094,7 @@ export default function LandingPage() {
             </Reveal>
           </div>
 
-          <div className="mx-auto mt-3 w-full max-w-5xl flex-1 min-h-0 overflow-y-auto landing-section-inner sm:mt-4 lg:mt-6">
+          <div className="mx-auto mt-6 w-full max-w-5xl sm:mt-8 lg:mt-10">
             <Reveal delay={0.15} variant="slide-rotate">
               <AppShowcase />
             </Reveal>
@@ -1120,10 +1120,10 @@ export default function LandingPage() {
       </section>
 
       {/* ═══ PIN TAPPER GAME ═════════════════════════════════════ */}
-      <section id="games" className="relative h-screen snap-start">
+      <section id="games" className="relative min-h-screen py-16 sm:py-20 lg:py-24">
         <div className="absolute left-[20%] top-[30%] h-[400px] w-[400px] rounded-full bg-violet-500/[0.04] blur-[100px]" />
-        <div className="relative flex h-full flex-col px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-          <div className="mx-auto w-full max-w-5xl shrink-0">
+        <div className="relative px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-5xl">
             <Reveal variant="scale-up">
               <div className="text-center">
                 <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-violet-400 sm:text-xs">Mini Game</p>
@@ -1138,9 +1138,9 @@ export default function LandingPage() {
             </Reveal>
           </div>
 
-          <div className="mx-auto mt-2 w-full max-w-5xl flex-1 min-h-0 sm:mt-3 lg:mt-4">
-            <Reveal delay={0.15} variant="blur-in" className="h-full">
-              <div className="h-full overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] p-2 backdrop-blur-sm sm:rounded-2xl sm:p-3">
+          <div className="mx-auto mt-6 w-full max-w-5xl sm:mt-8 lg:mt-10">
+            <Reveal delay={0.15} variant="blur-in">
+              <div className="h-[400px] overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] p-2 backdrop-blur-sm sm:h-[500px] sm:rounded-2xl sm:p-3 lg:h-[550px]">
                 <Suspense fallback={<GameSpinner />}>
                   <PinTapper />
                 </Suspense>
@@ -1151,10 +1151,10 @@ export default function LandingPage() {
       </section>
 
       {/* ═══ LOCATION GUESSER GAME ═══════════════════════════════ */}
-      <section id="geo-game" className="relative h-screen snap-start">
+      <section id="geo-game" className="relative min-h-screen py-16 sm:py-20 lg:py-24">
         <div className="absolute right-[20%] top-[30%] h-[400px] w-[400px] rounded-full bg-blue-500/[0.04] blur-[100px]" />
-        <div className="relative flex h-full flex-col px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-          <div className="mx-auto w-full max-w-5xl shrink-0">
+        <div className="relative px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-5xl">
             <Reveal variant="scale-up">
               <div className="text-center">
                 <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-blue-400 sm:text-xs">Mini Game</p>
@@ -1169,9 +1169,9 @@ export default function LandingPage() {
             </Reveal>
           </div>
 
-          <div className="mx-auto mt-2 w-full max-w-5xl flex-1 min-h-0 sm:mt-3 lg:mt-4">
-            <Reveal delay={0.15} variant="blur-in" className="h-full">
-              <div className="h-full overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] p-2 backdrop-blur-sm sm:rounded-2xl sm:p-3">
+          <div className="mx-auto mt-6 w-full max-w-5xl sm:mt-8 lg:mt-10">
+            <Reveal delay={0.15} variant="blur-in">
+              <div className="h-[400px] overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] p-2 backdrop-blur-sm sm:h-[500px] sm:rounded-2xl sm:p-3 lg:h-[550px]">
                 <Suspense fallback={<GameSpinner />}>
                   <LocationGuesser />
                 </Suspense>
@@ -1182,7 +1182,7 @@ export default function LandingPage() {
       </section>
 
       {/* ═══ TESTIMONIALS ════════════════════════════════════════ */}
-      <section id="testimonials" className="relative flex h-screen snap-start flex-col justify-center">
+      <section id="testimonials" className="relative flex min-h-screen flex-col justify-center py-16 sm:py-20 lg:py-24">
         <div className="absolute left-[40%] top-[40%] h-[400px] w-[400px] rounded-full bg-pink-500/[0.03] blur-[100px]" />
         <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <Reveal variant="blur-in">
@@ -1199,10 +1199,10 @@ export default function LandingPage() {
       </section>
 
       {/* ═══ FAQ ══════════════════════════════════════════════════ */}
-      <section id="faq" className="relative h-screen snap-start">
+      <section id="faq" className="relative min-h-screen py-16 sm:py-20 lg:py-24">
         <div className="absolute right-[30%] top-[40%] h-[400px] w-[400px] rounded-full bg-violet-500/[0.03] blur-[100px]" />
-        <div className="relative flex h-full flex-col px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-10">
-          <div className="mx-auto w-full max-w-7xl shrink-0">
+        <div className="relative px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-7xl">
             <Reveal variant="blur-in">
               <div className="mx-auto max-w-2xl text-center">
                 <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-violet-400 sm:text-xs">FAQ</p>
@@ -1214,7 +1214,7 @@ export default function LandingPage() {
               </div>
             </Reveal>
           </div>
-          <div className="mx-auto mt-3 w-full max-w-7xl flex-1 min-h-0 overflow-y-auto landing-section-inner sm:mt-4 lg:mt-6">
+          <div className="mx-auto mt-6 w-full max-w-7xl sm:mt-8 lg:mt-10">
             <Reveal delay={0.1} variant="fade-up">
               <FAQ />
             </Reveal>
@@ -1223,7 +1223,7 @@ export default function LandingPage() {
       </section>
 
       {/* ═══ STATS ═══════════════════════════════════════════════ */}
-      <section id="community" className="relative flex h-screen snap-start flex-col justify-center">
+      <section id="community" className="relative flex min-h-screen flex-col justify-center py-16 sm:py-20 lg:py-24">
         <div className="absolute left-[20%] top-[50%] h-[500px] w-[500px] rounded-full bg-blue-500/[0.04] blur-[120px]" />
         <div className="relative mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
           <Reveal variant="fade-up">
@@ -1245,7 +1245,7 @@ export default function LandingPage() {
       </section>
 
       {/* ═══ CTA + FOOTER ═══════════════════════════════════════ */}
-      <section id="cta" className="relative flex h-screen snap-start flex-col overflow-hidden">
+      <section id="cta" className="relative flex min-h-screen flex-col overflow-hidden">
         {/* Background */}
         <div className="absolute inset-0 bg-[#050810]" />
         <div className="absolute left-1/2 top-[40%] h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-blue-500/[0.07] via-violet-500/[0.05] to-transparent blur-[120px]" />
