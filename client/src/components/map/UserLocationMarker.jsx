@@ -35,10 +35,10 @@ export default function UserLocationMarker() {
         center={[lat, lng]}
         radius={accuracy ?? 50}
         pathOptions={{
-          fillColor: '#3b82f6',
+          fillColor: '#8b5cf6',
           fillOpacity: 0.08,
           stroke: true,
-          color: '#3b82f6',
+          color: '#8b5cf6',
           opacity: 0.2,
           weight: 1,
         }}

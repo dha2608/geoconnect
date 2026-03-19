@@ -111,20 +111,20 @@ class ErrorBoundary extends Component {
                 className="flex-1 py-2.5 px-5 rounded-xl font-semibold text-sm transition-all duration-200 hover:brightness-110 active:scale-95"
                 style={{
                   fontFamily: 'DM Sans, sans-serif',
-                  background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
                   color: '#f1f5f9',
-                  boxShadow: '0 0 18px rgba(59,130,246,0.28)',
+                  boxShadow: '0 0 18px rgba(139,92,246,0.28)',
                 }}
               >
                 Try Again
               </button>
               <a
-                href="/"
+                href="/map"
                 className="flex-1 py-2.5 px-5 rounded-xl font-semibold text-sm text-center transition-all duration-200 hover:brightness-110 active:scale-95"
                 style={{
                   fontFamily: 'DM Sans, sans-serif',
-                  background: 'rgba(59,130,246,0.10)',
-                  border: '1px solid rgba(59,130,246,0.25)',
+                  background: 'rgba(139,92,246,0.10)',
+                  border: '1px solid rgba(139,92,246,0.25)',
                   color: '#94a3b8',
                 }}
               >
@@ -166,7 +166,7 @@ class ErrorBoundary extends Component {
                     className="rounded-xl p-4 overflow-auto max-h-52 text-xs leading-relaxed"
                     style={{
                       background: 'rgba(8,11,18,0.85)',
-                      border: '1px solid rgba(59,130,246,0.12)',
+                      border: '1px solid rgba(139,92,246,0.12)',
                       fontFamily: 'monospace',
                       color: '#f87171',
                     }}
