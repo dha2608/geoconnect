@@ -16,7 +16,7 @@
   --accent-danger: #ef4444;
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
-  --text-muted: #475569;
+  --text-muted: #64748b;
 
   /* Glass — deeper, more premium */
   --glass-bg: rgba(8, 12, 24, 0.75);
@@ -554,22 +554,50 @@ body {
   animation: landing-blink-cursor 0.75s step-end infinite;
 }
 
-/* Landing page snap-scroll container */
+/* Landing page smooth-scroll container */
 .landing-scroll-container {
   -ms-overflow-style: none;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 .landing-scroll-container::-webkit-scrollbar {
   display: none;
 }
 
-/* Landing snap sections — inner scrollable area with hidden scrollbar */
+/* Landing sections — inner scrollable area with hidden scrollbar */
 .landing-section-inner {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 .landing-section-inner::-webkit-scrollbar {
   display: none;
+}
+
+/* Landing page — GPU-accelerated reveal sections */
+.landing-scroll-container section {
+  will-change: opacity;
+  transform: translateZ(0);
+}
+
+/* Reduced motion — disable heavy landing animations */
+@media (prefers-reduced-motion: reduce) {
+  .landing-marquee {
+    animation: none;
+  }
+  .landing-particle {
+    animation: none;
+  }
+  .landing-cursor {
+    animation: none;
+    opacity: 1;
+  }
+  .landing-scroll-container {
+    scroll-behavior: auto;
+  }
+  .landing-scroll-container section {
+    will-change: auto;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
