@@ -33,7 +33,7 @@ function XIcon(props) {
 export default function ReviewForm({ pinId, onSuccess }) {
   const user = useSelector((state) => state.auth.user);
   const isGuest = useSelector((state) => state.auth.isGuest);
-  const requireAuth = useRequireAuth();
+  const { requireAuth, AuthGate } = useRequireAuth();
   const [rating, setRating] = useState(0);
   const [text, setText] = useState('');
   const [photos, setPhotos] = useState([]); // File[]
@@ -132,6 +132,7 @@ export default function ReviewForm({ pinId, onSuccess }) {
       transition={{ duration: 0.25 }}
       className="glass rounded-xl p-5 space-y-4"
     >
+      {AuthGate}
       {/* Header */}
       <div className="flex items-center gap-3">
         <Avatar src={user.avatar} name={user.name} size="sm" />

@@ -144,7 +144,7 @@ function CharCounter({ count, max }) {
 
 export default function CreatePostModal() {
   const dispatch = useDispatch();
-  const requireAuth = useRequireAuth();
+  const { requireAuth, AuthGate } = useRequireAuth();
   const user = useSelector((state) => state.auth.user);
   const modalOpen = useSelector((state) => state.ui.modalOpen);
 
@@ -293,6 +293,7 @@ export default function CreatePostModal() {
       title="Create Post"
       size="md"
     >
+      {AuthGate}
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
 
         {/* User row */}

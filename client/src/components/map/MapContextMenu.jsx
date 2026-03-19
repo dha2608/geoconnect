@@ -7,6 +7,7 @@ import { openModal } from '../../features/ui/uiSlice';
 import { setDestination } from '../../features/map/mapSlice';
 import { geocodeApi } from '../../api/geocodeApi';
 import toast from 'react-hot-toast';
+import useRequireAuth from '../../hooks/useRequireAuth';
 
 /* ─── Menu Button ────────────────────────────────────────────────────────── */
 function MenuButton({ icon, onClick, disabled, children }) {
@@ -34,6 +35,7 @@ function MenuButton({ icon, onClick, disabled, children }) {
 export default function MapContextMenu() {
   const dispatch = useDispatch();
   const map      = useMap();
+  const { requireAuth, AuthGate } = useRequireAuth();
 
   // menu state: null when hidden, or { x, y, lat, lng } when visible
   const [menu,      setMenu]      = useState(null);
@@ -142,6 +144,7 @@ export default function MapContextMenu() {
   /* ── Action handlers ── */
   const handleCreatePin = () => {
     if (!menu) return;
+    if (!requireAuth('create a pin')) return;
     dispatch(openModal({ modal: 'createPin', data: { lat: menu.lat, lng: menu.lng } }));
     closeMenu();
   };
@@ -174,6 +177,7 @@ export default function MapContextMenu() {
 
   const handleCreateEvent = () => {
     if (!menu) return;
+    if (!requireAuth('create an event')) return;
     dispatch(openModal({ modal: 'createEvent', data: { lat: menu.lat, lng: menu.lng } }));
     closeMenu();
   };
@@ -232,6 +236,8 @@ export default function MapContextMenu() {
 
   /* ── Render ── */
   return (
+    <>
+    {AuthGate}
     <AnimatePresence>
       {menu && (
         <motion.div
@@ -276,5 +282,6 @@ export default function MapContextMenu() {
         </motion.div>
       )}
     </AnimatePresence>
+    </>
   );
 }

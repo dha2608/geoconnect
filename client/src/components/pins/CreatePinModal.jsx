@@ -126,7 +126,7 @@ function ImagePreview({ url, index, onRemove }) {
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function CreatePinModal() {
   const dispatch    = useDispatch();
-  const requireAuth = useRequireAuth();
+  const { requireAuth, AuthGate } = useRequireAuth();
   const modalOpen   = useSelector((state) => state.ui.modalOpen);
   const modalData   = useSelector((state) => state.ui.modalData); // pre-filled coords from context menu
   const mapCenter   = useSelector((state) => state.map.center); // [lat, lng]
@@ -354,6 +354,7 @@ export default function CreatePinModal() {
       title="Drop a New Pin"
       size="lg"
     >
+      {AuthGate}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
 
         {/* ── Title ─────────────────────────────────────────────────────── */}

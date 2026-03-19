@@ -156,7 +156,7 @@ const CHAR_LIMIT = 220;
 
 const PostCard = memo(function PostCard({ post }) {
   const dispatch = useDispatch();
-  const requireAuth = useRequireAuth();
+  const { requireAuth, AuthGate } = useRequireAuth();
   const user = useSelector((state) => state.auth.user);
 
   const [showComments, setShowComments] = useState(false);
@@ -219,6 +219,7 @@ const PostCard = memo(function PostCard({ post }) {
 
   return (
     <motion.div layout className="mb-3">
+      {AuthGate}
       <GlassCard className="p-4">
 
         {/* ── Repost attribution ── */}

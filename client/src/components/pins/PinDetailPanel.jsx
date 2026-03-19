@@ -201,7 +201,7 @@ async function sharePin(pin) {
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function PinDetailPanel() {
   const dispatch    = useDispatch();
-  const requireAuth = useRequireAuth();
+  const { requireAuth, AuthGate } = useRequireAuth();
   const modalOpen   = useSelector((state) => state.ui.modalOpen);
   const modalData   = useSelector((state) => state.ui.modalData);
   const selectedPin = useSelector(selectSelectedPin);
@@ -354,6 +354,7 @@ export default function PinDetailPanel() {
       size="lg"
       className="!p-0"   // override default p-6 — we handle padding manually per section
     >
+      {AuthGate}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

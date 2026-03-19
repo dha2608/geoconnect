@@ -126,7 +126,7 @@ const LABEL_CLS = 'block text-[11px] font-semibold tracking-widest text-slate-50
 
 export default function CreateEventModal() {
   const dispatch = useDispatch();
-  const requireAuth = useRequireAuth();
+  const { requireAuth, AuthGate } = useRequireAuth();
 
   const modalOpen  = useSelector((s) => s.ui.modalOpen);
   const modalData  = useSelector((s) => s.ui.modalData);
@@ -385,6 +385,7 @@ export default function CreateEventModal() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={isEditMode ? 'Edit Event' : 'Create Event'}>
+      {AuthGate}
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="flex flex-col gap-5 max-h-[74vh] overflow-y-auto pr-0.5"

@@ -207,7 +207,7 @@ function ReplyRow({ reply, postId, parentCommentId, currentUserId, postAuthorId 
 
 function CommentRow({ comment, index, postId, currentUserId, postAuthorId }) {
   const dispatch = useDispatch();
-  const requireAuth = useRequireAuth();
+  const { requireAuth, AuthGate } = useRequireAuth();
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -395,6 +395,7 @@ function CommentRow({ comment, index, postId, currentUserId, postAuthorId }) {
       transition={{ delay: index * 0.04, duration: 0.2 }}
       className="flex items-start gap-2.5 group"
     >
+      {AuthGate}
       <Avatar
         src={comment.user.avatar}
         name={comment.user.name || comment.user.username}
@@ -664,7 +665,7 @@ function CommentRow({ comment, index, postId, currentUserId, postAuthorId }) {
 
 export default function CommentSection({ post }) {
   const dispatch = useDispatch();
-  const requireAuth = useRequireAuth();
+  const { requireAuth, AuthGate } = useRequireAuth();
   const user = useSelector((state) => state.auth.user);
 
   const [text, setText] = useState('');
@@ -721,6 +722,7 @@ export default function CommentSection({ post }) {
 
   return (
     <div className="flex flex-col gap-3">
+      {AuthGate}
       {/* ── Comment list ── */}
       {!hasComments ? (
         <motion.div

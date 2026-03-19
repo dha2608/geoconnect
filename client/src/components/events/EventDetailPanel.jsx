@@ -77,7 +77,7 @@ function SectionLabel({ children }) {
 
 export default function EventDetailPanel() {
   const dispatch = useDispatch();
-  const requireAuth = useRequireAuth();
+  const { requireAuth, AuthGate } = useRequireAuth();
   const [coverLightbox, setCoverLightbox] = useState(false);
   const [commentText, setCommentText]     = useState('');
   const [editingId, setEditingId]         = useState(null);
@@ -208,6 +208,7 @@ export default function EventDetailPanel() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
+    {AuthGate}
     <AnimatePresence>
       {isOpen && (
         <>

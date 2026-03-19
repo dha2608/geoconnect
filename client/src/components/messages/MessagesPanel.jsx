@@ -967,7 +967,7 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation, on
 
 function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
   const dispatch = useDispatch();
-  const requireAuth = useRequireAuth();
+  const { requireAuth, AuthGate } = useRequireAuth();
   const { messages, loading, typingUsers } = useSelector((s) => s.messages);
 
   const { joinConversation, sendMessage: socketSend, startTyping, stopTyping, emitEditMessage, emitReaction } =
@@ -1168,6 +1168,7 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
       transition={{ duration: 0.2, ease: 'easeOut' }}
       className="flex flex-col h-full"
     >
+      {AuthGate}
       {/* ── Chat Header ──────────────────────────────────────────────────── */}
       <div
         className="flex-shrink-0 flex items-center gap-3 px-3 py-3

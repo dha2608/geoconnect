@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 
 export default function FollowButton({ userId, isFollowing: externalFollowing, size = 'md' }) {
   const dispatch = useDispatch();
-  const requireAuth = useRequireAuth();
+  const { requireAuth, AuthGate } = useRequireAuth();
   const [isFollowing, setIsFollowing] = useState(externalFollowing);
   const [loading, setLoading] = useState(false);
 
@@ -38,13 +38,16 @@ export default function FollowButton({ userId, isFollowing: externalFollowing, s
   };
 
   return (
-    <Button
-      variant={isFollowing ? 'outline' : 'primary'}
-      size={size}
-      onClick={handleToggle}
-      loading={loading}
-    >
-      {isFollowing ? 'Following' : 'Follow'}
-    </Button>
+    <>
+      {AuthGate}
+      <Button
+        variant={isFollowing ? 'outline' : 'primary'}
+        size={size}
+        onClick={handleToggle}
+        loading={loading}
+      >
+        {isFollowing ? 'Following' : 'Follow'}
+      </Button>
+    </>
   );
 }

@@ -468,7 +468,7 @@ export default function ReviewList({ pinId, pinOwnerId, newReview }) {
     }
   };
 
-  const requireAuth = useRequireAuth();
+  const { requireAuth, AuthGate } = useRequireAuth();
   const handleVoteHelpful = useCallback(
     async (review) => {
       if (!requireAuth('vote on reviews')) return;
@@ -539,6 +539,7 @@ export default function ReviewList({ pinId, pinOwnerId, newReview }) {
 
   return (
     <div className="space-y-3">
+      {AuthGate}
       {/* Summary row + sort */}
       <div className="flex items-center justify-between px-1">
         <h4 className="text-sm font-semibold text-txt-primary font-heading">
