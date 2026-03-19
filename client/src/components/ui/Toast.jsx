@@ -16,10 +16,10 @@ export function ToastProvider() {
         role: 'status',
         ariaProps: { role: 'status', 'aria-live': 'polite' },
         style: {
-          background: isLight ? 'rgba(255, 255, 255, 0.82)' : 'rgba(15, 21, 32, 0.9)',
+          background: isLight ? 'rgba(255, 255, 255, 0.82)' : 'rgba(8, 12, 24, 0.92)',
           backdropFilter: 'blur(20px)',
           color: isLight ? '#1a1a2e' : '#f1f5f9',
-          border: isLight ? '1px solid rgba(255, 255, 255, 0.45)' : '1px solid rgba(59, 130, 246, 0.12)',
+          border: isLight ? '1px solid rgba(255, 255, 255, 0.45)' : '1px solid rgba(139, 92, 246, 0.12)',
           borderRadius: '12px',
           fontSize: '14px',
           fontFamily: 'DM Sans, sans-serif',

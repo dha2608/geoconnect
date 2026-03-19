@@ -175,8 +175,8 @@ function RegisterForm({ onSuccess }) {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             className="w-20 h-20 rounded-full overflow-hidden border-2 border-dashed border-surface-divider
-                       hover:border-accent-primary/50 transition-colors duration-200 flex items-center justify-center
-                       bg-surface-hover cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
+                       hover:border-accent-violet/50 transition-colors duration-200 flex items-center justify-center
+                       bg-surface-hover cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-violet/30"
             aria-label="Choose avatar"
           >
             <AnimatePresence mode="wait">
@@ -298,8 +298,8 @@ function TwoFactorForm({ onSuccess, onBack }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Header */}
       <div className="text-center space-y-1">
-        <div className="w-12 h-12 mx-auto rounded-full bg-accent-primary/10 flex items-center justify-center mb-3">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent-primary">
+          <div className="w-12 h-12 mx-auto rounded-full bg-accent-violet/10 flex items-center justify-center mb-3">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent-violet">
             <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
@@ -368,7 +368,7 @@ function TwoFactorForm({ onSuccess, onBack }) {
         <button
           type="button"
           onClick={() => { setUseBackup(!useBackup); dispatch(clearError()); }}
-          className="text-sm text-accent-primary hover:text-accent-primary/80 transition-colors"
+          className="text-sm text-violet-400 hover:text-violet-300 transition-colors"
         >
           {useBackup ? 'Use authenticator app' : 'Use backup code'}
         </button>
@@ -399,7 +399,7 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [direction, setDirection] = useState(0);
 
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname || '/map';
 
   const handleSuccess = () => {
     navigate(from, { replace: true });
@@ -433,7 +433,7 @@ export default function AuthPage() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-heading font-bold bg-gradient-to-r from-accent-primary to-accent-secondary bg-clip-text text-transparent mb-2">
+          <h1 className="text-4xl font-heading font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-500 bg-clip-text text-transparent mb-2">
             {t('common.appName', 'GeoConnect')}
           </h1>
           <p className="text-txt-secondary text-sm">{t('auth.tagline')}</p>
@@ -460,7 +460,7 @@ export default function AuthPage() {
                       {isActive && (
                         <motion.div
                           layoutId="auth-tab-indicator"
-                          className="absolute inset-0 rounded-lg glass border border-accent-primary/20 shadow-sm"
+                          className="absolute inset-0 rounded-lg glass border border-accent-violet/30 shadow-sm"
                           style={{ zIndex: -1 }}
                           transition={TAB_SPRING}
                         />
@@ -509,7 +509,7 @@ export default function AuthPage() {
               {/* OAuth */}
               <div className="grid grid-cols-2 gap-3">
                 <Button
-                  variant="ghost"
+                  variant="glass"
                   loading={oauthLoading === 'google'}
                   disabled={!!oauthLoading}
                   onClick={() => { setOauthLoading('google'); authApi.googleLogin(); }}
@@ -518,7 +518,7 @@ export default function AuthPage() {
                   Google
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="glass"
                   loading={oauthLoading === 'github'}
                   disabled={!!oauthLoading}
                   onClick={() => { setOauthLoading('github'); authApi.githubLogin(); }}

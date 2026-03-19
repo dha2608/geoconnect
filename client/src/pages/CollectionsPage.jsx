@@ -121,7 +121,7 @@ function CollectionCard({ collection, onDelete, onExpand, onShare, isExpanded, c
             <button
               onClick={(e) => { e.stopPropagation(); onShare(collection); }}
               className="w-7 h-7 rounded-lg bg-black/50 backdrop-blur-sm text-white
-                         flex items-center justify-center hover:bg-accent-primary/80"
+                         flex items-center justify-center hover:bg-violet-500/80"
               title="Share & Collaborate"
             >
               <ShareIcon />
@@ -278,7 +278,7 @@ function CreateModal({ onClose, onCreate }) {
               placeholder="My favourite spots…"
               className="w-full bg-surface-hover border border-surface-divider rounded-lg px-3 py-2
                          text-txt-primary placeholder-txt-muted text-sm focus:outline-none
-                         focus:border-accent-primary transition-colors"
+                         focus:border-accent-violet transition-colors"
             />
           </div>
 
@@ -293,7 +293,7 @@ function CreateModal({ onClose, onCreate }) {
                   onClick={() => setEmoji(e)}
                   className={`h-9 rounded-lg text-xl flex items-center justify-center transition-all
                     ${emoji === e
-                      ? 'bg-accent-primary/20 ring-2 ring-accent-primary'
+                      ? 'bg-violet-500/20 ring-2 ring-violet-500'
                       : 'bg-surface-hover hover:bg-surface-hover/80'
                     }`}
                 >
@@ -313,7 +313,7 @@ function CreateModal({ onClose, onCreate }) {
               type="button"
               onClick={() => setIsPublic((v) => !v)}
               className={`relative w-11 h-6 rounded-full transition-colors duration-200
-                ${isPublic ? 'bg-accent-primary' : 'bg-surface-hover border border-surface-divider'}`}
+                ${isPublic ? 'bg-gradient-to-r from-blue-500 to-violet-500' : 'bg-surface-hover border border-surface-divider'}`}
             >
               <span
                 className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow
@@ -336,8 +336,8 @@ function CreateModal({ onClose, onCreate }) {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-2 rounded-lg bg-accent-primary text-white text-sm font-semibold
-                         hover:bg-accent-primary/90 disabled:opacity-60 transition-colors"
+              className="flex-1 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-violet-500 text-white text-sm font-semibold
+                         hover:opacity-90 disabled:opacity-60 transition-opacity"
             >
               {loading ? 'Creating…' : 'Create'}
             </button>
@@ -574,8 +574,8 @@ function ShareModal({ collection, currentUserId, onClose, onUpdate }) {
                     />
                     <button
                       onClick={handleCopy}
-                      className="px-3 py-2 rounded-lg bg-accent-primary text-white text-xs font-semibold
-                                 hover:bg-accent-primary/90 flex items-center gap-1.5 transition-colors"
+                     className="px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-violet-500 text-white text-xs font-semibold
+                                hover:opacity-90 flex items-center gap-1.5 transition-opacity"
                     >
                       <CopyIcon /> {copied ? 'Copied!' : 'Copy'}
                     </button>
@@ -594,8 +594,8 @@ function ShareModal({ collection, currentUserId, onClose, onUpdate }) {
                 <button
                   onClick={handleGenerateLink}
                   disabled={linkLoading || !isOwner}
-                  className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-accent-primary text-white
-                             text-sm font-semibold hover:bg-accent-primary/90 disabled:opacity-60 transition-colors"
+                  className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gradient-to-r from-blue-500 to-violet-500 text-white
+                             text-sm font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
                 >
                   <LinkIcon /> {linkLoading ? 'Generating…' : 'Generate Share Link'}
                 </button>
@@ -617,7 +617,7 @@ function ShareModal({ collection, currentUserId, onClose, onUpdate }) {
                       placeholder="Search users to add…"
                       className="flex-1 bg-surface-hover border border-surface-divider rounded-lg px-3 py-2
                                  text-txt-primary placeholder-txt-muted text-sm focus:outline-none
-                                 focus:border-accent-primary transition-colors"
+                                 focus:border-accent-violet transition-colors"
                     />
                     <select
                       value={addRole}
@@ -643,8 +643,8 @@ function ShareModal({ collection, currentUserId, onClose, onUpdate }) {
                           <span className="flex-1 text-txt-primary text-sm truncate">{u.name}</span>
                           <button
                             onClick={() => handleAddCollaborator(u._id)}
-                            className="px-2 py-1 rounded bg-accent-primary text-white text-xs font-semibold
-                                       hover:bg-accent-primary/90 transition-colors"
+                            className="px-2 py-1 rounded bg-gradient-to-r from-blue-500 to-violet-500 text-white text-xs font-semibold
+                                       hover:opacity-90 transition-opacity"
                           >
                             Add
                           </button>
@@ -804,8 +804,8 @@ export default function CollectionsPage() {
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 bg-accent-primary hover:bg-accent-primary/90
-                       text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm"
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-violet-500 hover:opacity-90
+                       text-white text-sm font-semibold px-4 py-2 rounded-xl transition-opacity shadow-sm"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -840,8 +840,8 @@ export default function CollectionsPage() {
             action={
               <button
                 onClick={() => setShowCreate(true)}
-                className="mt-4 bg-accent-primary hover:bg-accent-primary/90 text-white text-sm
-                           font-semibold px-5 py-2.5 rounded-xl transition-colors"
+                className="mt-4 bg-gradient-to-r from-blue-500 to-violet-500 hover:opacity-90 text-white text-sm
+                           font-semibold px-5 py-2.5 rounded-xl transition-opacity"
               >
                 Create your first collection
               </button>

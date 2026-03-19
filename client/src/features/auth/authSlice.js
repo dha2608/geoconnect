@@ -175,7 +175,7 @@ const authSlice = createSlice({
       state.loading = false; state.initialized = true; state.user = action.payload.user;
       state.isAuthenticated = true; state.isGuest = true;
     });
-    builder.addCase(guestLogin.rejected, (state, action) => { state.loading = false; state.error = action.payload?.message; });
+    builder.addCase(guestLogin.rejected, (state, action) => { state.loading = false; state.initialized = true; state.error = action.payload?.message; });
     // getMe
     builder.addCase(getMe.pending, (state) => { state.loading = true; });
     builder.addCase(getMe.fulfilled, (state, action) => {

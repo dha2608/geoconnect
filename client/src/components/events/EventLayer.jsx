@@ -24,12 +24,12 @@ import { openModal }        from '../../features/ui/uiSlice';
 // ─── Category config ──────────────────────────────────────────────────────────
 
 const EVENT_CATEGORIES = [
-  { value: 'meetup', label: 'Meetup', color: '#3b82f6', emoji: '🤝' },
-  { value: 'party',  label: 'Party',  color: '#8b5cf6', emoji: '🎉' },
-  { value: 'sports', label: 'Sports', color: '#10b981', emoji: '⚽' },
-  { value: 'music',  label: 'Music',  color: '#ec4899', emoji: '🎵' },
-  { value: 'food',   label: 'Food',   color: '#f59e0b', emoji: '🍕' },
-  { value: 'other',  label: 'Other',  color: '#06b6d4', emoji: '📅' },
+  { value: 'meetup', label: 'Meetup', color: '#3b82f6' },
+  { value: 'party',  label: 'Party',  color: '#8b5cf6' },
+  { value: 'sports', label: 'Sports', color: '#10b981' },
+  { value: 'music',  label: 'Music',  color: '#ec4899' },
+  { value: 'food',   label: 'Food',   color: '#f59e0b' },
+  { value: 'other',  label: 'Other',  color: '#06b6d4' },
 ];
 
 function getCat(value) {
@@ -45,57 +45,30 @@ function injectStyles() {
   const el = document.createElement('style');
   el.id = STYLE_ID;
   el.textContent = /* css */ `
-    /* ── Pulse ring animation ── */
-    @keyframes evtPulseRing {
-      0%   { transform: scale(0.85); opacity: 0.75; }
-      65%  { transform: scale(2.7);  opacity: 0;    }
-      100% { transform: scale(0.85); opacity: 0;    }
-    }
-
     /* ── Marker shell ── */
     .evt-marker {
-      position: relative;
-      width: 44px;
-      height: 44px;
+      width: 20px;
+      height: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
-      /* Leaflet sets overflow:hidden on icons by default — we need visible for the ring */
-      overflow: visible !important;
+      overflow: visible;
     }
 
-    /* ── Expanding ring ── */
-    .evt-pulse {
-      position: absolute;
-      inset: 4px;
-      border-radius: 50%;
-      animation: evtPulseRing 2.4s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
-      pointer-events: none;
-    }
-
-    /* ── Emoji circle ── */
+    /* ── Simple colored dot ── */
     .evt-body {
-      position: relative;
-      width: 36px;
-      height: 36px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 17px;
-      line-height: 1;
-      border: 2px solid rgba(255, 255, 255, 0.22);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+      border: 2px solid #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
       cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      transition: transform 0.15s ease;
       z-index: 2;
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
     }
 
     .evt-body:hover {
-      transform: scale(1.2);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+      transform: scale(1.3);
     }
 
     /* ── Tooltip overrides ── */
@@ -132,34 +105,29 @@ function isVisible(event) {
 }
 
 function buildIcon(event) {
-  const { color, emoji } = getCat(event.category);
-  const bg   = `${color}cc`;   // 80% opacity fill
-  const ring = `${color}55`;   // 33% opacity for the pulse ring
+  const { color } = getCat(event.category);
 
   return L.divIcon({
     className: '',             // Clear Leaflet's default white-box class
     html: `
       <div class="evt-marker">
-        <div class="evt-pulse" style="background:${ring};"></div>
-        <div class="evt-body"  style="background:${bg};" aria-label="${event.title.replace(/"/g, '&quot;')}">
-          ${emoji}
-        </div>
+        <div class="evt-body" style="background:${color};" aria-label="${event.title.replace(/"/g, '&quot;')}"></div>
       </div>`,
-    iconSize:      [44, 44],
-    iconAnchor:    [22, 22],   // Centre of the circle on the lat/lng point
-    tooltipAnchor: [0, -26],   // Above the icon
+    iconSize:      [20, 20],
+    iconAnchor:    [10, 10],   // Centre of the dot on the lat/lng point
+    tooltipAnchor: [0, -14],   // Above the icon
   });
 }
 
 function buildTooltip(event) {
-  const { emoji, label, color } = getCat(event.category);
+  const { label, color } = getCat(event.category);
   const attendees = event.attendees?.length ?? 0;
   const timeStr   = event.startTime
     ? format(new Date(event.startTime), 'EEE, MMM d · h:mm a')
     : '';
 
   return /* html */ `
-    <div style="font-family:'DM Sans',sans-serif;min-width:160px;">
+    <div style="font-family:'Nunito',sans-serif;min-width:160px;">
       <div style="font-weight:700;color:#f1f5f9;font-size:13px;margin-bottom:4px;max-width:220px;
                   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
         ${event.title}
@@ -168,10 +136,10 @@ function buildTooltip(event) {
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-size:11px;background:${color}22;color:${color};
                      padding:1px 7px;border-radius:99px;border:1px solid ${color}44;">
-          ${emoji} ${label}
+          ${label}
         </span>
         ${attendees > 0
-          ? `<span style="font-size:11px;color:#475569;">👥 ${attendees}</span>`
+          ? `<span style="font-size:11px;color:#475569;">${attendees} attending</span>`
           : ''}
       </div>
     </div>`;

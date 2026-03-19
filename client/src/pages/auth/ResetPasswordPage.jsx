@@ -52,7 +52,7 @@ export default function ResetPasswordPage() {
         <div className="aurora-bg" />
         <GlassCard padding="p-6" className="max-w-md w-full relative z-10 text-center">
           <p className="text-sm text-accent-danger mb-4">Invalid or missing reset token.</p>
-          <Link to="/forgot-password" className="text-sm text-accent-primary hover:underline">Request a new reset link</Link>
+          <Link to="/forgot-password" className="text-sm text-violet-400 hover:text-violet-300 hover:underline">Request a new reset link</Link>
         </GlassCard>
       </div>
     );
@@ -63,7 +63,7 @@ export default function ResetPasswordPage() {
       <div className="aurora-bg" />
       <motion.div variants={pageVariants} initial="hidden" animate="visible" className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-heading font-bold bg-gradient-to-r from-accent-primary to-accent-secondary bg-clip-text text-transparent">
+          <h1 className="text-3xl font-heading font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-500 bg-clip-text text-transparent">
             New Password
           </h1>
           <p className="text-sm text-txt-muted mt-2">Choose a strong password for your account</p>
@@ -76,7 +76,7 @@ export default function ResetPasswordPage() {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
               </div>
               <p className="text-sm text-txt-primary">Password reset successfully!</p>
-              <Link to="/login" className="inline-block text-sm text-accent-primary hover:underline">Go to login</Link>
+              <Link to="/login" className="inline-block text-sm text-violet-400 hover:text-violet-300 hover:underline">Go to login</Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

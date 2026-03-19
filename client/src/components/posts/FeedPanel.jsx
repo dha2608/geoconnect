@@ -40,7 +40,7 @@ export default function FeedPanel() {
   const hasMore = useSelector(selectPostsHasMore);
   const page    = useSelector(selectPostsPage);
   const error   = useSelector(selectPostsError);
-  const { activePanel, isMobile } = useSelector((state) => state.ui);
+  const { activePanel, isMobile, sidebarExpanded } = useSelector((state) => state.ui);
 
   const scrollRef = useRef(null);
   const isOpen = activePanel === 'feed';
@@ -107,12 +107,19 @@ export default function FeedPanel() {
 
   // ── Responsive classes ───────────────────────────────────────────────────
 
+  const sidebarWidth = sidebarExpanded ? 240 : 72;
+
   const panelClass = useMemo(
     () =>
       isMobile
         ? 'fixed top-16 bottom-16 left-0 right-0 z-20 glass overflow-hidden flex flex-col'
-        : 'fixed top-16 bottom-0 left-[72px] w-[380px] z-20 glass border-r border-accent-primary/10 overflow-hidden flex flex-col',
+        : 'fixed top-16 bottom-0 w-[380px] z-20 glass border-r border-accent-violet/10 overflow-hidden flex flex-col',
     [isMobile]
+  );
+
+  const panelStyle = useMemo(
+    () => isMobile ? undefined : { left: sidebarWidth, transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' },
+    [isMobile, sidebarWidth]
   );
 
   const motionProps = useMemo(
@@ -142,6 +149,7 @@ export default function FeedPanel() {
           key="feed-panel"
           {...motionProps}
           className={panelClass}
+          style={panelStyle}
         >
           {/* ── Header ── */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-surface-divider flex-shrink-0">
@@ -193,7 +201,7 @@ export default function FeedPanel() {
                     className="w-5 h-5"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke={pullDistance >= PULL_THRESHOLD || refreshing ? '#3b82f6' : 'rgba(255,255,255,0.3)'}
+                    stroke={pullDistance >= PULL_THRESHOLD || refreshing ? '#8b5cf6' : 'rgba(255,255,255,0.3)'}
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"

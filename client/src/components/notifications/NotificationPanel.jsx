@@ -198,7 +198,7 @@ const NotificationItem = memo(function NotificationItem({ notification, onRead, 
           {!read && (
             <span
               className="w-2 h-2 rounded-full block group-hover:opacity-0 transition-opacity duration-150"
-              style={{ backgroundColor: '#3b82f6', boxShadow: '0 0 6px rgba(59,130,246,0.6)' }}
+              style={{ backgroundColor: '#8b5cf6', boxShadow: '0 0 6px rgba(139,92,246,0.6)' }}
             />
           )}
           <button

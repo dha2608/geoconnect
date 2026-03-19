@@ -57,9 +57,9 @@ function Toggle({ checked, onChange, disabled = false }) {
       aria-checked={checked}
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
-      className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60
+      className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60
         ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
-        ${checked ? 'bg-accent-primary shadow-[0_0_12px_rgba(59,130,246,0.4)]' : 'bg-elevated border border-surface-divider'}`}
+        ${checked ? 'bg-gradient-to-r from-blue-500 to-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.4)]' : 'bg-elevated border border-surface-divider'}`}
     >
       <motion.span
         layout
@@ -88,7 +88,7 @@ function ToggleRow({ label, description, checked, onChange, disabled }) {
 function SectionHeader({ icon, title, description }) {
   return (
     <div className="flex items-start gap-3 mb-5">
-      <div className="w-8 h-8 rounded-xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+      <div className="w-8 h-8 rounded-xl bg-accent-violet/10 border border-accent-violet/20 flex items-center justify-center flex-shrink-0 mt-0.5">
         {icon}
       </div>
       <div>
@@ -370,7 +370,7 @@ export default function SettingsPage() {
     if (!window.confirm('Are you sure you want to log out?')) return;
     setLogoutLoading(true);
     await dispatch(logout());
-    navigate('/login', { replace: true });
+    navigate('/', { replace: true });
   };
 
   /* ── 2FA handlers ── */
@@ -486,7 +486,7 @@ export default function SettingsPage() {
                   disabled={isGuest}
                   className={`relative group flex-shrink-0 ${isGuest ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
                 >
-                  <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-accent-primary/20 group-hover:ring-accent-primary/50 transition-all duration-200">
+                  <div                   className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-violet-500/20 group-hover:ring-violet-500/50 transition-all duration-200">
                     {avatarPreview || user?.avatar ? (
                       <img src={avatarPreview || user.avatar} alt="avatar" className="w-full h-full object-cover" />
                     ) : (
@@ -549,8 +549,8 @@ export default function SettingsPage() {
                   rows={3}
                   maxLength={200}
                   placeholder="Tell the world a little about yourself..."
-                  disabled={isGuest}
-                  className="w-full bg-elevated border border-surface-divider rounded-xl px-4 py-3 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-accent-primary/50 focus:shadow-[0_0_16px_rgba(59,130,246,0.12)] transition-all duration-150 resize-none leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
+                   disabled={isGuest}
+                   className="w-full bg-elevated border border-surface-divider rounded-xl px-4 py-3 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-accent-violet/50 focus:shadow-[0_0_16px_rgba(139,92,246,0.12)] transition-all duration-150 resize-none leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {profileErrors.bio && <p className="text-xs text-accent-danger">{profileErrors.bio.message}</p>}
               </div>
@@ -685,7 +685,7 @@ export default function SettingsPage() {
                     whileTap={{ scale: 0.97 }}
                     className={`relative rounded-xl overflow-hidden border-2 transition-all duration-150 cursor-pointer ${
                       mapStyle === style.id
-                        ? 'border-accent-primary shadow-[0_0_16px_rgba(59,130,246,0.3)]'
+                        ? 'border-accent-primary shadow-[0_0_16px_rgba(139,92,246,0.3)]'
                         : 'border-surface-divider hover:border-surface-active'
                     }`}
                   >
@@ -732,7 +732,7 @@ export default function SettingsPage() {
                     whileTap={{ scale: 0.98 }}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all duration-150 cursor-pointer ${
                       distanceUnit === unit
-                        ? 'bg-accent-primary/10 border-accent-primary/50 text-accent-primary shadow-[0_0_12px_rgba(59,130,246,0.15)]'
+                        ? 'bg-accent-primary/10 border-accent-primary/50 text-accent-primary shadow-[0_0_12px_rgba(139,92,246,0.15)]'
                         : 'bg-elevated border-surface-divider text-txt-muted hover:border-surface-active hover:text-txt-secondary'
                     }`}
                   >
@@ -758,7 +758,7 @@ export default function SettingsPage() {
                     whileTap={{ scale: 0.98 }}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all duration-150 cursor-pointer flex items-center justify-center gap-2 ${
                       i18n.language?.startsWith(lang.code)
-                        ? 'bg-accent-primary/10 border-accent-primary/50 text-accent-primary shadow-[0_0_12px_rgba(59,130,246,0.15)]'
+                        ? 'bg-accent-primary/10 border-accent-primary/50 text-accent-primary shadow-[0_0_12px_rgba(139,92,246,0.15)]'
                         : 'bg-elevated border-surface-divider text-txt-muted hover:border-surface-active hover:text-txt-secondary'
                     }`}
                   >

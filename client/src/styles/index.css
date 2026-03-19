@@ -4,12 +4,13 @@
 
 :root,
 [data-theme="dark"] {
-  /* Base colors */
-  --bg-base: #080b12;
-  --bg-elevated: #0d1117;
-  --bg-panel: #0f1520;
+  /* Base colors — synced with landing page #050810 */
+  --bg-base: #050810;
+  --bg-elevated: #0a0f1a;
+  --bg-panel: #0c1220;
   --accent-primary: #3b82f6;
   --accent-secondary: #06b6d4;
+  --accent-violet: #8b5cf6;
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-danger: #ef4444;
@@ -17,17 +18,22 @@
   --text-secondary: #94a3b8;
   --text-muted: #475569;
 
-  /* Glass */
-  --glass-bg: rgba(15, 21, 32, 0.72);
-  --glass-blur: 20px;
-  --glass-saturate: 180%;
-  --glass-border: rgba(59, 130, 246, 0.12);
+  /* Glass — deeper, more premium */
+  --glass-bg: rgba(8, 12, 24, 0.75);
+  --glass-blur: 24px;
+  --glass-saturate: 200%;
+  --glass-border: rgba(139, 92, 246, 0.10);
 
   /* Surfaces */
-  --surface-hover: rgba(255, 255, 255, 0.05);
-  --surface-active: rgba(255, 255, 255, 0.08);
-  --surface-divider: rgba(255, 255, 255, 0.05);
-  --overlay-bg: rgba(0, 0, 0, 0.6);
+  --surface-hover: rgba(255, 255, 255, 0.06);
+  --surface-active: rgba(255, 255, 255, 0.10);
+  --surface-divider: rgba(255, 255, 255, 0.06);
+  --overlay-bg: rgba(0, 0, 0, 0.65);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
+  --gradient-subtle: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  --gradient-accent: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
 
   /* Spacing */
   --s-1: 4px;
@@ -48,11 +54,12 @@
   --r-full: 9999px;
 
   /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 16px 64px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 64px rgba(0, 0, 0, 0.55);
   --shadow-glow-primary: 0 0 20px rgba(59, 130, 246, 0.3);
   --shadow-glow-secondary: 0 0 20px rgba(6, 182, 212, 0.3);
+  --shadow-glow-violet: 0 0 20px rgba(139, 92, 246, 0.3);
 
   /* Timing */
   --duration-instant: 80ms;
@@ -102,10 +109,12 @@
 }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Nunito', sans-serif;
   background: var(--bg-base);
   color: var(--text-primary);
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Glass card utility */
@@ -126,15 +135,15 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
-/* Aurora background */
+/* Aurora background — synced with landing page gradient palette */
 .aurora-bg {
   position: fixed;
   inset: 0;
   z-index: -1;
   background: 
     radial-gradient(ellipse at 20% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(6, 182, 212, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 80%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+    radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.07) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(6, 182, 212, 0.05) 0%, transparent 50%);
   background-size: 200% 200%;
   animation: aurora 18s ease infinite alternate;
   transition: opacity 0.5s ease;
@@ -445,4 +454,150 @@ body {
 .nearby-user-popup .leaflet-popup-tip {
   background: var(--bg-elevated, #1a1a2e);
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Landing Page — Minigame Markers
+   ═══════════════════════════════════════════════════════════════ */
+.guess-marker-icon,
+.actual-marker-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.landing-guess-marker {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2), 0 2px 8px rgba(0, 0, 0, 0.15);
+  animation: landing-bounce-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.landing-actual-marker {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--marker-color, #8b5cf6);
+  box-shadow: 0 0 12px var(--marker-color, #8b5cf6), 0 2px 8px rgba(0, 0, 0, 0.15);
+  animation: landing-bounce-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes landing-bounce-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Landing Page — Marquee
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes landing-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.landing-marquee {
+  animation: landing-marquee 30s linear infinite;
+}
+
+.landing-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Landing Page — Floating Particles (GPU-accelerated CSS)
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes landing-float-particle {
+  0%, 100% {
+    transform: translate(var(--tx1, 0), var(--ty1, 0));
+  }
+  33% {
+    transform: translate(var(--tx2, 10px), var(--ty2, -10px));
+  }
+  66% {
+    transform: translate(var(--tx3, -5px), var(--ty3, 5px));
+  }
+}
+
+.landing-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  will-change: transform;
+  animation: landing-float-particle var(--dur, 20s) ease-in-out infinite;
+  animation-delay: var(--del, 0s);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Landing Page — Typewriter Cursor Blink
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes landing-blink-cursor {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.landing-cursor {
+  animation: landing-blink-cursor 0.75s step-end infinite;
+}
+
+/* Landing page snap-scroll container */
+.landing-scroll-container {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.landing-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Landing snap sections — inner scrollable area with hidden scrollbar */
+.landing-section-inner {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.landing-section-inner::-webkit-scrollbar {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Landing Page — Globe Animations
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes landing-globe-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.landing-globe-spin {
+  animation: landing-globe-spin 120s linear infinite;
+}
+
+@keyframes landing-globe-ring-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.landing-globe-ring-pulse {
+  animation: landing-globe-ring-pulse 4s ease-in-out infinite;
+}
+
+@keyframes landing-arc-dash {
+  0% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -18; }
+}
+
+.landing-arc-dash {
+  animation: landing-arc-dash 3s linear infinite;
 }

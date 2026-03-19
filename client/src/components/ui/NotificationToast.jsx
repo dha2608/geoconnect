@@ -55,7 +55,7 @@ function ToastItem({ toast, onDismiss }) {
       transition={{ type: 'spring', damping: 22, stiffness: 260 }}
       onClick={handleClick}
       className="glass rounded-xl border border-surface-divider shadow-lg cursor-pointer
-                 flex items-start gap-3 p-3 w-80 hover:border-accent-primary/40
+                 flex items-start gap-3 p-3 w-80 hover:border-accent-violet/40
                  transition-colors duration-150 select-none"
       role="alert"
       aria-live="polite"
@@ -99,7 +99,7 @@ function ToastItem({ toast, onDismiss }) {
 
       {/* Progress bar */}
       <motion.div
-        className="absolute bottom-0 left-0 h-[2px] bg-accent-primary/50 rounded-b-xl"
+        className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-blue-500/50 to-violet-500/50 rounded-b-xl"
         initial={{ width: '100%' }}
         animate={{ width: '0%' }}
         transition={{ duration: AUTO_DISMISS_MS / 1000, ease: 'linear' }}

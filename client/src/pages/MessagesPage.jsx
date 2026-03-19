@@ -101,7 +101,7 @@ const TypingIndicator = memo(function TypingIndicator() {
         {[0, 1, 2].map((i) => (
           <motion.span
             key={i}
-            className="w-1.5 h-1.5 rounded-full bg-white/50"
+            className="w-1.5 h-1.5 rounded-full bg-txt-muted"
             animate={{ y: [0, -4, 0] }}
             transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.15 }}
           />
@@ -115,11 +115,11 @@ const TypingIndicator = memo(function TypingIndicator() {
 const DateSeparator = memo(function DateSeparator({ date }) {
   return (
     <div className="flex items-center gap-3 py-3">
-      <div className="flex-1 h-px bg-white/10" />
-      <span className="text-[11px] text-white/40 font-medium tracking-wide uppercase">
+      <div className="flex-1 h-px bg-surface-divider" />
+      <span className="text-[11px] text-txt-muted font-medium tracking-wide uppercase">
         {formatDateSeparator(date)}
       </span>
-      <div className="flex-1 h-px bg-white/10" />
+      <div className="flex-1 h-px bg-surface-divider" />
     </div>
   );
 });
@@ -142,7 +142,7 @@ const MessageBubble = memo(function MessageBubble({ msg, isOwn, onEdit, onDelete
         <div
           className={`rounded-2xl px-3.5 py-2 text-sm leading-relaxed break-words ${
             isOwn
-              ? 'bg-blue-600/80 text-white rounded-br-md'
+              ? 'bg-gradient-to-r from-blue-500/80 to-violet-500/80 text-white rounded-br-md'
               : 'glass text-white/90 rounded-bl-md'
           }`}
         >
@@ -155,7 +155,7 @@ const MessageBubble = memo(function MessageBubble({ msg, isOwn, onEdit, onDelete
           )}
           {msg.text && <p>{msg.text}</p>}
           {msg.isEdited && <span className="text-[10px] opacity-50 ml-1">(edited)</span>}
-          <span className={`text-[10px] block mt-0.5 ${isOwn ? 'text-white/50 text-right' : 'text-white/40'}`}>
+          <span className={`text-[10px] block mt-0.5 ${isOwn ? 'text-white/50 text-right' : 'text-txt-muted'}`}>
             {formatMsgTime(msg.createdAt)}
           </span>
         </div>
@@ -178,11 +178,11 @@ const MessageBubble = memo(function MessageBubble({ msg, isOwn, onEdit, onDelete
               exit={{ opacity: 0, scale: 0.9 }}
               className={`absolute top-0 ${isOwn ? '-left-20' : '-right-20'} flex gap-1`}
             >
-              <button onClick={() => setShowReactions(!showReactions)} className="glass rounded-full p-1.5 text-xs hover:bg-white/10" title="React">😊</button>
+              <button onClick={() => setShowReactions(!showReactions)} className="glass rounded-full p-1.5 text-xs hover:bg-surface-hover" title="React">😊</button>
               {isOwn && (
                 <>
-                  <button onClick={() => onEdit(msg)} className="glass rounded-full p-1.5 text-xs hover:bg-white/10" title="Edit">✏️</button>
-                  <button onClick={() => onDelete(msg._id)} className="glass rounded-full p-1.5 text-xs hover:bg-white/10" title="Delete">🗑️</button>
+                  <button onClick={() => onEdit(msg)} className="glass rounded-full p-1.5 text-xs hover:bg-surface-hover" title="Edit">✏️</button>
+                  <button onClick={() => onDelete(msg._id)} className="glass rounded-full p-1.5 text-xs hover:bg-surface-hover" title="Delete">🗑️</button>
                 </>
               )}
             </motion.div>
@@ -218,19 +218,19 @@ const ConversationItem = memo(function ConversationItem({ conv, currentUserId, i
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left ${
-        isActive ? 'bg-white/10' : 'hover:bg-white/5'
+        isActive ? 'bg-surface-hover' : 'hover:bg-surface-hover/50'
       }`}
     >
       <div className="relative shrink-0">
         {other?.avatar ? (
           <img src={other.avatar} alt="" className="w-11 h-11 rounded-full object-cover" />
         ) : (
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white font-semibold text-sm">
             {other?.name?.charAt(0)?.toUpperCase() || '?'}
           </div>
         )}
         {unread > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white">
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-blue-500 to-violet-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
@@ -239,10 +239,10 @@ const ConversationItem = memo(function ConversationItem({ conv, currentUserId, i
         <div className="flex items-baseline justify-between">
           <span className="text-sm font-medium text-white truncate">{other?.name || 'Unknown'}</span>
           {conv.lastMessage?.createdAt && (
-            <span className="text-[10px] text-white/40 ml-2 shrink-0">{formatTime(conv.lastMessage.createdAt)}</span>
+            <span className="text-[10px] text-txt-muted ml-2 shrink-0">{formatTime(conv.lastMessage.createdAt)}</span>
           )}
         </div>
-        <p className="text-xs text-white/50 truncate mt-0.5">
+        <p className="text-xs text-txt-muted truncate mt-0.5">
           {conv.lastMessage?.text || 'No messages yet'}
         </p>
       </div>
@@ -255,12 +255,12 @@ const EmptyChat = memo(function EmptyChat() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
       <div className="w-20 h-20 rounded-full glass flex items-center justify-center mb-4">
-        <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} className="text-white/40">
+        <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} className="text-txt-muted">
           <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
         </svg>
       </div>
-      <h3 className="text-white/70 font-medium mb-1">Select a conversation</h3>
-      <p className="text-white/40 text-sm">Choose from your existing conversations or start a new one</p>
+      <h3 className="text-txt-secondary font-medium mb-1">Select a conversation</h3>
+      <p className="text-txt-muted text-sm">Choose from your existing conversations or start a new one</p>
     </div>
   );
 });
@@ -288,43 +288,43 @@ function NewConversationView({ currentUserId, onSelect, onCancel }) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-surface-divider">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-white font-semibold">New Message</h3>
-          <button onClick={onCancel} className="text-white/50 hover:text-white text-sm">Cancel</button>
+          <button onClick={onCancel} className="text-txt-secondary hover:text-white text-sm">Cancel</button>
         </div>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"><IconSearch /></span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-txt-muted"><IconSearch /></span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search people..."
-            className="w-full glass rounded-xl pl-9 pr-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+            className="w-full glass rounded-xl pl-9 pr-3 py-2.5 text-sm text-white placeholder:text-txt-muted focus:outline-none focus:ring-1 focus:ring-violet-500/50"
             autoFocus
           />
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {searching && <p className="text-center text-white/40 text-sm py-6">Searching...</p>}
+        {searching && <p className="text-center text-txt-muted text-sm py-6">Searching...</p>}
         {!searching && results.length === 0 && query.trim() && (
-          <p className="text-center text-white/40 text-sm py-6">No users found</p>
+          <p className="text-center text-txt-muted text-sm py-6">No users found</p>
         )}
         {results.map((user) => (
           <button
             key={user._id}
             onClick={() => onSelect(user._id)}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-hover/50 transition-colors text-left"
           >
             {user.avatar ? (
               <img src={user.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white font-semibold text-sm">
                 {user.name?.charAt(0)?.toUpperCase()}
               </div>
             )}
             <div>
               <p className="text-sm font-medium text-white">{user.name}</p>
-              {user.bio && <p className="text-xs text-white/40 truncate max-w-[200px]">{user.bio}</p>}
+              {user.bio && <p className="text-xs text-txt-muted truncate max-w-[200px]">{user.bio}</p>}
             </div>
           </button>
         ))}
@@ -464,10 +464,10 @@ export default function MessagesPage() {
       className="h-[calc(100vh-4rem)] flex flex-col"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 sm:px-6 py-4 border-b border-white/10">
+      <div className="flex items-center gap-3 px-4 sm:px-6 py-4 border-b border-surface-divider">
         <button
           onClick={() => navigate(-1)}
-          className="glass w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors"
+          className="glass w-9 h-9 rounded-xl flex items-center justify-center hover:bg-surface-hover transition-colors"
         >
           <IconBack />
         </button>
@@ -475,7 +475,7 @@ export default function MessagesPage() {
         <div className="flex-1" />
         <button
           onClick={() => setMobileView('new')}
-          className="glass w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors text-white/70"
+          className="glass w-9 h-9 rounded-xl flex items-center justify-center hover:bg-surface-hover transition-colors text-txt-secondary"
           title="New conversation"
         >
           <IconPlus />
@@ -486,7 +486,7 @@ export default function MessagesPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* ─── Conversation List ──────────────────────────────────── */}
         <div className={`
-          w-full sm:w-80 sm:min-w-[320px] sm:border-r border-white/10 flex flex-col
+          w-full sm:w-80 sm:min-w-[320px] sm:border-r border-surface-divider flex flex-col
           ${mobileView !== 'list' ? 'hidden sm:flex' : 'flex'}
         `}>
           {mobileView === 'new' && (
@@ -503,27 +503,27 @@ export default function MessagesPage() {
               {loading && conversations.length === 0 ? (
                 <div className="flex-1 p-4 space-y-3">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
-                      <div className="w-10 h-10 rounded-full bg-white/10 animate-pulse" />
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-surface-hover/50">
+                      <div className="w-10 h-10 rounded-full bg-surface-hover animate-pulse" />
                       <div className="flex-1 space-y-2">
-                        <div className="h-3 bg-white/10 rounded w-2/5 animate-pulse" />
-                        <div className="h-2.5 bg-white/10 rounded w-3/5 animate-pulse" />
+                        <div className="h-3 bg-surface-hover rounded w-2/5 animate-pulse" />
+                        <div className="h-2.5 bg-surface-hover rounded w-3/5 animate-pulse" />
                       </div>
-                      <div className="h-2 bg-white/10 rounded w-8 animate-pulse" />
+                      <div className="h-2 bg-surface-hover rounded w-8 animate-pulse" />
                     </div>
                   ))}
                 </div>
               ) : conversations.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
                   <div className="w-16 h-16 rounded-full glass flex items-center justify-center mb-3">
-                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} className="text-white/40">
+                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} className="text-txt-muted">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 01-.923 1.785A5.969 5.969 0 006 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337z" />
                     </svg>
                   </div>
-                  <p className="text-white/50 text-sm">No conversations yet</p>
+                  <p className="text-txt-muted text-sm">No conversations yet</p>
                   <button
                     onClick={() => setMobileView('new')}
-                    className="mt-3 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                    className="mt-3 text-sm text-violet-400 hover:text-violet-300 transition-colors"
                   >
                     Start a conversation
                   </button>
@@ -545,7 +545,7 @@ export default function MessagesPage() {
           )}
 
           {/* Desktop new conversation button */}
-          <div className="hidden sm:block p-3 border-t border-white/10">
+          <div className="hidden sm:block p-3 border-t border-surface-divider">
             <NewConversationView
               currentUserId={currentUser?._id}
               onSelect={handleNewConversation}
@@ -564,7 +564,7 @@ export default function MessagesPage() {
           ) : (
             <>
               {/* Chat header */}
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-surface-divider">
                 <button
                   onClick={handleBackToList}
                   className="sm:hidden glass w-8 h-8 rounded-lg flex items-center justify-center"
@@ -578,13 +578,13 @@ export default function MessagesPage() {
                       {other?.avatar ? (
                         <img src={other.avatar} alt="" className="w-9 h-9 rounded-full object-cover" />
                       ) : (
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white font-semibold text-sm">
                           {other?.name?.charAt(0)?.toUpperCase() || '?'}
                         </div>
                       )}
                       <div>
                         <p className="text-sm font-medium text-white">{other?.name || 'Unknown'}</p>
-                        {typingInActive && <p className="text-[11px] text-blue-400">typing...</p>}
+                         {typingInActive && <p className="text-[11px] text-violet-400">typing...</p>}
                       </div>
                     </div>
                   );
@@ -611,15 +611,15 @@ export default function MessagesPage() {
 
               {/* Edit indicator */}
               {editingMsg && (
-                <div className="px-4 py-2 border-t border-white/10 flex items-center justify-between bg-blue-500/10">
-                  <span className="text-xs text-blue-400">Editing message</span>
-                  <button onClick={() => { setEditingMsg(null); setMsgText(''); }} className="text-xs text-white/40 hover:text-white">Cancel</button>
+                <div className="px-4 py-2 border-t border-surface-divider flex items-center justify-between bg-violet-500/10">
+                  <span className="text-xs text-violet-400">Editing message</span>
+                  <button onClick={() => { setEditingMsg(null); setMsgText(''); }} className="text-xs text-txt-muted hover:text-white">Cancel</button>
                 </div>
               )}
 
               {/* Image preview */}
               {images.length > 0 && (
-                <div className="px-4 py-2 border-t border-white/10 flex gap-2">
+                <div className="px-4 py-2 border-t border-surface-divider flex gap-2">
                   {images.map((img, i) => (
                     <div key={i} className="relative">
                       <img src={img} alt="" className="w-16 h-16 rounded-lg object-cover" />
@@ -633,11 +633,11 @@ export default function MessagesPage() {
               )}
 
               {/* Input bar */}
-              <div className="p-3 border-t border-white/10">
+              <div className="p-3 border-t border-surface-divider">
                 <div className="flex items-end gap-2">
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="glass w-9 h-9 rounded-xl flex items-center justify-center text-white/50 hover:text-white/80 shrink-0"
+                    className="glass w-9 h-9 rounded-xl flex items-center justify-center text-txt-secondary hover:text-txt-primary shrink-0"
                   >
                     <IconImage />
                   </button>
@@ -648,12 +648,12 @@ export default function MessagesPage() {
                     onKeyDown={handleKeyDown}
                     placeholder="Type a message..."
                     rows={1}
-                    className="flex-1 glass rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-blue-500/50 resize-none max-h-24"
+                    className="flex-1 glass rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-txt-muted focus:outline-none focus:ring-1 focus:ring-violet-500/50 resize-none max-h-24"
                   />
                   <button
                     onClick={handleSend}
                     disabled={!msgText.trim() && images.length === 0}
-                    className="w-9 h-9 rounded-xl flex items-center justify-center bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed text-white shrink-0 transition-colors"
+                    className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-r from-blue-500 to-violet-500 hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed text-white shrink-0 transition-opacity"
                   >
                     <IconSend />
                   </button>

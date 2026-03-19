@@ -91,7 +91,7 @@ function EmptyState({ icon, title, message }) {
 function PostCard({ post }) {
   return (
     <motion.div
-      whileHover={{ scale: 1.02, borderColor: 'rgba(59,130,246,0.25)' }}
+      whileHover={{ scale: 1.02, borderColor: 'rgba(139,92,246,0.20)' }}
       transition={{ duration: 0.18 }}
       className="glass p-4 rounded-2xl cursor-pointer group space-y-3"
     >
@@ -101,7 +101,7 @@ function PostCard({ post }) {
         </div>
       )}
       {!post.images?.[0] && (
-        <div className="h-36 rounded-xl bg-gradient-to-br from-accent-primary/10 to-accent-secondary/5 flex items-center justify-center">
+        <div className="h-36 rounded-xl bg-gradient-to-br from-accent-primary/10 via-violet-500/5 to-accent-secondary/5 flex items-center justify-center">
           <span className="text-3xl opacity-40">📝</span>
         </div>
       )}
@@ -134,7 +134,7 @@ function PinCard({ pin }) {
 
   return (
     <motion.div
-      whileHover={{ scale: 1.02, borderColor: 'rgba(59,130,246,0.25)' }}
+      whileHover={{ scale: 1.02, borderColor: 'rgba(139,92,246,0.20)' }}
       transition={{ duration: 0.18 }}
       className="glass p-4 rounded-2xl cursor-pointer group space-y-3"
     >
@@ -298,7 +298,7 @@ function UserStatsSection({ stats, loading }) {
             <motion.div
               key={key}
               variants={statCardVariants}
-              className="glass rounded-xl p-3 flex flex-col items-center gap-1 border border-surface-divider/50 hover:border-accent-primary/25 hover:shadow-[0_0_12px_rgba(59,130,246,0.08)] transition-all duration-200 cursor-default"
+              className="glass rounded-xl p-3 flex flex-col items-center gap-1 border border-surface-divider/50 hover:border-violet-500/25 hover:shadow-[0_0_12px_rgba(139,92,246,0.08)] transition-all duration-200 cursor-default"
             >
               <span className="text-accent-primary opacity-80">{icon}</span>
               <span className="text-sm font-heading font-bold text-txt-primary tabular-nums leading-tight">
@@ -577,7 +577,7 @@ export default function ProfilePage() {
                           {...register('name')}
                           autoComplete="name"
                           placeholder="Your name"
-                          className="w-full bg-elevated border border-surface-divider rounded-xl px-3.5 py-2.5 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-accent-primary/50 focus:shadow-[0_0_16px_rgba(59,130,246,0.12)] transition-all duration-150"
+                          className="w-full bg-elevated border border-surface-divider rounded-xl px-3.5 py-2.5 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-violet-500/50 focus:shadow-[0_0_16px_rgba(139,92,246,0.12)] transition-all duration-150"
                         />
                         {errors.name && <p className="text-xs text-accent-danger">{errors.name.message}</p>}
                       </div>
@@ -595,7 +595,7 @@ export default function ProfilePage() {
                         rows={3}
                         maxLength={200}
                         placeholder="Tell people a little about yourself..."
-                        className="w-full bg-elevated border border-surface-divider rounded-xl px-3.5 py-2.5 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-accent-primary/50 focus:shadow-[0_0_16px_rgba(59,130,246,0.12)] transition-all duration-150 resize-none leading-relaxed"
+                        className="w-full bg-elevated border border-surface-divider rounded-xl px-3.5 py-2.5 text-sm text-txt-primary placeholder-txt-muted outline-none focus:border-violet-500/50 focus:shadow-[0_0_16px_rgba(139,92,246,0.12)] transition-all duration-150 resize-none leading-relaxed"
                       />
                       {errors.bio && <p className="text-xs text-accent-danger">{errors.bio.message}</p>}
                     </div>
@@ -704,7 +704,7 @@ export default function ProfilePage() {
                   {activeTab === tab && (
                     <motion.div
                       layoutId="tab-underline"
-                      className="absolute bottom-0 left-2 right-2 h-0.5 rounded-t-full bg-gradient-to-r from-accent-primary to-accent-secondary"
+                      className="absolute bottom-0 left-2 right-2 h-0.5 rounded-t-full bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-500"
                       transition={{ type: 'spring', damping: 30, stiffness: 400 }}
                     />
                   )}

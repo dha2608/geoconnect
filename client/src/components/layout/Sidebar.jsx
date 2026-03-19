@@ -107,7 +107,7 @@ function NavItem({ item, isActive, expanded, badge, onClick }) {
         className={`relative w-full flex items-center gap-3 rounded-xl transition-all duration-150 group
           ${expanded ? 'px-3 h-11' : 'justify-center h-11 mx-auto'}
           ${isActive
-            ? 'bg-accent-primary/12 text-accent-primary'
+            ? 'bg-gradient-to-r from-blue-500/12 to-violet-500/12 text-blue-400'
             : 'text-txt-muted hover:text-txt-secondary hover:bg-surface-hover'
           }`}
         style={expanded ? {} : { width: 44 }}
@@ -119,7 +119,7 @@ function NavItem({ item, isActive, expanded, badge, onClick }) {
           {isActive && (
             <motion.div
               layoutId="sidebar-active-pill"
-              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-accent-primary"
+              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-gradient-to-b from-blue-500 to-violet-500"
               style={{ height: expanded ? 24 : 20 }}
               initial={{ opacity: 0, scaleY: 0 }}
               animate={{ opacity: 1, scaleY: 1 }}
@@ -160,7 +160,7 @@ function NavItem({ item, isActive, expanded, badge, onClick }) {
 
         {/* Badge */}
         {badge > 0 && (
-          <span className={`flex-shrink-0 min-w-[18px] h-[18px] bg-accent-primary rounded-full text-[10px] font-bold flex items-center justify-center text-white
+          <span className={`flex-shrink-0 min-w-[18px] h-[18px] bg-gradient-to-r from-blue-500 to-violet-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white
             ${expanded ? 'ml-auto' : 'absolute -top-1 -right-1'}`}
           >
             {badge > 99 ? '99+' : badge}
@@ -210,7 +210,7 @@ function UserMenu({ user, expanded, onClose }) {
     {
       label: t('common.logout', 'Log out'),
       icon: 'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1',
-      action: () => { dispatch(logout()); onClose(); },
+      action: () => { dispatch(logout()); onClose(); navigate('/'); },
       danger: true,
     },
   ];

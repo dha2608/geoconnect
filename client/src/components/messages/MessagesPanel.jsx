@@ -342,7 +342,7 @@ function MessageBubble({ message, isOwn, otherParticipantId, currentUserId, onDe
     : 'rounded-bl-sm text-txt-primary border border-[var(--glass-border)]';
 
   const bubbleStyle = isOwn
-    ? { background: '#3b82f6', boxShadow: '0 2px 12px rgba(59,130,246,0.3)' }
+    ? { background: '#6366f1', boxShadow: '0 2px 12px rgba(139,92,246,0.25)' }
     : { background: 'var(--glass-bg)' };
 
   return (
@@ -948,7 +948,7 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation, on
                       {hasUnread && (
                         <span
                           className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: '#3b82f6', boxShadow: '0 0 6px rgba(59,130,246,0.6)' }}
+                          style={{ backgroundColor: '#8b5cf6', boxShadow: '0 0 6px rgba(139,92,246,0.6)' }}
                         />
                       )}
                     </div>
@@ -1365,7 +1365,7 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
               'w-10 h-10 flex items-center justify-center rounded-xl flex-shrink-0',
               'transition-all duration-150',
               (inputText.trim() || selectedImages.length > 0) && !isSending
-                ? 'bg-accent-primary text-white shadow-[0_0_16px_rgba(59,130,246,0.4)] hover:bg-blue-500'
+                ? 'bg-accent-primary text-white shadow-[0_0_16px_rgba(139,92,246,0.4)] hover:bg-blue-500'
                 : 'bg-surface-hover text-txt-muted cursor-not-allowed',
             ].join(' ')}
           >

@@ -22,7 +22,7 @@ export default function NotFoundPage() {
             transition={{ delay: 0.15, type: 'spring', stiffness: 300, damping: 20 }}
           >
             <span className="text-8xl select-none block mb-2">🗺️</span>
-            <h1 className="text-6xl font-heading font-bold bg-gradient-to-r from-accent-primary to-accent-secondary bg-clip-text text-transparent">
+            <h1 className="text-6xl font-heading font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-500 bg-clip-text text-transparent">
               404
             </h1>
           </motion.div>
@@ -38,7 +38,7 @@ export default function NotFoundPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link to="/">
+            <Link to="/map">
               <Button variant="primary" size="md">
                 🏠 Go Home
               </Button>
