@@ -1,8 +1,8 @@
 import { useEffect, useState, lazy, Suspense, useMemo, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { setDeviceSize, setSidebarOpen, closePanel } from '../../features/ui/uiSlice';
+import { setDeviceSize, setSidebarOpen, closePanel, clearActivePanel } from '../../features/ui/uiSlice';
 import { fetchUnreadCount } from '../../features/messages/messageSlice';
 import useSocket from '../../socket/useSocket';
 import useGeolocation from '../../hooks/useGeolocation';
@@ -41,9 +41,16 @@ const LIGHT_TILES = new Set(['street', 'light', 'satellite']);
 
 export default function AppLayout() {
   const dispatch = useDispatch();
+  const location = useLocation();
   const { isMobile, isTablet, sidebarOpen, sidebarExpanded, activePanel, modalData } = useSelector((state) => state.ui);
   const { user } = useSelector((state) => state.auth);
   const { tileLayer } = useSelector((state) => state.map);
+
+  // ── Close any open panel when the route changes ──
+  // Uses clearActivePanel (not closePanel) to avoid collapsing the sidebar
+  useEffect(() => {
+    dispatch(clearActivePanel());
+  }, [location.pathname, dispatch]);
 
   // Keyboard shortcuts — exposes help overlay state
   const { showShortcutHelp, setShowShortcutHelp } = useKeyboardShortcuts();
@@ -120,7 +127,18 @@ export default function AppLayout() {
         role="main"
       >
         <SectionErrorBoundary name="Map">
-          <Outlet />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              className="w-full h-full"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </SectionErrorBoundary>
       </main>
 
@@ -171,39 +189,57 @@ export default function AppLayout() {
           )}
         </AnimatePresence>
       ) : (
-        /* Desktop: each panel manages its own spring animation (slide from left) */
-        <AnimatePresence>
-          {activePanel === 'feed' && (
-            <SectionErrorBoundary name="Feed">
-              <Suspense fallback={null}><FeedPanel /></Suspense>
-            </SectionErrorBoundary>
-          )}
-          {activePanel === 'profile' && (
-            <SectionErrorBoundary name="Profile">
-              <UserProfilePanel userId={modalData?.userId || user?._id} />
-            </SectionErrorBoundary>
-          )}
-          {activePanel === 'events' && (
-            <SectionErrorBoundary name="Events">
-              <EventListPanel />
-            </SectionErrorBoundary>
-          )}
-          {activePanel === 'notifications' && (
-            <SectionErrorBoundary name="Notifications">
-              <Suspense fallback={null}><NotificationPanel /></Suspense>
-            </SectionErrorBoundary>
-          )}
-          {activePanel === 'messages' && (
-            <SectionErrorBoundary name="Messages">
-              <Suspense fallback={null}><MessagesPanel /></Suspense>
-            </SectionErrorBoundary>
-          )}
-          {activePanel === 'search' && (
-            <SectionErrorBoundary name="Search">
-              <Suspense fallback={null}><SearchPanel /></Suspense>
-            </SectionErrorBoundary>
-          )}
-        </AnimatePresence>
+        <>
+          {/* Desktop panel backdrop — closes active panel when clicked */}
+          <AnimatePresence>
+            {activePanel && (
+              <motion.div
+                key="panel-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="fixed top-16 bottom-0 right-0 z-[15] bg-black/20 backdrop-blur-[1px] cursor-pointer"
+                style={{ left: sidebarExpanded ? 240 : 72, transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                onClick={() => dispatch(closePanel())}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Desktop: each panel manages its own spring animation (slide from left) */}
+          <AnimatePresence>
+            {activePanel === 'feed' && (
+              <SectionErrorBoundary name="Feed">
+                <Suspense fallback={null}><FeedPanel /></Suspense>
+              </SectionErrorBoundary>
+            )}
+            {activePanel === 'profile' && (
+              <SectionErrorBoundary name="Profile">
+                <UserProfilePanel userId={modalData?.userId || user?._id} />
+              </SectionErrorBoundary>
+            )}
+            {activePanel === 'events' && (
+              <SectionErrorBoundary name="Events">
+                <EventListPanel />
+              </SectionErrorBoundary>
+            )}
+            {activePanel === 'notifications' && (
+              <SectionErrorBoundary name="Notifications">
+                <Suspense fallback={null}><NotificationPanel /></Suspense>
+              </SectionErrorBoundary>
+            )}
+            {activePanel === 'messages' && (
+              <SectionErrorBoundary name="Messages">
+                <Suspense fallback={null}><MessagesPanel /></Suspense>
+              </SectionErrorBoundary>
+            )}
+            {activePanel === 'search' && (
+              <SectionErrorBoundary name="Search">
+                <Suspense fallback={null}><SearchPanel /></Suspense>
+              </SectionErrorBoundary>
+            )}
+          </AnimatePresence>
+        </>
       )}
 
       {/* ── Modals (always mounted, render conditionally from Redux state) ── */}
