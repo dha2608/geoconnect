@@ -7,6 +7,9 @@ import { flyToLocation, setDestination } from '../../features/map/mapSlice';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+const HISTORY_KEY = 'geo_search_history';
+const MAX_HISTORY = 5;
+
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
 
 function haversine(lat1, lon1, lat2, lon2) {
@@ -19,6 +22,28 @@ function haversine(lat1, lon1, lat2, lon2) {
     Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveToHistory(entry) {
+  try {
+    const current = loadHistory();
+    // Deduplicate by display_name, newest first, capped at MAX_HISTORY
+    const filtered = current.filter(h => h.display_name !== entry.display_name);
+    const updated  = [entry, ...filtered].slice(0, MAX_HISTORY);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
 }
 
 /** Returns an emoji for a Nominatim result's type/class, or null → use the default pin. */
@@ -56,6 +81,7 @@ export default function SearchBar() {
   const [isOpen,      setIsOpen]      = useState(false);
   const [isLoading,   setIsLoading]   = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [history,     setHistory]     = useState(loadHistory); // lazy-init
 
   const inputRef       = useRef(null);
   const debounceRef    = useRef(null);
@@ -171,6 +197,19 @@ export default function SearchBar() {
     return `${dist.toFixed(1)} km`;
   }, [userLocation]);
 
+  // ── History helpers ───────────────────────────────────────────────────────────
+  const handleDeleteHistory = useCallback((e, idx) => {
+    e.stopPropagation();
+    const updated = history.filter((_, i) => i !== idx);
+    setHistory(updated);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+  }, [history]);
+
+  const handleClearHistory = useCallback(() => {
+    setHistory([]);
+    localStorage.removeItem(HISTORY_KEY);
+  }, []);
+
   // ── Focus / Blur with cancelable close timer ──────────────────────────────────
   const handleFocus = () => {
     // Cancel any pending close so re-focusing doesn't hide the dropdown
@@ -185,12 +224,31 @@ export default function SearchBar() {
 
   // ── Selection handlers ────────────────────────────────────────────────────────
   const handleSelect = (result) => {
+    // Auto-save every selection to history
+    const updated = saveToHistory({
+      display_name: result.display_name,
+      lat: result.lat,
+      lon: result.lon,
+    });
+    setHistory(updated);
+
     dispatch(flyToLocation({
       lat: parseFloat(result.lat),
       lng: parseFloat(result.lon),
       zoom: 16,
     }));
     setQuery(result.display_name.split(',')[0]);
+    setIsOpen(false);
+    setActiveIndex(-1);
+  };
+
+  const handleHistorySelect = (item) => {
+    dispatch(flyToLocation({
+      lat: parseFloat(item.lat),
+      lng: parseFloat(item.lon),
+      zoom: 16,
+    }));
+    setQuery(item.display_name.split(',')[0]);
     setIsOpen(false);
     setActiveIndex(-1);
   };
@@ -210,6 +268,7 @@ export default function SearchBar() {
     setResults([]);
     setActiveIndex(-1);
     inputRef.current?.focus();
+    // Re-focus → handleFocus cancels blurTimeoutRef → dropdown opens to history panel
   };
 
   // ── Keyboard navigation ───────────────────────────────────────────────────────
@@ -222,7 +281,9 @@ export default function SearchBar() {
     }
 
     // Decide which list Arrow/Enter operates on
-    const navList = results.length > 0 ? results : [];
+    const navList = results.length > 0
+      ? results
+      : (query.length === 0 ? history : []);
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -235,14 +296,19 @@ export default function SearchBar() {
       e.preventDefault();
       const item = navList[activeIndex];
       if (!item) return;
-      handleSelect(item);
+      if (results.length > 0) {
+        handleSelect(item);
+      } else if (query.length === 0) {
+        handleHistorySelect(item);
+      }
     }
   };
 
   // ── Derived visibility ────────────────────────────────────────────────────────
+  const showHistoryPanel = isOpen && query.length === 0;
   const showResults      = isOpen && query.length >= 2 && results.length > 0;
   const showEmpty        = isOpen && query.length >= 2 && results.length === 0 && !isLoading;
-  const showDropdown     = showResults || showEmpty;
+  const showDropdown     = showHistoryPanel || showResults || showEmpty;
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
@@ -296,6 +362,74 @@ export default function SearchBar() {
             transition={{ duration: 0.15 }}
             className="mt-2 glass rounded-xl overflow-hidden"
           >
+
+            {/* ── History Panel: shown when focused with empty query ─────────── */}
+            {showHistoryPanel && (
+              <>
+                {/* Recent history — only shown when history is non-empty */}
+                {history.length > 0 && (
+                  <>
+                    <div className="border-t border-surface-divider" />
+
+                    {/* Section header */}
+                    <div className="px-3 py-2 flex items-center justify-between">
+                      <p className="text-[10px] font-body text-txt-muted uppercase tracking-wider">
+                        Recent
+                      </p>
+                      <button
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={handleClearHistory}
+                        className="text-xs text-accent-primary hover:underline font-body"
+                      >
+                        Clear all
+                      </button>
+                    </div>
+
+                    <div className="max-h-44 overflow-y-auto">
+                      {history.map((item, i) => (
+                        <div
+                          key={`hist-${i}`}
+                          className={`flex items-center border-b border-surface-divider last:border-0 transition-colors group ${
+                            activeIndex === i ? 'bg-surface-hover' : 'hover:bg-surface-hover'
+                          }`}
+                        >
+                          {/* Click area → fly to saved location */}
+                          <button
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handleHistorySelect(item)}
+                            className="flex-1 px-3 py-2.5 flex items-center gap-3 text-left min-w-0"
+                          >
+                            {/* Clock icon */}
+                            <svg
+                              className="w-4 h-4 text-txt-muted flex-shrink-0"
+                              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                            >
+                              <circle cx="12" cy="12" r="10"/>
+                              <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            <span className="text-sm text-txt-secondary truncate font-body">
+                              {item.display_name.split(',')[0]}
+                            </span>
+                          </button>
+
+                          {/* Per-item delete */}
+                          <button
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={(e) => handleDeleteHistory(e, i)}
+                            title="Remove from history"
+                            className="p-2 mr-1.5 text-txt-muted hover:text-txt-primary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                          >
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
 
             {/* ── Search Results — pins first, then geocode, sorted by distance ── */}
             {showResults && (() => {

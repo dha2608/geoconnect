@@ -18,7 +18,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { useSelector, useDispatch } from 'react-redux';
 import { setSelectedPin, selectAllPins, selectPinFilters } from '../../features/pins/pinSlice';
 import { openModal } from '../../features/ui/uiSlice';
-import { getCategoryColor } from './PinCategoryIcon';
+import { getCategoryColor, getCategoryIconSvg } from './PinCategoryIcon';
 
 // ─── Inject marker animation CSS ─────────────────────────────────────────────
 let markerCssInjected = false;
@@ -45,7 +45,7 @@ function ensureMarkerCSS() {
       border: 1px solid rgba(255,255,255,0.1) !important;
       border-radius: 8px !important;
       color: #e2e8f0 !important;
-      font-family: 'Nunito', sans-serif !important;
+      font-family: 'DM Sans', sans-serif !important;
       font-size: 12px !important;
       padding: 4px 10px !important;
       box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
@@ -86,16 +86,17 @@ function createClusterIcon(cluster) {
       width: ${size}px;
       height: ${size}px;
       border-radius: 50%;
-      background: rgba(139, 92, 246, 0.85);
-      border: 2px solid rgba(255, 255, 255, 0.4);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      background: rgba(59, 130, 246, 0.85);
+      border: 2px solid rgba(147, 197, 253, 0.6);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.6), 0 0 24px rgba(59, 130, 246, 0.3);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: 'Nunito', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: ${fontSize}px;
       font-weight: 700;
       color: #fff;
+      backdrop-filter: blur(4px);
     ">
       ${count}
     </div>
@@ -120,6 +121,7 @@ function createClusterIcon(cluster) {
 function createPinIcon(category) {
   ensureMarkerCSS();
   const color = getCategoryColor(category);
+  const iconSvg = getCategoryIconSvg(category);
 
   const html = `
     <div class="pin-marker-wrap">
@@ -129,7 +131,10 @@ function createPinIcon(category) {
           fill="${color}"
           filter="drop-shadow(0 2px 4px rgba(0,0,0,0.4))"
         />
-        <circle cx="16" cy="14" r="5" fill="rgba(255,255,255,0.85)"/>
+        <circle cx="16" cy="14" r="9" fill="rgba(0,0,0,0.2)"/>
+        <g transform="translate(9, 7)">
+          ${iconSvg}
+        </g>
       </svg>
     </div>
   `;
