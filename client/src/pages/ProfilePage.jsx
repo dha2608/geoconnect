@@ -15,6 +15,8 @@ import Button from '../components/ui/Button';
 import GlassCard from '../components/ui/GlassCard';
 import { ProfileSkeleton } from '../components/ui/Skeleton';
 import { userApi } from '../api/userApi';
+import { fetchMyProgress, fetchLevels } from '../features/gamification/gamificationSlice';
+import LevelProgressBar from '../components/gamification/LevelProgressBar';
 
 /* ─────────────────────────── animation variants ─────────────────────────── */
 const pageVariants = {
@@ -371,6 +373,14 @@ export default function ProfilePage() {
       .finally(() => setStatsLoading(false));
   }, [profileId]);
 
+  /* ── fetch gamification progress for own profile ── */
+  useEffect(() => {
+    if (isOwnProfile) {
+      dispatch(fetchMyProgress());
+      dispatch(fetchLevels());
+    }
+  }, [isOwnProfile, dispatch]);
+
   /* ── derived ── */
   const isFollowing = currentUser?.following?.some(
     (id) => id === profile?._id || id?._id === profile?._id
@@ -684,6 +694,13 @@ export default function ProfilePage() {
         {!editMode && (
           <motion.div variants={itemVariants}>
             <UserStatsSection stats={userStats} loading={statsLoading} />
+          </motion.div>
+        )}
+
+        {/* ── Gamification Level Progress ── */}
+        {!editMode && isOwnProfile && (
+          <motion.div variants={itemVariants} className="mt-4">
+            <LevelProgressBar />
           </motion.div>
         )}
 
