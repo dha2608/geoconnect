@@ -15,7 +15,7 @@ export default function ProtectedRoute({ children }) {
   useEffect(() => {
     if (initialized && !loading && !isAuthenticated && !redirecting.current) {
       redirecting.current = true;
-      navigate('/login', { state: { from: location.pathname }, replace: true });
+      navigate('/welcome', { state: { from: location.pathname }, replace: true });
     }
     if (isAuthenticated) {
       redirecting.current = false;

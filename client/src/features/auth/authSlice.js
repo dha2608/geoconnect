@@ -105,7 +105,7 @@ const authSlice = createSlice({
     isAuthenticated: false,
     isGuest: false,
     loading: hasTokenOnLoad,   // true if token exists → show spinner until getMe resolves
-    initialized: false,        // becomes true after first getMe attempt
+    initialized: !hasTokenOnLoad, // true immediately when no token (nothing to verify); false when token exists → wait for getMe
     error: null,
     // 2FA login flow
     requires2FA: false,
