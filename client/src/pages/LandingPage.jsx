@@ -776,7 +776,7 @@ export default function LandingPage() {
       <motion.nav className="fixed inset-x-0 top-0 z-50">
         <motion.div className="absolute inset-0 border-b border-white/[0.06] bg-[#050810]/80 backdrop-blur-2xl" style={{ opacity: navBg }} />
         <div className="relative mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
-           <Link to="/" className="flex items-center gap-2.5">
+          <Link to="/welcome" className="flex items-center gap-2.5">
             <motion.div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-violet-500"
               whileHover={{ rotate: 12, scale: 1.1 }} transition={{ type: 'spring', stiffness: 300 }}
             >
@@ -792,7 +792,7 @@ export default function LandingPage() {
             <Link to="/login" className="hidden px-4 py-2 text-sm text-gray-400 transition-colors hover:text-white sm:block">Log in</Link>
             <MagneticButton>
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-                <Link to="/map" className="inline-block rounded-full bg-gradient-to-r from-blue-500 to-violet-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-500/20 transition-shadow hover:shadow-xl hover:shadow-blue-500/30 sm:px-5 sm:py-2.5 sm:text-sm">
+                <Link to="/register" className="inline-block rounded-full bg-gradient-to-r from-blue-500 to-violet-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-500/20 transition-shadow hover:shadow-xl hover:shadow-blue-500/30 sm:px-5 sm:py-2.5 sm:text-sm">
                   Get Started
                 </Link>
               </motion.div>
@@ -868,10 +868,10 @@ export default function LandingPage() {
               >
                 <MagneticButton>
                   <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-                    <Link to="/map"
+                    <Link to="/register"
                       className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-violet-500 px-5 py-3 text-xs font-semibold text-white shadow-lg shadow-blue-500/25 transition-shadow hover:shadow-xl hover:shadow-blue-500/30 sm:gap-2.5 sm:px-7 sm:py-3.5 sm:text-sm"
                     >
-                      Start Exploring
+                      Get Started
                       <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M5 12h14M12 5l7 7-7 7" />
                       </svg>
@@ -1023,7 +1023,7 @@ export default function LandingPage() {
                               <p className="mt-3 border-t border-white/[0.06] pt-3 text-xs leading-relaxed text-gray-300 sm:text-sm">
                                 {feat.detail}
                               </p>
-                              <Link to="/map" className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold transition-colors hover:text-white" style={{ color: feat.color }}>
+                              <Link to="/register" className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold transition-colors hover:text-white" style={{ color: feat.color }}>
                                 Learn more
                                 <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
                               </Link>
@@ -1317,11 +1317,11 @@ export default function LandingPage() {
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
               <MagneticButton>
                 <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-                  <Link to="/map"
+                  <Link to="/register"
                     className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-full bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-500 px-8 py-4 text-sm font-bold text-white shadow-2xl shadow-blue-500/25 transition-all hover:shadow-blue-500/40"
                   >
                     <span className="relative z-10 flex items-center gap-2.5">
-                      Start Exploring Free
+                      Get Started Free
                       <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M5 12h14M12 5l7 7-7 7" />
                       </svg>

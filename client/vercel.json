@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://geoconnect-n895.onrender.com/api/$1"
+      "destination": "https://geoconnect-api.onrender.com/api/$1"
     },
     {
       "source": "/socket.io/(.*)",
-      "destination": "https://geoconnect-n895.onrender.com/socket.io/$1"
+      "destination": "https://geoconnect-api.onrender.com/socket.io/$1"
     },
     {
       "source": "/((?!assets|vite\\.svg).*)",

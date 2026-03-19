@@ -38,7 +38,7 @@ export default function NotFoundPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link to="/map">
+            <Link to="/">
               <Button variant="primary" size="md">
                 🏠 Go Home
               </Button>

@@ -202,7 +202,7 @@ export default function SearchPanel() {
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
     if (Number.isNaN(lat) || Number.isNaN(lng)) return;
-    navigate('/map');
+    navigate('/');
     dispatch(flyToLocation({ lat, lng, zoom: 15 }));
     setRecent((prev) => {
       const updated = prependRecent({ ...result, _type: 'place' }, prev);
@@ -219,7 +219,7 @@ export default function SearchPanel() {
     const parts = (result.display_name ?? '').split(', ');
     dispatch(setDestination({ lat, lng, name: parts[0], address: parts.slice(1).join(', ') }));
     dispatch(flyToLocation({ lat, lng, zoom: 16 }));
-    navigate('/map');
+    navigate('/');
     dispatch(closePanel());
   }, [dispatch, navigate]);
 
@@ -231,7 +231,7 @@ export default function SearchPanel() {
   const handleSelectPin = useCallback((pin) => {
     const [lng, lat] = pin.location?.coordinates || [];
     if (lat != null && lng != null) {
-      navigate('/map');
+      navigate('/');
       dispatch(flyToLocation({ lat, lng, zoom: 17 }));
     }
     dispatch(setSelectedPin(pin));
@@ -242,7 +242,7 @@ export default function SearchPanel() {
   const handleSelectEvent = useCallback((event) => {
     const [lng, lat] = event.location?.coordinates || [];
     if (lat != null && lng != null) {
-      navigate('/map');
+      navigate('/');
       dispatch(flyToLocation({ lat, lng, zoom: 17 }));
     }
     dispatch(setSelectedEvent(event));

@@ -399,7 +399,7 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [direction, setDirection] = useState(0);
 
-  const from = location.state?.from?.pathname || '/map';
+  const from = location.state?.from?.pathname || '/';
 
   const handleSuccess = () => {
     navigate(from, { replace: true });

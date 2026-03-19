@@ -180,7 +180,7 @@ function PinDetailSkeleton() {
 
 /* ─── Share helper ──────────────────────────────────────────────────────── */
 async function sharePin(pin) {
-  const url  = `${window.location.origin}/map?pin=${pin._id}`;
+  const url  = `${window.location.origin}/?pin=${pin._id}`;
   const text = `Check out "${pin.title}" on GeoConnect`;
 
   if (navigator.share) {

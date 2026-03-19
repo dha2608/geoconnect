@@ -370,7 +370,7 @@ export default function SettingsPage() {
     if (!window.confirm('Are you sure you want to log out?')) return;
     setLogoutLoading(true);
     await dispatch(logout());
-    navigate('/', { replace: true });
+    navigate('/login', { replace: true });
   };
 
   /* ── 2FA handlers ── */

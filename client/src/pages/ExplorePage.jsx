@@ -305,9 +305,9 @@ export default function ExplorePage() {
   }, [activeCategory]);
 
   // Stable navigation callbacks
-  const navigateToMap = useCallback(() => navigate('/map'), [navigate]);
+  const navigateToMap = useCallback(() => navigate('/'), [navigate]);
   const navigateToSettings = useCallback(() => navigate('/settings'), [navigate]);
-  const navigateToTrending = useCallback(() => navigate('/map?filter=trending'), [navigate]);
+  const navigateToTrending = useCallback(() => navigate('/?filter=trending'), [navigate]);
   const navigateToEvents = useCallback(() => navigate('/?panel=events'), [navigate]);
   const navigateToPin = useCallback((id) => navigate(`/?pin=${id}`), [navigate]);
   const navigateToProfile = useCallback((id) => navigate(`/profile/${id}`), [navigate]);
