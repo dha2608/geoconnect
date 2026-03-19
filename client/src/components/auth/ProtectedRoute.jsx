@@ -1,27 +1,15 @@
-import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { useEffect, useRef } from 'react';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
+/**
+ * Soft gate — allows unauthenticated users to view the app.
+ * Feature-level auth checks are handled by useRequireAuth hook
+ * and LoginPromptModal in individual components.
+ */
 export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading, initialized } = useSelector((state) => state.auth);
-  const location = useLocation();
-  const navigate = useNavigate();
-  const redirecting = useRef(false);
+  const { loading, initialized } = useSelector((state) => state.auth);
 
-  // Use imperative navigate instead of <Navigate> component to avoid
-  // infinite re-render loop caused by AnimatePresence + key={location.pathname}
-  // re-mounting the route tree during exit animations.
-  useEffect(() => {
-    if (initialized && !loading && !isAuthenticated && !redirecting.current) {
-      redirecting.current = true;
-      navigate('/welcome', { state: { from: location.pathname }, replace: true });
-    }
-    if (isAuthenticated) {
-      redirecting.current = false;
-    }
-  }, [initialized, loading, isAuthenticated, navigate, location.pathname]);
-
+  // Wait for auth state to initialize (token verification)
   if (loading || !initialized) {
     return (
       <div className="h-screen flex items-center justify-center bg-base">
@@ -30,10 +18,6 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  // Return null while useEffect handles the redirect
-  if (!isAuthenticated) {
-    return null;
-  }
-
+  // Allow everyone through — authenticated or not
   return children;
 }
