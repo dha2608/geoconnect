@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
       <div className="aurora-bg" />
       <motion.div variants={pageVariants} initial="hidden" animate="visible" className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-heading font-bold bg-gradient-to-r from-accent-primary to-accent-secondary bg-clip-text text-transparent">
+          <h1 className="text-3xl font-heading font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-500 bg-clip-text text-transparent">
             Reset Password
           </h1>
           <p className="text-sm text-txt-muted mt-2">Enter your email and we'll send you a reset link</p>
@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
               </div>
               <p className="text-sm text-txt-primary">If an account exists with that email, a password reset link has been sent.</p>
               <p className="text-xs text-txt-muted">Check your inbox and spam folder.</p>
-              <Link to="/login" className="text-sm text-accent-primary hover:underline">Back to login</Link>
+              <Link to="/login" className="text-sm text-violet-400 hover:text-violet-300 hover:underline">Back to login</Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -80,7 +80,7 @@ export default function ForgotPasswordPage() {
               </Button>
               <p className="text-center text-sm text-txt-muted">
                 Remember your password?{' '}
-                <Link to="/login" className="text-accent-primary hover:underline">Log in</Link>
+                <Link to="/login" className="text-violet-400 hover:text-violet-300 hover:underline">Log in</Link>
               </p>
             </form>
           )}

@@ -20,6 +20,8 @@ const uiSlice = createSlice({
     setSidebarExpanded: (state, action) => { state.sidebarExpanded = action.payload; },
     setActivePanel: (state, action) => { state.activePanel = action.payload; state.sidebarOpen = true; },
     closePanel: (state) => { state.activePanel = null; state.sidebarOpen = false; },
+    /** Clear panel without touching sidebar state — used on route navigation */
+    clearActivePanel: (state) => { state.activePanel = null; },
     openModal: (state, action) => {
       if (typeof action.payload === 'string') {
         // openModal('createPin')
@@ -46,7 +48,7 @@ const uiSlice = createSlice({
 
 export const {
   toggleSidebar, setSidebarOpen, toggleSidebarExpanded, setSidebarExpanded,
-  setActivePanel, closePanel,
+  setActivePanel, closePanel, clearActivePanel,
   openModal, closeModal, setMapStyle, setIsMobile, setDeviceSize, setActiveMapTool,
 } = uiSlice.actions;
 export default uiSlice.reducer;
