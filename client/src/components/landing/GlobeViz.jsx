@@ -74,16 +74,13 @@ export default function GlobeViz({ mouseX, mouseY, size = 420 }) {
       phi: 0,
       theta: 0.25,
       dark: 1,
-      diffuse: 1.8,
-      mapSamples: 20000,
-      mapBrightness: 4,
-      mapBaseBrightness: 0.02,
-      baseColor: [0.05, 0.08, 0.18],
-      markerColor: [0.23, 0.51, 0.96],
-      glowColor: [0.08, 0.15, 0.35],
+      diffuse: 1.2,
+      mapSamples: 16000,
+      mapBrightness: 6,
+      baseColor: [0.3, 0.3, 0.3],
+      markerColor: [0.1, 0.8, 1],
+      glowColor: [1, 1, 1],
       markers: MARKERS,
-      opacity: 0.92,
-      scale: 1.02,
       onRender: (state) => {
         // Auto-rotation (pauses during drag)
         if (pointerInteracting.current === null) {
