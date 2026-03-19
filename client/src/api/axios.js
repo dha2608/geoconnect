@@ -14,11 +14,34 @@ const API = axios.create({
   timeout: 15000, // 15s timeout — fail fast instead of hanging forever
 });
 
-// Request interceptor - attach access token
+// Endpoints that require authentication — requests without a token are silently skipped
+const AUTH_REQUIRED_PATHS = [
+  '/posts/feed', '/posts/saved', '/posts/hashtag', '/posts/user',
+  '/users/me', '/users/nearby', '/users/live-nearby', '/users/search',
+  '/users/me/settings', '/users/me/blocked',
+  '/messages/', '/notifications',
+  '/collections/mine',
+  '/gamification/me', '/gamification/daily-challenges', '/gamification/xp-history',
+  '/gamification/daily-login',
+  '/activity/',
+  '/reports/',
+];
+
+// Request interceptor - attach access token, block auth-required calls when not logged in
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    // Block requests to auth-required endpoints when there's no token
+    const path = config.url || '';
+    const needsAuth = AUTH_REQUIRED_PATHS.some((p) => path.includes(p));
+    if (needsAuth) {
+      const controller = new AbortController();
+      config.signal = controller.signal;
+      controller.abort('No auth token — skipping request');
+      return config;
+    }
   }
   return config;
 });
@@ -45,6 +68,12 @@ API.interceptors.response.use(
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // If user was never logged in (no token), don't attempt refresh — just reject silently
+      const hasToken = localStorage.getItem('accessToken');
+      if (!hasToken) {
+        return Promise.reject(error);
+      }
+
       // If already refreshing, queue this request
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
