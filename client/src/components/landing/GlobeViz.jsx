@@ -3,34 +3,26 @@ import createGlobe from 'cobe';
 import { motion } from 'framer-motion';
 
 // City markers with real lat/lng coordinates
-const CITIES = [
-  { name: 'Paris', lat: 48.86, lng: 2.35, color: [0.23, 0.51, 0.96], size: 0.08 },
-  { name: 'Tokyo', lat: 35.68, lng: 139.65, color: [0.55, 0.36, 0.96], size: 0.08 },
-  { name: 'New York', lat: 40.71, lng: -74.01, color: [0.02, 0.71, 0.83], size: 0.08 },
-  { name: 'Sydney', lat: -33.87, lng: 151.21, color: [0.06, 0.73, 0.51], size: 0.06 },
-  { name: 'São Paulo', lat: -23.55, lng: -46.63, color: [0.96, 0.62, 0.04], size: 0.06 },
-  { name: 'Dubai', lat: 25.20, lng: 55.27, color: [0.94, 0.27, 0.27], size: 0.05 },
-  { name: 'Seoul', lat: 37.57, lng: 126.98, color: [0.55, 0.36, 0.96], size: 0.05 },
-  { name: 'London', lat: 51.51, lng: -0.13, color: [0.23, 0.51, 0.96], size: 0.05 },
-  { name: 'Lagos', lat: 6.52, lng: 3.38, color: [0.06, 0.73, 0.51], size: 0.05 },
-  { name: 'Mumbai', lat: 19.08, lng: 72.88, color: [0.96, 0.62, 0.04], size: 0.05 },
+const MARKERS = [
+  { location: [48.86, 2.35], size: 0.07 },      // Paris
+  { location: [35.68, 139.65], size: 0.07 },     // Tokyo
+  { location: [40.71, -74.01], size: 0.07 },     // New York
+  { location: [-33.87, 151.21], size: 0.05 },    // Sydney
+  { location: [-23.55, -46.63], size: 0.05 },    // São Paulo
+  { location: [25.20, 55.27], size: 0.04 },      // Dubai
+  { location: [37.57, 126.98], size: 0.04 },     // Seoul
+  { location: [51.51, -0.13], size: 0.05 },      // London
+  { location: [6.52, 3.38], size: 0.04 },        // Lagos
+  { location: [19.08, 72.88], size: 0.04 },      // Mumbai
+  { location: [10.76, 106.66], size: 0.06 },     // Ho Chi Minh City
 ];
 
-// Convert cities to cobe marker format
-const MARKERS = CITIES.map((city) => ({
-  location: [city.lat, city.lng],
-  size: city.size,
-  color: city.color,
-}));
-
-export default function GlobeViz({ mouseX, mouseY, size = 420 }) {
+export default function GlobeViz({ mouseY, size = 420 }) {
   const canvasRef = useRef(null);
   const pointerInteracting = useRef(null);
   const pointerInteractionMovement = useRef(0);
   const phiRef = useRef(0);
-  const globeRef = useRef(null);
 
-  // Handle mouse drag for manual rotation
   const handlePointerDown = useCallback((e) => {
     pointerInteracting.current = e.clientX - pointerInteractionMovement.current;
     if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
@@ -48,8 +40,7 @@ export default function GlobeViz({ mouseX, mouseY, size = 420 }) {
 
   const handlePointerMove = useCallback((e) => {
     if (pointerInteracting.current !== null) {
-      const delta = e.clientX - pointerInteracting.current;
-      pointerInteractionMovement.current = delta;
+      pointerInteractionMovement.current = e.clientX - pointerInteracting.current;
     }
   }, []);
 
@@ -57,22 +48,16 @@ export default function GlobeViz({ mouseX, mouseY, size = 420 }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    let width = 0;
-
-    const onResize = () => {
-      if (canvas) {
-        width = canvas.offsetWidth;
-      }
-    };
-    window.addEventListener('resize', onResize);
-    onResize();
+    // Use fixed pixel size based on prop — never rely on offsetWidth at mount
+    const pixelRatio = Math.min(window.devicePixelRatio, 2);
+    const canvasWidth = size * pixelRatio;
 
     const globe = createGlobe(canvas, {
-      devicePixelRatio: Math.min(window.devicePixelRatio, 2),
-      width: width * 2,
-      height: width * 2,
+      devicePixelRatio: pixelRatio,
+      width: canvasWidth,
+      height: canvasWidth,
       phi: 0,
-      theta: 0.25,
+      theta: 0.3,
       dark: 1,
       diffuse: 1.2,
       mapSamples: 16000,
@@ -88,43 +73,31 @@ export default function GlobeViz({ mouseX, mouseY, size = 420 }) {
         }
         state.phi = phiRef.current + pointerInteractionMovement.current / 200;
 
-        // Subtle tilt from mouse position (from parent motion values)
+        // Subtle tilt from parent mouse position
         if (mouseY && typeof mouseY.get === 'function') {
-          state.theta = 0.25 + mouseY.get() * 0.0004;
+          state.theta = 0.3 + mouseY.get() * 0.0003;
         }
-
-        state.width = width * 2;
-        state.height = width * 2;
       },
     });
 
-    globeRef.current = globe;
-
-    // Fade in
-    setTimeout(() => {
+    // Fade in after first frame renders
+    requestAnimationFrame(() => {
       if (canvas) canvas.style.opacity = '1';
-    }, 100);
+    });
 
-    return () => {
-      globe.destroy();
-      window.removeEventListener('resize', onResize);
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => globe.destroy();
+  }, [size]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <motion.div
       className="relative"
-      style={{
-        width: size,
-        height: size,
-      }}
+      style={{ width: size, height: size }}
     >
-      {/* Outer glow */}
+      {/* Soft ambient glow behind globe */}
       <div
-        className="absolute -inset-16 rounded-full pointer-events-none"
+        className="absolute -inset-20 rounded-full pointer-events-none"
         style={{
-          background:
-            'radial-gradient(circle, rgba(59,130,246,0.08) 0%, rgba(139,92,246,0.04) 35%, transparent 60%)',
+          background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, rgba(139,92,246,0.05) 30%, transparent 55%)',
         }}
       />
 
@@ -136,22 +109,11 @@ export default function GlobeViz({ mouseX, mouseY, size = 420 }) {
         onPointerOut={handlePointerOut}
         onPointerMove={handlePointerMove}
         style={{
-          width: '100%',
-          height: '100%',
-          contain: 'layout paint size',
+          width: size,
+          height: size,
           opacity: 0,
-          transition: 'opacity 1s ease',
+          transition: 'opacity 0.8s ease',
           cursor: 'grab',
-          borderRadius: '50%',
-        }}
-      />
-
-      {/* Atmospheric ring overlay */}
-      <div
-        className="absolute inset-0 rounded-full pointer-events-none"
-        style={{
-          boxShadow:
-            'inset 0 0 40px rgba(59,130,246,0.06), 0 0 60px rgba(59,130,246,0.04), 0 0 120px rgba(139,92,246,0.02)',
         }}
       />
     </motion.div>

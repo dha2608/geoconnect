@@ -952,7 +952,7 @@ export default function LandingPage() {
             <motion.div className="hidden items-center justify-center lg:flex"
               initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1, delay: 0.3 }}
             >
-              <GlobeViz mouseX={mouseX} mouseY={mouseY} />
+              <GlobeViz mouseY={mouseY} />
             </motion.div>
           </div>
         </motion.div>
