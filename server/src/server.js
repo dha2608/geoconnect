@@ -40,6 +40,7 @@ import adminRoutes from './routes/admin.js';
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (Render)
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
