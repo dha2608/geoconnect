@@ -66,26 +66,38 @@ export default function GlobeViz({ mouseY, size = 420 }) {
       markerColor: [0.1, 0.8, 1],
       glowColor: [1, 1, 1],
       markers: MARKERS,
-      onRender: (state) => {
-        // Auto-rotation (pauses during drag)
-        if (pointerInteracting.current === null) {
-          phiRef.current += 0.003;
-        }
-        state.phi = phiRef.current + pointerInteractionMovement.current / 200;
-
-        // Subtle tilt from parent mouse position
-        if (mouseY && typeof mouseY.get === 'function') {
-          state.theta = 0.3 + mouseY.get() * 0.0003;
-        }
-      },
     });
 
-    // Fade in after first frame renders
-    requestAnimationFrame(() => {
+    // cobe v2 has no onRender callback — we drive the animation loop ourselves
+    let animationId;
+    function animate() {
+      // Auto-rotation (pauses during drag)
+      if (pointerInteracting.current === null) {
+        phiRef.current += 0.003;
+      }
+
+      const phi = phiRef.current + pointerInteractionMovement.current / 200;
+      const theta = mouseY && typeof mouseY.get === 'function'
+        ? 0.3 + mouseY.get() * 0.0003
+        : 0.3;
+
+      globe.update({ phi, theta });
+      animationId = requestAnimationFrame(animate);
+    }
+
+    // Start animation loop — continuous re-renders also ensure
+    // the async map texture appears once it finishes loading
+    animationId = requestAnimationFrame(animate);
+
+    // Fade in after a brief delay for first frames to render
+    setTimeout(() => {
       if (canvas) canvas.style.opacity = '1';
-    });
+    }, 200);
 
-    return () => globe.destroy();
+    return () => {
+      cancelAnimationFrame(animationId);
+      globe.destroy();
+    };
   }, [size]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
