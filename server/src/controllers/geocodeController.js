@@ -34,17 +34,23 @@ export const reverseGeocode = asyncHandler(async (req, res) => {
   try {
     const response = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
-      { headers: { 'User-Agent': 'GeoConnect/1.0' }, signal: AbortSignal.timeout(5000) }
+      {
+        headers: { 'User-Agent': 'GeoConnect/1.0' },
+        signal: AbortSignal.timeout(5000),
+      }
     );
-
-    if (!response.ok) {
-      return ok(res, { display_name: `${lat}, ${lng}`, error: `Nominatim returned ${response.status}` });
-    }
 
     const data = await response.json();
     return ok(res, data);
-  } catch {
-    // Nominatim timeout or network error — return coords as fallback
-    return ok(res, { display_name: `${lat}, ${lng}`, error: 'Geocode service unavailable' });
+  } catch (err) {
+    console.error('[Geocode] Reverse geocode failed:', err.message);
+    // Return a graceful fallback so the client always gets a usable response
+    return ok(res, {
+      display_name: `${lat}, ${lng}`,
+      lat,
+      lon: lng,
+      address: {},
+      _fallback: true,
+    });
   }
 });
