@@ -746,7 +746,7 @@ export default function LandingPage() {
   const [showPreloader, setShowPreloader] = useState(true);
   const activeSection = useActiveSection(containerRef);
   const { scrollYProgress } = useScroll({ container: containerRef });
-  const navBg = useTransform(scrollYProgress, [0, 0.02], [0, 1]);
+  // navBg removed — landing page header was removed
   const heroParallax = useTransform(scrollYProgress, [0, 0.15], [0, -80]);
   const { mouseX, mouseY } = useMouseParallax();
 
@@ -797,35 +797,6 @@ export default function LandingPage() {
       <CursorGlow />
       <SideNav activeSection={activeSection} scrollTo={scrollTo} />
       <SectionCounter active={activeSection} total={SECTION_NAV.length} />
-
-      {/* ═══ MINIMAL TOP BAR ═════════════════════════════════════ */}
-      <motion.nav className="fixed inset-x-0 top-0 z-50">
-        <motion.div className="absolute inset-0 border-b border-white/[0.06] bg-[#050810]/80 backdrop-blur-2xl" style={{ opacity: navBg }} />
-        <div className="relative mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
-          <Link to="/welcome" className="flex items-center gap-2.5">
-            <motion.div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-violet-500"
-              whileHover={{ rotate: 12, scale: 1.1 }} transition={{ type: 'spring', stiffness: 300 }}
-            >
-              <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="10" r="3" />
-                <path d="M12 2a8 8 0 0 0-8 8c0 5.4 7 11.5 7.3 11.8a1 1 0 0 0 1.4 0C13 21.5 20 15.4 20 10a8 8 0 0 0-8-8z" />
-              </svg>
-            </motion.div>
-            <span className="hidden font-heading text-lg font-bold tracking-tight sm:block">GeoConnect</span>
-          </Link>
-
-          <div className="flex items-center gap-3">
-            <Link to="/login" className="hidden px-4 py-2 text-sm text-gray-400 transition-colors hover:text-white sm:block">Log in</Link>
-            <MagneticButton>
-              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-                <Link to="/register" className="inline-block rounded-full bg-gradient-to-r from-blue-500 to-violet-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-500/20 transition-shadow hover:shadow-xl hover:shadow-blue-500/30 sm:px-5 sm:py-2.5 sm:text-sm">
-                  Get Started
-                </Link>
-              </motion.div>
-            </MagneticButton>
-          </div>
-        </div>
-      </motion.nav>
 
       {/* ═══ HERO ═══════════════════════════════════════════════ */}
       <section id="hero" className="relative flex min-h-screen items-center overflow-hidden">
@@ -897,7 +868,7 @@ export default function LandingPage() {
               >
                 <MagneticButton>
                   <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-                    <Link to="/register"
+                    <Link to="/"
                       className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-violet-500 px-5 py-3 text-xs font-semibold text-white shadow-lg shadow-blue-500/25 transition-shadow hover:shadow-xl hover:shadow-blue-500/30 sm:gap-2.5 sm:px-7 sm:py-3.5 sm:text-sm"
                     >
                       Get Started
@@ -1354,7 +1325,7 @@ export default function LandingPage() {
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
               <MagneticButton>
                 <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-                  <Link to="/register"
+                  <Link to="/"
                     className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-full bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-500 px-8 py-4 text-sm font-bold text-white shadow-2xl shadow-blue-500/25 transition-all hover:shadow-blue-500/40"
                   >
                     <span className="relative z-10 flex items-center gap-2.5">
