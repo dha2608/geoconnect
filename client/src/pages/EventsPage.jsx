@@ -147,7 +147,7 @@ const EventCard = memo(function EventCard({ event, onClick }) {
       onClick={onClick}
       className="group relative cursor-pointer rounded-2xl overflow-hidden
                  border border-[var(--glass-border)] bg-[var(--glass-bg)]
-                 hover:border-accent-primary/30 hover:bg-surface-active
+                 hover:border-accent-violet/30 hover:bg-surface-active
                  backdrop-blur-sm transition-colors duration-200"
     >
       {/* Category colour accent bar on the left edge */}
@@ -220,7 +220,7 @@ const EventCard = memo(function EventCard({ event, onClick }) {
                   <span
                     key={tag}
                     className="px-1.5 py-0.5 rounded-full text-[10px]
-                               bg-blue-500/10 text-blue-400/70 border border-blue-500/15"
+                               bg-violet-500/10 text-violet-400/70 border border-violet-500/15"
                   >
                     #{tag}
                   </span>
@@ -249,7 +249,7 @@ const CategoryChip = memo(function CategoryChip({ category, isActive, onClick })
         'flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium',
         'transition-all duration-200 border',
         isActive
-          ? 'bg-accent-primary/20 text-accent-primary border-accent-primary/40 shadow-sm'
+          ? 'bg-violet-500/20 text-violet-400 border-violet-500/40 shadow-sm'
           : 'glass text-txt-muted border-[var(--glass-border)] hover:text-txt-secondary hover:border-txt-muted/30',
       ].join(' ')}
     >
@@ -492,8 +492,8 @@ export default function EventsPage() {
               whileTap={{ scale: 0.96 }}
               onClick={handleCreateEvent}
               className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-xl
-                         bg-accent-primary text-white text-sm font-semibold
-                         hover:bg-accent-primary/90 transition-colors shadow-lg shadow-accent-primary/20 flex-shrink-0"
+                         bg-gradient-to-r from-blue-500 to-violet-500 text-white text-sm font-semibold
+                         hover:opacity-90 transition-opacity shadow-lg shadow-violet-500/20 flex-shrink-0"
             >
               <span className="text-lg leading-none">+</span>
               Create Event
@@ -567,7 +567,7 @@ export default function EventsPage() {
                   'flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium',
                   'transition-all duration-200 whitespace-nowrap',
                   activeTab === tab.id
-                    ? 'bg-accent-primary/20 text-accent-primary shadow-sm'
+                    ? 'bg-violet-500/20 text-violet-400 shadow-sm'
                     : 'text-txt-muted hover:text-txt-secondary',
                 ].join(' ')}
               >
@@ -595,7 +595,7 @@ export default function EventsPage() {
             </svg>
             Filters
             {activeFilterCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full text-xs font-bold bg-accent-primary/20 text-accent-primary">
+              <span className="px-1.5 py-0.5 rounded-full text-xs font-bold bg-violet-500/20 text-violet-400">
                 {activeFilterCount}
               </span>
             )}
@@ -634,7 +634,7 @@ export default function EventsPage() {
                               className={[
                                 'px-2.5 py-1 rounded-full text-xs font-medium transition-all border',
                                 active
-                                  ? 'bg-accent-primary/20 text-accent-primary border-accent-primary/30'
+                                  ? 'bg-violet-500/20 text-violet-400 border-violet-500/30'
                                   : 'glass text-txt-muted border-[var(--glass-border)] hover:text-txt-secondary',
                               ].join(' ')}
                             >
@@ -763,10 +763,10 @@ export default function EventsPage() {
         onClick={handleCreateEvent}
         aria-label="Create new event"
         className="sm:hidden fixed bottom-6 right-4 z-40 w-14 h-14 rounded-full
-                   bg-accent-primary text-white text-2xl font-bold
-                   shadow-xl shadow-accent-primary/30
+                   bg-gradient-to-r from-blue-500 to-violet-500 text-white text-2xl font-bold
+                   shadow-xl shadow-violet-500/30
                    flex items-center justify-center
-                   hover:bg-accent-primary/90 transition-colors"
+                   hover:opacity-90 transition-opacity"
       >
         +
       </motion.button>

@@ -322,7 +322,7 @@ export default function ActivityPage() {
           </div>
           <button
             onClick={() => navigate(`/profile/${user?._id || ''}`)}
-            className="text-sm text-accent-primary hover:underline"
+            className="text-sm text-violet-400 hover:underline"
           >
             View Profile
           </button>

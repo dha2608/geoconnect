@@ -7,21 +7,7 @@ import { pinApi } from '../api/pinApi';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
 import LazyImage from '../components/ui/LazyImage';
-
-const pageVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
-};
-
-const sectionVariants = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
-};
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 16, scale: 0.97 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } },
-};
+import { pageVariants, sectionVariants, cardVariants } from '../utils/animations';
 
 const CATEGORY_ICONS = {
   food: '🍕', entertainment: '🎭', shopping: '🛍️', outdoors: '🏕️',
@@ -68,7 +54,7 @@ const CategoryChip = memo(function CategoryChip({ category, count, isActive, onC
       onClick={onClick}
       whileHover={{ scale: 1.04 }}
       whileTap={{ scale: 0.97 }}
-      className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl border backdrop-blur-sm transition-all duration-200 bg-gradient-to-br ${colorClass} ${isActive ? 'ring-2 ring-accent-primary shadow-lg shadow-accent-primary/10' : 'hover:shadow-md'}`}
+      className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl border backdrop-blur-sm transition-all duration-200 bg-gradient-to-br ${colorClass} ${isActive ? 'ring-2 ring-violet-500 shadow-lg shadow-violet-500/10' : 'hover:shadow-md'}`}
     >
       <span className="text-xl">{CATEGORY_ICONS[category] || '📍'}</span>
       <div className="text-left">
@@ -85,7 +71,7 @@ const TrendingPinCard = memo(function TrendingPinCard({ pin, onClick }) {
       variants={cardVariants}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
       onClick={onClick}
-      className="group cursor-pointer rounded-2xl overflow-hidden glass border border-surface-divider hover:border-accent-primary/30 transition-all duration-300"
+      className="group cursor-pointer rounded-2xl overflow-hidden glass border border-surface-divider hover:border-violet-500/30 transition-all duration-300"
     >
       <div className="relative h-40 overflow-hidden">
         {pin.images?.[0] ? (
@@ -128,7 +114,7 @@ const EventCard = memo(function EventCard({ event, onClick }) {
       variants={cardVariants}
       whileHover={{ y: -2 }}
       onClick={onClick}
-      className="group cursor-pointer flex gap-3 p-3 rounded-xl glass border border-surface-divider hover:border-accent-primary/30 transition-all"
+      className="group cursor-pointer flex gap-3 p-3 rounded-xl glass border border-surface-divider hover:border-violet-500/30 transition-all"
     >
       {startDate && (
         <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-accent-primary/10 flex flex-col items-center justify-center">
@@ -156,9 +142,9 @@ const UserCard = memo(function UserCard({ user, onClick }) {
       variants={cardVariants}
       whileHover={{ y: -2 }}
       onClick={onClick}
-      className="group cursor-pointer flex flex-col items-center gap-2 p-4 rounded-2xl glass border border-surface-divider hover:border-accent-primary/30 transition-all"
+      className="group cursor-pointer flex flex-col items-center gap-2 p-4 rounded-2xl glass border border-surface-divider hover:border-violet-500/30 transition-all"
     >
-      <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-surface-divider group-hover:ring-accent-primary/30 transition-all">
+      <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-surface-divider group-hover:ring-violet-500/30 transition-all">
         {user.avatar ? (
           <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
         ) : (
@@ -319,9 +305,9 @@ export default function ExplorePage() {
   }, [activeCategory]);
 
   // Stable navigation callbacks
-  const navigateToMap = useCallback(() => navigate('/'), [navigate]);
+  const navigateToMap = useCallback(() => navigate('/map'), [navigate]);
   const navigateToSettings = useCallback(() => navigate('/settings'), [navigate]);
-  const navigateToTrending = useCallback(() => navigate('/?filter=trending'), [navigate]);
+  const navigateToTrending = useCallback(() => navigate('/map?filter=trending'), [navigate]);
   const navigateToEvents = useCallback(() => navigate('/?panel=events'), [navigate]);
   const navigateToPin = useCallback((id) => navigate(`/?pin=${id}`), [navigate]);
   const navigateToProfile = useCallback((id) => navigate(`/profile/${id}`), [navigate]);
@@ -340,22 +326,91 @@ export default function ExplorePage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-8">
 
         {/* ── Hero ── */}
-        <motion.div variants={sectionVariants} className="relative overflow-hidden rounded-3xl glass border border-surface-divider p-6 sm:p-8">
-          <div className="absolute inset-0 bg-gradient-to-r from-accent-primary/10 via-transparent to-purple-500/10 pointer-events-none" />
+        <motion.div variants={sectionVariants} className="relative overflow-hidden rounded-3xl glass border border-surface-divider p-6 sm:p-10">
+
+          {/* Animated mesh gradient background */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-accent-primary/15 via-accent-secondary/5 via-50% to-purple-500/15" />
+            <div className="absolute -top-10 -left-10 w-72 h-72 bg-accent-primary/10 rounded-full blur-3xl" />
+            <div className="absolute -bottom-10 -right-10 w-56 h-56 bg-accent-secondary/10 rounded-full blur-3xl" />
+          </motion.div>
+
+          {/* Floating decorative orbs */}
+          <motion.div
+            className="absolute top-5 right-12 w-14 h-14 rounded-full bg-gradient-to-br from-accent-primary/25 to-accent-secondary/25 blur-2xl"
+            animate={{ y: [-5, 5, -5], x: [0, 4, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <motion.div
+            className="absolute bottom-6 left-8 w-9 h-9 rounded-full bg-gradient-to-br from-purple-500/25 to-accent-primary/25 blur-xl"
+            animate={{ y: [4, -4, 4], x: [-3, 3, -3] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}
+          />
+          <motion.div
+            className="absolute top-1/2 right-1/3 w-6 h-6 rounded-full bg-accent-secondary/20 blur-lg"
+            animate={{ y: [-6, 6, -6] }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
+          />
+
           <div className="relative">
-            <h1 className="text-2xl sm:text-3xl font-bold text-txt-primary">
-              Discover{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
+            {/* Bold gradient title */}
+            <h1 className="font-heading text-4xl sm:text-5xl font-bold leading-tight tracking-tight">
+              <span className="bg-gradient-to-r from-accent-primary to-accent-secondary bg-clip-text text-transparent">
+                Discover
+              </span>
+              {user?.name && (
+                <span className="text-txt-primary">{`, ${user.name.split(' ')[0]}`}</span>
+              )}
             </h1>
-            <p className="text-txt-muted mt-2 max-w-lg">
+
+            {/* Lighter subtitle */}
+            <p className="text-txt-muted mt-3 max-w-md text-sm sm:text-base font-body leading-relaxed">
               Explore trending places, upcoming events, and connect with people around you.
             </p>
-            <div className="flex gap-3 mt-4">
-              <button onClick={navigateToMap} className="px-4 py-2 rounded-xl bg-accent-primary text-white text-sm font-medium hover:bg-accent-primary/90 transition-colors">
+
+            {/* Animated stat counters */}
+            <div className="flex gap-6 mt-5">
+              {[
+                { value: '12K+', label: 'Places' },
+                { value: '500+', label: 'Events' },
+                { value: '2K+', label: 'Users' },
+              ].map(({ value, label }, i) => (
+                <motion.div
+                  key={label}
+                  initial={{ opacity: 0, y: 12, scale: 0.85 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: 0.35 + i * 0.13, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex flex-col"
+                >
+                  <span className="font-heading text-xl font-bold text-txt-primary leading-none">{value}</span>
+                  <span className="text-xs text-txt-muted font-body mt-0.5">{label}</span>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Search bar + CTA row */}
+            <div className="flex flex-col sm:flex-row gap-3 mt-6">
+              <button
+                onClick={() => navigate('/?panel=search')}
+                className="flex items-center gap-2 flex-1 sm:max-w-xs px-4 py-2.5 rounded-xl glass border border-surface-divider text-txt-muted text-sm hover:border-accent-primary/50 hover:text-txt-secondary transition-all group"
+              >
+                <svg className="w-4 h-4 shrink-0 group-hover:text-accent-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span className="truncate">Search places, events…</span>
+              </button>
+              <motion.button
+                onClick={navigateToMap}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-accent-primary to-accent-secondary text-white text-sm font-semibold shadow-lg shadow-accent-primary/30 hover:opacity-90 transition-opacity shrink-0"
+              >
                 Open Map
-              </button>
-              <button onClick={navigateToSettings} className="px-4 py-2 rounded-xl glass border border-surface-divider text-txt-secondary text-sm font-medium hover:bg-surface-hover transition-colors">
-                Settings
-              </button>
+              </motion.button>
             </div>
           </div>
         </motion.div>
