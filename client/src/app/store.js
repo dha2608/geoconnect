@@ -8,6 +8,7 @@ import userReducer from '../features/users/userSlice';
 import notificationReducer from '../features/notifications/notificationSlice';
 import messageReducer from '../features/messages/messageSlice';
 import uiReducer from '../features/ui/uiSlice';
+import gamificationReducer from '../features/gamification/gamificationSlice';
 import { offlineCacheMiddleware } from '../middleware/offlineCacheMiddleware';
 
 export const store = configureStore({
@@ -21,6 +22,7 @@ export const store = configureStore({
     notifications: notificationReducer,
     messages: messageReducer,
     ui: uiReducer,
+    gamification: gamificationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(offlineCacheMiddleware),
