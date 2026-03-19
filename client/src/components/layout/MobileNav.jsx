@@ -124,16 +124,24 @@ function NavItem({ id, label, Icon, isActive, onClick }) {
 
 /* ── Create menu option ────────────────────────────────────────────── */
 
+// Map color tokens to full Tailwind classes (JIT requires static class names)
+const COLOR_STYLES = {
+  'accent-primary':   { bg: 'bg-blue-500/12',   text: 'text-blue-400',   border: 'hover:border-blue-500/30' },
+  'accent-secondary': { bg: 'bg-violet-500/12',  text: 'text-violet-400', border: 'hover:border-violet-500/30' },
+  'accent-success':   { bg: 'bg-emerald-500/12', text: 'text-emerald-400', border: 'hover:border-emerald-500/30' },
+};
+
 function CreateOption({ icon: Icon, label, color, onClick }) {
+  const styles = COLOR_STYLES[color] || COLOR_STYLES['accent-primary'];
   return (
     <motion.button
       whileHover={{ scale: 1.06 }}
       whileTap={{ scale: 0.92 }}
       onClick={onClick}
       className={`flex flex-col items-center gap-2 px-5 py-3 rounded-2xl glass border border-surface-divider
-        hover:border-${color}/30 transition-all duration-150`}
+        ${styles.border} transition-all duration-150`}
     >
-      <div className={`w-11 h-11 rounded-xl bg-${color}/12 flex items-center justify-center text-${color}`}>
+      <div className={`w-11 h-11 rounded-xl ${styles.bg} flex items-center justify-center ${styles.text}`}>
         <Icon />
       </div>
       <span className="text-xs font-medium text-txt-secondary">{label}</span>
