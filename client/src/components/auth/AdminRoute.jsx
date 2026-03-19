@@ -5,7 +5,7 @@ export default function AdminRoute({ children }) {
   const { user } = useSelector((state) => state.auth);
   
   if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
-    return <Navigate to="/map" replace />;
+    return <Navigate to="/" replace />;
   }
   
   return children;

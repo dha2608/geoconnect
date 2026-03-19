@@ -119,7 +119,7 @@ class ErrorBoundary extends Component {
                 Try Again
               </button>
               <a
-                href="/map"
+                href="/"
                 className="flex-1 py-2.5 px-5 rounded-xl font-semibold text-sm text-center transition-all duration-200 hover:brightness-110 active:scale-95"
                 style={{
                   fontFamily: 'DM Sans, sans-serif',
