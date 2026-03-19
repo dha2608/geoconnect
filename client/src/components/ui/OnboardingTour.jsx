@@ -285,7 +285,7 @@ export default function OnboardingTour({ onComplete }) {
             </div>
 
             {/* Decorative glow */}
-            <div className="absolute -inset-1 rounded-xl bg-accent-primary/20 blur-xl -z-10 pointer-events-none" />
+            <div className="absolute -inset-1 rounded-xl bg-accent-violet/20 blur-xl -z-10 pointer-events-none" />
           </motion.div>
         </AnimatePresence>
       </div>

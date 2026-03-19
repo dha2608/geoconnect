@@ -46,7 +46,7 @@ export default function CommandPalette() {
   const commands = useMemo(
     () => [
       // Navigation
-      { id: 'nav-home', label: 'Go to Map', category: 'navigation', icon: '🗺️', action: () => navigate('/') },
+      { id: 'nav-home', label: 'Go to Map', category: 'navigation', icon: '🗺️', action: () => navigate('/map') },
       { id: 'nav-explore', label: 'Go to Explore', category: 'navigation', icon: '🧭', action: () => navigate('/explore') },
       { id: 'nav-activity', label: 'Go to Activity', category: 'navigation', icon: '📊', action: () => navigate('/activity') },
       { id: 'nav-profile', label: 'Go to Profile', category: 'navigation', icon: '👤', action: () => navigate(`/profile/${user?._id || ''}`) },
@@ -238,7 +238,7 @@ export default function CommandPalette() {
                           aria-selected={idx === selectedIndex}
                           className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${
                             idx === selectedIndex
-                              ? 'bg-accent-primary/15 text-accent-primary'
+                              ? 'bg-accent-violet/15 text-accent-violet'
                               : 'text-txt-secondary hover:bg-surface-hover'
                           }`}
                           onClick={() => execute(cmd)}

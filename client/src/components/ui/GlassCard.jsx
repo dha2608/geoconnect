@@ -9,7 +9,7 @@ const GlassCard = forwardRef(({ children, className = '', hover = false, padding
     transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
   } : {};
   const hoverProps = hover ? {
-    whileHover: { scale: 1.02, borderColor: 'rgba(59, 130, 246, 0.25)' },
+    whileHover: { scale: 1.02, borderColor: 'rgba(139, 92, 246, 0.20)' },
     transition: { duration: 0.2 },
   } : {};
 

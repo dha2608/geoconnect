@@ -5,7 +5,7 @@ import { forwardRef } from 'react';
 // top (CSS stacking: color below image) creating the moving glint effect.
 const shimmerStyle = {
   backgroundImage:
-    'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%)',
+    'linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.04) 50%, transparent 100%)',
   backgroundSize: '200% 100%',
 };
 

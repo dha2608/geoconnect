@@ -78,7 +78,7 @@ function ProgressBar({ value }) {
   return (
     <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
       <motion.div
-        className="h-full rounded-full bg-accent-primary"
+        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500"
         initial={{ width: 0 }}
         animate={{ width: `${value}%` }}
         transition={{ type: 'spring', damping: 22, stiffness: 220 }}
@@ -92,7 +92,7 @@ function FabButton({ completedCount, total, onClick }) {
   return (
     <motion.button
       onClick={onClick}
-      className="w-12 h-12 rounded-full bg-accent-primary shadow-lg flex items-center justify-center relative"
+      className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-violet-500 shadow-lg flex items-center justify-center relative"
       whileHover={{ scale: 1.06 }}
       whileTap={{ scale: 0.94 }}
       title="Open getting-started checklist"

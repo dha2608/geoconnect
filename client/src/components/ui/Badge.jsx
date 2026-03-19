@@ -4,6 +4,7 @@ const colorMap = {
   success: 'bg-accent-success/15 text-accent-success border-accent-success/25',
   warning: 'bg-accent-warning/15 text-accent-warning border-accent-warning/25',
   danger: 'bg-accent-danger/15 text-accent-danger border-accent-danger/25',
+  violet: 'bg-accent-violet/15 text-accent-violet border-accent-violet/25',
 };
 
 export default function Badge({ children, color = 'primary', dot = false, className = '' }) {
