@@ -1,8 +1,8 @@
 import { useEffect, useState, lazy, Suspense, useMemo, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { setDeviceSize, setSidebarOpen, closePanel, clearActivePanel } from '../../features/ui/uiSlice';
+import { setDeviceSize, setSidebarOpen, closePanel } from '../../features/ui/uiSlice';
 import { fetchUnreadCount } from '../../features/messages/messageSlice';
 import useSocket from '../../socket/useSocket';
 import useGeolocation from '../../hooks/useGeolocation';
@@ -28,6 +28,7 @@ import NotificationToast from '../ui/NotificationToast';
 import LiveIndicator from '../ui/LiveIndicator';
 import OnboardingTour from '../ui/OnboardingTour';
 import WelcomeChecklist from '../ui/WelcomeChecklist';
+import XPPopup from '../gamification/XPPopup';
 import { requestNotificationPermission } from '../../utils/notificationSound';
 
 // Heavy panels — lazy-loaded so they don't block the initial map render
@@ -41,16 +42,9 @@ const LIGHT_TILES = new Set(['street', 'light', 'satellite']);
 
 export default function AppLayout() {
   const dispatch = useDispatch();
-  const location = useLocation();
   const { isMobile, isTablet, sidebarOpen, sidebarExpanded, activePanel, modalData } = useSelector((state) => state.ui);
   const { user } = useSelector((state) => state.auth);
   const { tileLayer } = useSelector((state) => state.map);
-
-  // ── Close any open panel when the route changes ──
-  // Uses clearActivePanel (not closePanel) to avoid collapsing the sidebar
-  useEffect(() => {
-    dispatch(clearActivePanel());
-  }, [location.pathname, dispatch]);
 
   // Keyboard shortcuts — exposes help overlay state
   const { showShortcutHelp, setShowShortcutHelp } = useKeyboardShortcuts();
@@ -127,18 +121,7 @@ export default function AppLayout() {
         role="main"
       >
         <SectionErrorBoundary name="Map">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              className="w-full h-full"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
+          <Outlet />
         </SectionErrorBoundary>
       </main>
 
@@ -260,6 +243,9 @@ export default function AppLayout() {
 
       {/* ── Real-time notification toasts ── */}
       <NotificationToast />
+
+      {/* ── XP gain popups ── */}
+      <XPPopup />
 
       {/* ── Onboarding tour (shown once after first login) ── */}
       <AnimatePresence>

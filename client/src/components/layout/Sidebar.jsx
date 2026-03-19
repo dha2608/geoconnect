@@ -210,7 +210,7 @@ function UserMenu({ user, expanded, onClose }) {
     {
       label: t('common.logout', 'Log out'),
       icon: 'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1',
-      action: () => { dispatch(logout()); onClose(); navigate('/'); },
+      action: () => { dispatch(logout()); onClose(); },
       danger: true,
     },
   ];
@@ -294,6 +294,7 @@ export default function Sidebar() {
       label: t('nav.sectionSocial', 'Social'),
       items: [
         { id: 'messages', label: t('nav.messages', 'Messages'), icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', badge: 'messages' },
+        { id: 'leaderboard', label: t('nav.leaderboard', 'Leaderboard'), icon: 'M16 8V2H8v6M2 8h20l-2 12H4L2 8zM12 12v4', path: '/leaderboard' },
       ],
     },
   ];

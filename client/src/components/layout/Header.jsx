@@ -211,8 +211,8 @@ export default function Header() {
           role="link"
           tabIndex={0}
           aria-label={`${t('common.appName')} — go to home`}
-          onClick={() => navigate('/map')}
-          onKeyDown={(e) => { if (e.key === 'Enter') navigate('/map'); }}
+          onClick={() => navigate('/')}
+          onKeyDown={(e) => { if (e.key === 'Enter') navigate('/'); }}
           whileHover="hov"
           whileTap="tap"
         >
