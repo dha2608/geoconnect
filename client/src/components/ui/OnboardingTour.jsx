@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { setActivePanel, openModal } from '../../features/ui/uiSlice';
 
 // ─── Tour step definitions ────────────────────────────────────────────────────
@@ -9,91 +9,148 @@ const buildSteps = (dispatch) => [
     id: 'welcome',
     title: 'Welcome to GeoConnect 👋',
     description:
-      "You've just joined a location-based social network where the world is your canvas. Let's take a quick tour to get you started!",
+      "Explore a location-based social network where the world is your canvas. Let's take a quick tour!",
     position: 'center',
     icon: '🌍',
+    target: null, // No highlight — centered card
   },
   {
     id: 'map',
     title: 'Explore the Map',
     description:
       'The interactive map is your home base. Coloured pins mark posts, events, and check-ins from people nearby. Tap any pin to dive in.',
-    position: 'top-center',
+    position: 'bottom-center',
     icon: '🗺️',
+    target: '.leaflet-container', // Highlight the map
   },
   {
     id: 'create-pin',
     title: 'Create a Pin',
     description:
-      'Drop a pin anywhere on the map to share a moment — a photo, a story, or a tip about that exact spot. Hit the "+" button to get started.',
-    position: 'bottom-right',
+      'Drop a pin anywhere to share a moment — a photo, a story, or a tip. Hit the "+" button to get started.',
+    position: 'top-left',
     icon: '📍',
+    target: '[data-tour="create-button"]', // MobileNav create FAB or sidebar button
     action: () => dispatch(openModal({ modal: 'createPin' })),
   },
   {
     id: 'discover',
     title: 'Discover Content',
     description:
-      'The Feed panel surfaces the freshest posts from people and places you care about. Swipe open the sidebar or tap the feed icon to browse.',
-    position: 'bottom-left',
+      'The Feed panel surfaces the freshest posts from people and places you care about. Swipe open the sidebar or tap the feed icon.',
+    position: 'right',
     icon: '✨',
+    target: '[data-tour="sidebar"]',
     action: () => dispatch(setActivePanel('feed')),
   },
   {
     id: 'connect',
     title: 'Connect with People',
     description:
-      'Follow locals, slide into DMs, and build your community — all from within the app. Tap any avatar to visit a profile.',
-    position: 'bottom-right',
+      'Follow locals, send messages, and build your community — all from within the app.',
+    position: 'right',
     icon: '🤝',
+    target: '[data-tour="sidebar"]',
     action: () => dispatch(setActivePanel('messages')),
   },
   {
-    id: 'activity',
-    title: 'Track Your Activity',
-    description:
-      'The Activity dashboard shows your pins, likes, followers, and check-in history at a glance. Access it from your profile any time.',
-    position: 'bottom-left',
-    icon: '📊',
-    action: () => dispatch(setActivePanel('profile')),
-  },
-  {
     id: 'command-palette',
-    title: 'Command Palette',
+    title: 'Quick Navigation',
     description:
-      'Power users love this: press Cmd+K (or Ctrl+K on Windows) to open a lightning-fast command palette for navigating anywhere instantly.',
-    position: 'top-center',
+      'Press Ctrl+K (or Cmd+K on Mac) to open a lightning-fast command palette for navigating anywhere instantly.',
+    position: 'center',
     icon: '⌨️',
+    target: null,
   },
   {
     id: 'done',
     title: "You're all set! 🎉",
     description:
-      "That's the full tour. Go explore, drop some pins, and make new connections. The world is waiting — happy exploring!",
+      "Go explore, drop some pins, and make new connections. Sign in anytime to unlock all features. Happy exploring!",
     position: 'center',
     icon: '🚀',
+    target: null,
   },
 ];
 
-// ─── Tooltip position styles ──────────────────────────────────────────────────
-const POSITION_STYLES = {
-  center: {
-    wrapper: 'inset-0 flex items-center justify-center',
-    card: 'w-full max-w-md mx-4',
-  },
-  'top-center': {
-    wrapper: 'inset-x-0 top-24 flex justify-center px-4',
-    card: 'w-full max-w-md',
-  },
-  'bottom-right': {
-    wrapper: 'bottom-24 right-6 flex justify-end',
-    card: 'w-80',
-  },
-  'bottom-left': {
-    wrapper: 'bottom-24 left-20 flex justify-start',
-    card: 'w-80',
-  },
-};
+// ─── Spotlight overlay — dims everything except the target ────────────────────
+function SpotlightOverlay({ rect }) {
+  if (!rect) {
+    // No target — light dim overlay only
+    return <div className="absolute inset-0 bg-black/40 transition-all duration-500" />;
+  }
+
+  const pad = 12; // padding around highlighted element
+  return (
+    <div
+      className="absolute inset-0 transition-all duration-500 pointer-events-none"
+      style={{
+        boxShadow: `0 0 0 9999px rgba(0,0,0,0.55), 0 0 30px 4px rgba(59,130,246,0.15) inset`,
+        // Create a transparent "hole" using clip-path
+        clipPath: `polygon(
+          0% 0%, 0% 100%, 
+          ${rect.left - pad}px 100%, 
+          ${rect.left - pad}px ${rect.top - pad}px, 
+          ${rect.right + pad}px ${rect.top - pad}px, 
+          ${rect.right + pad}px ${rect.bottom + pad}px, 
+          ${rect.left - pad}px ${rect.bottom + pad}px, 
+          ${rect.left - pad}px 100%, 
+          100% 100%, 100% 0%
+        )`,
+      }}
+    />
+  );
+}
+
+// ─── Compute tooltip position relative to target ──────────────────────────────
+function getTooltipStyle(position, rect) {
+  if (!rect || position === 'center') {
+    return {
+      wrapper: 'inset-0 flex items-center justify-center',
+      card: 'w-full max-w-md mx-4',
+    };
+  }
+
+  const pad = 20;
+
+  switch (position) {
+    case 'bottom-center':
+      return {
+        wrapper: `inset-x-0 flex justify-center px-4`,
+        card: 'w-full max-w-md',
+        style: { top: rect.bottom + pad },
+      };
+    case 'top-left':
+      return {
+        wrapper: 'flex',
+        card: 'w-80',
+        style: { bottom: window.innerHeight - rect.top + pad, right: window.innerWidth - rect.right },
+      };
+    case 'top-right':
+      return {
+        wrapper: 'flex',
+        card: 'w-80',
+        style: { bottom: window.innerHeight - rect.top + pad, left: rect.left },
+      };
+    case 'right':
+      return {
+        wrapper: 'flex',
+        card: 'w-80',
+        style: { top: rect.top, left: rect.right + pad },
+      };
+    case 'left':
+      return {
+        wrapper: 'flex',
+        card: 'w-80',
+        style: { top: rect.top, right: window.innerWidth - rect.left + pad },
+      };
+    default:
+      return {
+        wrapper: 'inset-0 flex items-center justify-center',
+        card: 'w-full max-w-md mx-4',
+      };
+  }
+}
 
 // ─── Spring animation variants ────────────────────────────────────────────────
 const cardVariants = {
@@ -118,7 +175,7 @@ const overlayVariants = {
   exit: { opacity: 0, transition: { duration: 0.25 } },
 };
 
-// ─── Confetti particle (for the final step) ───────────────────────────────────
+// ─── Confetti particle ────────────────────────────────────────────────────────
 function ConfettiParticle({ index }) {
   const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
   const color = colors[index % colors.length];
@@ -160,14 +217,47 @@ function ProgressDots({ total, current }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function OnboardingTour({ onComplete }) {
   const dispatch = useDispatch();
+  const { isAuthenticated } = useSelector((state) => state.auth);
   const steps = buildSteps(dispatch);
 
   const [stepIndex, setStepIndex] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [direction, setDirection] = useState(1); // 1 = forward, -1 = backward
+  const [direction, setDirection] = useState(1);
+  const [targetRect, setTargetRect] = useState(null);
 
   const currentStep = steps[stepIndex];
   const isLast = stepIndex === steps.length - 1;
+
+  // Find and track target element position
+  useEffect(() => {
+    if (!currentStep.target) {
+      setTargetRect(null);
+      return;
+    }
+
+    const findTarget = () => {
+      const el = document.querySelector(currentStep.target);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        setTargetRect({ top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height });
+      } else {
+        setTargetRect(null);
+      }
+    };
+
+    // Small delay to allow panels to open first
+    const timer = setTimeout(findTarget, 300);
+
+    // Update on resize/scroll
+    window.addEventListener('resize', findTarget);
+    window.addEventListener('scroll', findTarget, true);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', findTarget);
+      window.removeEventListener('scroll', findTarget, true);
+    };
+  }, [currentStep.target, stepIndex]);
 
   // Trigger confetti on final step
   useEffect(() => {
@@ -185,16 +275,31 @@ export default function OnboardingTour({ onComplete }) {
       return;
     }
     // Run optional step action (opens panel/modal for context)
-    currentStep.action?.();
+    const nextStep = steps[stepIndex + 1];
+    nextStep?.action?.();
     setDirection(1);
     setStepIndex((i) => i + 1);
-  }, [isLast, markComplete, currentStep]);
+  }, [isLast, markComplete, steps, stepIndex]);
 
   const handleSkip = useCallback(() => {
     markComplete();
   }, [markComplete]);
 
-  const posStyle = POSITION_STYLES[currentStep.position] ?? POSITION_STYLES.center;
+  // Keyboard: Escape to skip, Enter/Right for next, Left for back
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'Escape') handleSkip();
+      else if (e.key === 'Enter' || e.key === 'ArrowRight') handleNext();
+      else if (e.key === 'ArrowLeft' && stepIndex > 0) {
+        setDirection(-1);
+        setStepIndex((i) => i - 1);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleSkip, handleNext, stepIndex]);
+
+  const tooltipPos = getTooltipStyle(currentStep.position, targetRect);
 
   return (
     <motion.div
@@ -204,8 +309,25 @@ export default function OnboardingTour({ onComplete }) {
       animate="visible"
       exit="exit"
     >
-      {/* Darkened overlay */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
+      {/* Spotlight overlay — dims everything except the target element */}
+      <SpotlightOverlay rect={targetRect} />
+
+      {/* Highlight ring around target */}
+      {targetRect && (
+        <motion.div
+          className="absolute rounded-lg border-2 border-blue-400/50 pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          style={{
+            top: targetRect.top - 12,
+            left: targetRect.left - 12,
+            width: targetRect.width + 24,
+            height: targetRect.height + 24,
+            boxShadow: '0 0 20px rgba(59,130,246,0.2), 0 0 60px rgba(59,130,246,0.05)',
+          }}
+        />
+      )}
 
       {/* Confetti layer (final step only) */}
       {showConfetti && (
@@ -216,12 +338,15 @@ export default function OnboardingTour({ onComplete }) {
         </div>
       )}
 
-      {/* Tooltip card, repositioned per step */}
-      <div className={`absolute ${posStyle.wrapper} pointer-events-none`}>
+      {/* Tooltip card */}
+      <div
+        className={`absolute ${tooltipPos.wrapper} pointer-events-none`}
+        style={tooltipPos.style}
+      >
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={currentStep.id}
-            className={`${posStyle.card} pointer-events-auto`}
+            className={`${tooltipPos.card} pointer-events-auto`}
             variants={cardVariants}
             initial="enter"
             animate="center"
@@ -230,7 +355,7 @@ export default function OnboardingTour({ onComplete }) {
           >
             {/* Glass card */}
             <div className="glass rounded-xl border border-surface-divider p-6 shadow-2xl">
-              {/* Step counter */}
+              {/* Step counter + skip */}
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-semibold text-txt-muted uppercase tracking-wider">
                   Step {stepIndex + 1} of {steps.length}
@@ -256,7 +381,20 @@ export default function OnboardingTour({ onComplete }) {
                 {currentStep.description}
               </p>
 
-              {/* Footer row */}
+              {/* Login nudge for unauthenticated users */}
+              {!isAuthenticated && currentStep.id === 'done' && (
+                <div className="mb-4 flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2">
+                  <svg className="h-4 w-4 text-blue-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 16v-4M12 8h.01" />
+                  </svg>
+                  <span className="text-xs text-blue-300">
+                    <a href="/login" className="font-semibold underline underline-offset-2 hover:text-white">Sign in</a> or <a href="/register" className="font-semibold underline underline-offset-2 hover:text-white">create an account</a> to unlock all features!
+                  </span>
+                </div>
+              )}
+
+              {/* Footer */}
               <div className="flex items-center justify-between gap-3">
                 <ProgressDots total={steps.length} current={stepIndex} />
 

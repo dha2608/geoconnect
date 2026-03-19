@@ -336,6 +336,7 @@ export default function Sidebar() {
             animate="visible"
             exit="exit"
             className="fixed top-0 left-0 bottom-0 z-30 glass border-r border-surface-divider flex flex-col overflow-hidden"
+            data-tour="sidebar"
             style={{
               width: isMobile ? SIDEBAR_EXPANDED : expanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED,
               transition: isMobile ? undefined : 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',

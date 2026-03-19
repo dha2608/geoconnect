@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { setActivePanel, openModal } from '../../features/ui/uiSlice';
 import { useTranslation } from 'react-i18next';
+import useRequireAuth from '../../hooks/useRequireAuth';
 
 /* ── Icon components ───────────────────────────────────────────────── */
 
@@ -157,6 +158,7 @@ export default function MobileNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { activePanel } = useSelector((state) => state.ui);
+  const { requireAuth, AuthGate } = useRequireAuth();
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -215,10 +217,13 @@ export default function MobileNav() {
 
   const handleCreate = useCallback((type) => {
     setCreateMenuOpen(false);
+    if (!requireAuth('create content')) return;
     dispatch(openModal({ type }));
-  }, [dispatch]);
+  }, [dispatch, requireAuth]);
 
   return (
+    <>
+    {AuthGate}
     <motion.nav
       initial={{ y: 80 }}
       animate={{ y: 0 }}
@@ -246,6 +251,7 @@ export default function MobileNav() {
                   aria-label={t('nav.create', 'Create')}
                   aria-expanded={createMenuOpen}
                   aria-haspopup="menu"
+                  data-tour="create-button"
                 >
                   <PlusIcon />
                 </motion.button>
@@ -321,5 +327,6 @@ export default function MobileNav() {
       {/* Safe area spacer for notch phones */}
       <div className="h-[env(safe-area-inset-bottom,0px)]" />
     </motion.nav>
+    </>
   );
 }
