@@ -31,12 +31,20 @@ export const reverseGeocode = asyncHandler(async (req, res) => {
   const { lat, lng } = req.query;
   if (!lat || !lng) throw AppError.badRequest('lat and lng required');
 
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
-    { headers: { 'User-Agent': 'GeoConnect/1.0' } }
-  );
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+      { headers: { 'User-Agent': 'GeoConnect/1.0' }, signal: AbortSignal.timeout(5000) }
+    );
 
-  const data = await response.json();
-  // Pass through raw Nominatim result
-  return ok(res, data);
+    if (!response.ok) {
+      return ok(res, { display_name: `${lat}, ${lng}`, error: `Nominatim returned ${response.status}` });
+    }
+
+    const data = await response.json();
+    return ok(res, data);
+  } catch {
+    // Nominatim timeout or network error — return coords as fallback
+    return ok(res, { display_name: `${lat}, ${lng}`, error: 'Geocode service unavailable' });
+  }
 });
