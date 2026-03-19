@@ -6,6 +6,8 @@ import { createNotification } from '../utils/createNotification.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError, ERR } from '../utils/errors.js';
 import { ok, created, paginated, noContent, message } from '../utils/response.js';
+import { awardXP, incrementDailyChallenge } from '../services/xpService.js';
+import { checkAchievements } from '../services/achievementChecker.js';
 
 export const getPinsByViewport = asyncHandler(async (req, res) => {
   const { swLat, swLng, neLat, neLng, categories } = req.query;
@@ -86,6 +88,12 @@ export const createPin = asyncHandler(async (req, res) => {
   });
 
   const populated = await pin.populate('createdBy', 'name avatar');
+
+  // Gamification: award XP for pin creation (fire-and-forget)
+  awardXP(req.user._id, 'PIN_CREATE', { pinId: pin._id }).catch((err) => console.error('[Gamification] awardXP PIN_CREATE failed:', err.message));
+  incrementDailyChallenge(req.user._id, 'create_pin').catch((err) => console.error('[Gamification] incrementDailyChallenge create_pin failed:', err.message));
+  checkAchievements(req.user._id, 'PIN_CREATE').catch((err) => console.error('[Gamification] checkAchievements PIN_CREATE failed:', err.message));
+
   return created(res, populated);
 });
 
@@ -157,6 +165,12 @@ export const likePin = asyncHandler(async (req, res) => {
     type: 'like',
     data: { pinId: pin._id, pinTitle: pin.title },
   });
+
+  // Gamification: award XP to pin creator for receiving a like (fire-and-forget)
+  if (pin.createdBy.toString() !== req.user._id.toString()) {
+    awardXP(pin.createdBy, 'LIKE_RECEIVED', { pinId: pin._id }).catch((err) => console.error('[Gamification] awardXP LIKE_RECEIVED failed:', err.message));
+    checkAchievements(pin.createdBy, 'LIKE_RECEIVED').catch((err) => console.error('[Gamification] checkAchievements LIKE_RECEIVED failed:', err.message));
+  }
 
   return ok(res, { likes: pin.likes });
 });
@@ -382,6 +396,11 @@ export const checkIn = asyncHandler(async (req, res) => {
       data: { pinId: pin._id, pinTitle: pin.title },
     });
   }
+
+  // Gamification: award XP for check-in (fire-and-forget)
+  awardXP(req.user._id, 'CHECK_IN', { pinId: pin._id }).catch((err) => console.error('[Gamification] awardXP CHECK_IN failed:', err.message));
+  incrementDailyChallenge(req.user._id, 'check_in').catch((err) => console.error('[Gamification] incrementDailyChallenge check_in failed:', err.message));
+  checkAchievements(req.user._id, 'CHECK_IN').catch((err) => console.error('[Gamification] checkAchievements CHECK_IN failed:', err.message));
 
   return ok(res, { checkIns: pin.checkIns, checkInCount: pin.checkIns.length });
 });

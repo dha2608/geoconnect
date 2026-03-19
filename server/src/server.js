@@ -36,11 +36,12 @@ import discoverRoutes from './routes/discover.js';
 import activityRoutes from './routes/activity.js';
 import collectionRoutes from './routes/collections.js';
 import adminRoutes from './routes/admin.js';
+import gamificationRoutes from './routes/gamification.js';
 
 dotenv.config();
 
 const app = express();
-app.set('trust proxy', 1); // Trust first proxy (Render)
+app.set('trust proxy', 1); // Trust first proxy (Render, Vercel, nginx) for correct req.ip & secure cookies
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
@@ -145,6 +146,7 @@ app.use('/api/discover', discoverRoutes);
 app.use('/api/geocode', geocodeRoutes);
 app.use('/api/collections', collectionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/gamification', gamificationRoutes);
 
 // 404 handler — catch all unmatched routes
 app.use((req, res) => {

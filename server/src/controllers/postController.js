@@ -6,6 +6,8 @@ import { uploadToCloudinary } from '../middleware/upload.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError, ERR } from '../utils/errors.js';
 import { ok, created, paginated, noContent, message } from '../utils/response.js';
+import { awardXP, incrementDailyChallenge } from '../services/xpService.js';
+import { checkAchievements } from '../services/achievementChecker.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -132,6 +134,12 @@ export const createPost = asyncHandler(async (req, res) => {
   });
 
   const populated = await post.populate('author', 'name avatar');
+
+  // Gamification: award XP for post creation (fire-and-forget)
+  awardXP(req.user._id, 'POST_CREATE', { postId: post._id }).catch((err) => console.error('[Gamification] awardXP POST_CREATE failed:', err.message));
+  incrementDailyChallenge(req.user._id, 'create_post').catch((err) => console.error('[Gamification] incrementDailyChallenge create_post failed:', err.message));
+  checkAchievements(req.user._id, 'POST_CREATE').catch((err) => console.error('[Gamification] checkAchievements POST_CREATE failed:', err.message));
+
   return created(res, populated);
 });
 
@@ -252,6 +260,12 @@ export const likePost = asyncHandler(async (req, res) => {
     type: 'like',
     data: { postId: post._id, preview: post.text?.slice(0, 80) },
   });
+
+  // Gamification: award XP to post author for receiving a like (fire-and-forget)
+  if (post.author.toString() !== req.user._id.toString()) {
+    awardXP(post.author, 'LIKE_RECEIVED', { postId: post._id }).catch((err) => console.error('[Gamification] awardXP LIKE_RECEIVED failed:', err.message));
+    checkAchievements(post.author, 'LIKE_RECEIVED').catch((err) => console.error('[Gamification] checkAchievements LIKE_RECEIVED failed:', err.message));
+  }
 
   return ok(res, { likes: post.likes });
 });
@@ -435,6 +449,13 @@ export const addComment = asyncHandler(async (req, res) => {
     type: 'comment',
     data: { postId: post._id, preview: text.trim().slice(0, 80) },
   });
+
+  // Gamification: award XP to post author for receiving a comment (fire-and-forget)
+  if (post.author.toString() !== req.user._id.toString()) {
+    awardXP(post.author, 'COMMENT_RECEIVED', { postId: post._id }).catch((err) => console.error('[Gamification] awardXP COMMENT_RECEIVED failed:', err.message));
+    checkAchievements(post.author, 'COMMENT_RECEIVED').catch((err) => console.error('[Gamification] checkAchievements COMMENT_RECEIVED failed:', err.message));
+  }
+  incrementDailyChallenge(req.user._id, 'comment_post').catch((err) => console.error('[Gamification] incrementDailyChallenge comment_post failed:', err.message));
 
   const populated = await comment.populate('user', 'name avatar');
   return ok(res, populated);

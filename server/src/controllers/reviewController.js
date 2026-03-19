@@ -5,6 +5,8 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError, ERR } from '../utils/errors.js';
 import { ok, created, paginated, noContent, message } from '../utils/response.js';
 import { uploadToCloudinary } from '../middleware/upload.js';
+import { awardXP, incrementDailyChallenge } from '../services/xpService.js';
+import { checkAchievements } from '../services/achievementChecker.js';
 
 const updatePinRating = async (pinId) => {
   const stats = await Review.aggregate([
@@ -70,6 +72,11 @@ export const createReview = asyncHandler(async (req, res) => {
     type: 'review',
     data: { pinId: pin._id, pinTitle: pin.title, rating: req.body.rating },
   });
+
+  // Gamification: award XP for writing a review (fire-and-forget)
+  awardXP(req.user._id, 'REVIEW_CREATE', { pinId: pin._id, reviewId: review._id }).catch((err) => console.error('[Gamification] awardXP REVIEW_CREATE failed:', err.message));
+  incrementDailyChallenge(req.user._id, 'write_review').catch((err) => console.error('[Gamification] incrementDailyChallenge write_review failed:', err.message));
+  checkAchievements(req.user._id, 'REVIEW_CREATE').catch((err) => console.error('[Gamification] checkAchievements REVIEW_CREATE failed:', err.message));
 
   const populated = await review.populate('user', 'name avatar');
   return created(res, populated);

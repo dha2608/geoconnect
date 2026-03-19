@@ -5,6 +5,8 @@ import { createNotification } from '../utils/createNotification.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError, ERR } from '../utils/errors.js';
 import { ok, created, paginated, noContent, message } from '../utils/response.js';
+import { awardXP, incrementDailyChallenge } from '../services/xpService.js';
+import { checkAchievements } from '../services/achievementChecker.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -271,6 +273,11 @@ export const rsvpEvent = asyncHandler(async (req, res) => {
     type: 'rsvp',
     data: { eventId: event._id, eventTitle: event.title },
   });
+
+  // Gamification: award XP for event attendance (fire-and-forget)
+  awardXP(req.user._id, 'EVENT_ATTEND', { eventId: event._id }).catch((err) => console.error('[Gamification] awardXP EVENT_ATTEND failed:', err.message));
+  incrementDailyChallenge(req.user._id, 'attend_event').catch((err) => console.error('[Gamification] incrementDailyChallenge attend_event failed:', err.message));
+  checkAchievements(req.user._id, 'EVENT_ATTEND').catch((err) => console.error('[Gamification] checkAchievements EVENT_ATTEND failed:', err.message));
 
   return message(res, 'RSVP successful');
 });

@@ -8,6 +8,8 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError, ERR } from '../utils/errors.js';
 import { ok, message } from '../utils/response.js';
 import { getNearbyLocations } from '../socket/locationManager.js';
+import { awardXP, incrementDailyChallenge } from '../services/xpService.js';
+import { checkAchievements } from '../services/achievementChecker.js';
 
 export const getMe = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id)
@@ -78,6 +80,11 @@ export const followUser = asyncHandler(async (req, res) => {
 
   // Fire-and-forget email notification
   notifyEmail(req.params.id, 'follow', { followerName: req.user.name });
+
+  // Gamification: award XP to the followed user (fire-and-forget)
+  awardXP(req.params.id, 'FOLLOW_GAINED', { followerId: req.user._id }).catch((err) => console.error('[Gamification] awardXP FOLLOW_GAINED failed:', err.message));
+  incrementDailyChallenge(req.user._id, 'follow_user').catch((err) => console.error('[Gamification] incrementDailyChallenge follow_user failed:', err.message));
+  checkAchievements(req.params.id, 'FOLLOW_GAINED').catch((err) => console.error('[Gamification] checkAchievements FOLLOW_GAINED failed:', err.message));
 
   return message(res, 'Followed successfully');
 });
