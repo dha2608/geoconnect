@@ -134,7 +134,18 @@ function ImageCarousel({ images = [], title = '' }) {
 }
 
 /* ─── Action Button ─────────────────────────────────────────────────────── */
+// Static map — Tailwind JIT requires full class strings at build time.
+// Dynamic template literals like `border-[${color}]/30` are NOT compiled.
+const ACTION_ACTIVE_STYLES = {
+  'accent-danger':  'border-accent-danger/30  bg-accent-danger/10  text-accent-danger',
+  'accent-primary': 'border-accent-primary/30 bg-accent-primary/10 text-accent-primary',
+  'accent-success': 'border-accent-success/30 bg-accent-success/10 text-accent-success',
+  'accent-warning': 'border-accent-warning/30 bg-accent-warning/10 text-accent-warning',
+  'accent-violet':  'border-accent-violet/30  bg-accent-violet/10  text-accent-violet',
+};
+
 function ActionButton({ onClick, active, activeColor, label, children, loading }) {
+  const activeClasses = ACTION_ACTIVE_STYLES[activeColor] ?? ACTION_ACTIVE_STYLES['accent-primary'];
   return (
     <motion.button
       whileHover={{ scale: 1.04 }}
@@ -142,11 +153,12 @@ function ActionButton({ onClick, active, activeColor, label, children, loading }
       onClick={onClick}
       disabled={loading}
       title={label}
+      aria-pressed={active}
       className={`
         flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border transition-all duration-150
         disabled:opacity-50 disabled:cursor-not-allowed
         ${active
-          ? `border-[${activeColor}]/30 bg-[${activeColor}]/10 text-[${activeColor}]`
+          ? activeClasses
           : 'border-surface-divider bg-elevated text-txt-secondary hover:text-txt-primary hover:border-surface-divider'
         }
       `}
@@ -501,8 +513,9 @@ export default function PinDetailPanel() {
                         : 'border-surface-divider bg-elevated text-txt-secondary hover:text-txt-primary hover:border-surface-divider'
                       }
                     `}
-                    aria-label={isLiked ? 'Unlike' : 'Like'}
-                  >
+                     aria-label={isLiked ? 'Unlike' : 'Like'}
+                     aria-pressed={isLiked}
+                   >
                     <motion.svg
                       width="20" height="20"
                       viewBox="0 0 24 24"
@@ -535,8 +548,9 @@ export default function PinDetailPanel() {
                         : 'border-surface-divider bg-elevated text-txt-secondary hover:text-txt-primary hover:border-surface-divider'
                       }
                     `}
-                    aria-label={isSaved ? 'Unsave' : 'Save'}
-                  >
+                     aria-label={isSaved ? 'Unsave' : 'Save'}
+                     aria-pressed={isSaved}
+                   >
                     <motion.svg
                       width="20" height="20"
                       viewBox="0 0 24 24"
@@ -565,12 +579,13 @@ export default function PinDetailPanel() {
                       flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl border
                       transition-all duration-150 disabled:opacity-60
                        ${isCheckedIn
-                        ? 'border-green-500/30 bg-green-500/10 text-green-400'
+                        ? 'border-accent-success/30 bg-accent-success/10 text-accent-success'
                         : 'border-surface-divider bg-elevated text-txt-secondary hover:text-txt-primary hover:border-surface-divider'
                       }
                     `}
-                    aria-label={isCheckedIn ? 'Undo check-in' : 'Check in'}
-                  >
+                     aria-label={isCheckedIn ? 'Undo check-in' : 'Check in'}
+                     aria-pressed={isCheckedIn}
+                   >
                     <motion.svg
                       width="20" height="20"
                       viewBox="0 0 24 24"

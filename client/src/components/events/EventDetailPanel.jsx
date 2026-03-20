@@ -67,7 +67,7 @@ function getCat(value) {
 
 function SectionLabel({ children }) {
   return (
-    <p className="text-[10px] font-bold tracking-widest text-slate-600 uppercase mb-2">
+    <p className="text-[10px] font-bold tracking-widest text-txt-muted uppercase mb-2">
       {children}
     </p>
   );
@@ -281,7 +281,7 @@ export default function EventDetailPanel() {
             {!loading && !event && isOpen && (
               <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
                 <span className="text-5xl">😕</span>
-                <p className="text-slate-400 text-sm">Event not found or failed to load.</p>
+                <p className="text-txt-secondary text-sm">Event not found or failed to load.</p>
                 <Button variant="ghost" size="sm" onClick={handleClose}>Close</Button>
               </div>
             )}
@@ -311,7 +311,7 @@ export default function EventDetailPanel() {
                     </div>
                   )}
 
-                  {/* Close button */}
+                  {/* Close button — intentionally white on dark overlay */}
                   <button
                     onClick={handleClose}
                     aria-label="Close panel"
@@ -335,7 +335,7 @@ export default function EventDetailPanel() {
                   {!eventEnded && eventStarted && (
                     <div className="absolute top-3 left-3 flex items-center gap-1.5
                                     px-2.5 py-1 rounded-full text-xs font-semibold
-                                    bg-green-500/20 text-green-400 border border-green-500/30
+                                    bg-accent-success/10 text-green-400 border border-green-500/30
                                     backdrop-blur-sm">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                       Live now
@@ -350,7 +350,7 @@ export default function EventDetailPanel() {
                     {/* ── Title + Category ──────────────────────────────── */}
                     <div>
                       <div className="flex items-start justify-between gap-3">
-                        <h2 className="text-xl font-bold text-slate-100 font-[Syne] leading-snug">
+                        <h2 className="text-xl font-bold text-txt-primary font-heading leading-snug">
                           {event.title}
                         </h2>
                         {/* Category pill */}
@@ -382,18 +382,18 @@ export default function EventDetailPanel() {
                           </span>
                         )}
                         {event.startTime && (
-                          <p className="flex items-center gap-2 text-sm text-slate-400">
-                            <span className="text-slate-600">🗓</span>
+                          <p className="flex items-center gap-2 text-sm text-txt-secondary">
+                            <span className="text-txt-muted">🗓</span>
                             {format(new Date(event.startTime), 'EEEE, MMMM d · h:mm a')}
                             {event.endTime && (
-                              <span className="text-slate-600">
+                              <span className="text-txt-muted">
                                 → {format(new Date(event.endTime), 'h:mm a')}
                               </span>
                             )}
                           </p>
                         )}
                         {event.startTime && !eventEnded && (
-                          <p className="text-xs text-slate-600 pl-6">
+                          <p className="text-xs text-txt-muted pl-6">
                             {isFuture(new Date(event.startTime))
                               ? `Starts ${formatDistanceToNow(new Date(event.startTime), { addSuffix: true })}`
                               : 'Currently happening 🔥'}
@@ -414,11 +414,11 @@ export default function EventDetailPanel() {
                             size="sm"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-slate-200 truncate">
+                            <p className="text-sm font-semibold text-txt-primary truncate">
                               {event.organizer.displayName ?? event.organizer.username}
                             </p>
                             {event.organizer.username && event.organizer.displayName && (
-                              <p className="text-xs text-slate-600 truncate">
+                              <p className="text-xs text-txt-muted truncate">
                                 @{event.organizer.username}
                               </p>
                             )}
@@ -437,7 +437,7 @@ export default function EventDetailPanel() {
                     {event.description && (
                       <div>
                         <SectionLabel>About this event</SectionLabel>
-                        <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">
+                        <p className="text-sm text-txt-secondary leading-relaxed whitespace-pre-line">
                           {event.description}
                         </p>
                       </div>
@@ -445,7 +445,7 @@ export default function EventDetailPanel() {
 
                     {/* ── Address ───────────────────────────────────────── */}
                     {event.address && (
-                      <div className="flex items-start gap-2.5 text-sm text-slate-400">
+                      <div className="flex items-start gap-2.5 text-sm text-txt-secondary">
                         <span className="text-base mt-0.5 flex-shrink-0">📍</span>
                         <span>{event.address}</span>
                       </div>
@@ -470,7 +470,7 @@ export default function EventDetailPanel() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <SectionLabel>Attendees</SectionLabel>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-txt-muted">
                           {attendeeCount}
                           {capacity > 0 ? ` / ${capacity}` : ''} going
                           {isFull && (
@@ -486,12 +486,11 @@ export default function EventDetailPanel() {
                             initial={{ width: 0 }}
                             animate={{ width: `${capacityPct}%` }}
                             transition={{ duration: 0.9, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                            className="h-full rounded-full"
-                            style={{
-                              background: capacityPct >= 90
-                                ? 'linear-gradient(90deg, #f59e0b, #ef4444)'
-                                : 'linear-gradient(90deg, #3b82f6, #06b6d4)',
-                            }}
+                            className={`h-full rounded-full bg-gradient-to-r ${
+                              capacityPct >= 90
+                                ? 'from-accent-warning to-accent-danger'
+                                : 'from-blue-500 to-cyan-500'
+                            }`}
                           />
                         </div>
                       )}
@@ -523,12 +522,12 @@ export default function EventDetailPanel() {
                           )}
                         </div>
                       ) : (
-                        <p className="text-xs text-slate-600 italic">No attendees yet — be the first!</p>
+                        <p className="text-xs text-txt-muted italic">No attendees yet — be the first!</p>
                       )}
                     </div>
 
                     {/* ── Visibility ────────────────────────────────────── */}
-                    <p className="text-xs text-slate-600 flex items-center gap-1.5">
+                    <p className="text-xs text-txt-muted flex items-center gap-1.5">
                       {event.isPublic
                         ? <><span>🌍</span> Public event — anyone can join</>
                         : <><span>🔒</span> Private event</>}
@@ -548,7 +547,7 @@ export default function EventDetailPanel() {
                           maxLength={500}
                           className="flex-1 px-3 py-2 rounded-lg text-sm
                                      bg-[var(--glass-bg)] border border-[var(--glass-border)]
-                                     text-slate-200 placeholder:text-slate-600
+                                     text-txt-primary placeholder:text-txt-muted
                                      focus:outline-none focus:border-blue-500/40 transition-colors"
                         />
                         <Button
@@ -596,14 +595,14 @@ export default function EventDetailPanel() {
                                   />
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-xs font-semibold text-slate-300 truncate">
+                                      <span className="text-xs font-semibold text-txt-secondary truncate">
                                         {c.user?.name ?? 'User'}
                                       </span>
-                                      <span className="text-[10px] text-slate-600">
+                                      <span className="text-[10px] text-txt-muted">
                                         {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
                                       </span>
                                       {c.isEdited && (
-                                        <span className="text-[10px] text-slate-600 italic">edited</span>
+                                        <span className="text-[10px] text-txt-muted italic">edited</span>
                                       )}
                                     </div>
 
@@ -618,7 +617,7 @@ export default function EventDetailPanel() {
                                           }}
                                           className="flex-1 px-2 py-1 rounded text-xs
                                                      bg-[var(--glass-bg)] border border-blue-500/30
-                                                     text-slate-200 focus:outline-none"
+                                                     text-txt-primary focus:outline-none"
                                           maxLength={500}
                                           autoFocus
                                         />
@@ -628,11 +627,11 @@ export default function EventDetailPanel() {
                                         >Save</button>
                                         <button
                                           onClick={() => { setEditingId(null); setEditText(''); }}
-                                          className="text-slate-500 text-xs hover:underline"
+                                          className="text-txt-muted text-xs hover:underline"
                                         >Cancel</button>
                                       </div>
                                     ) : (
-                                      <p className="text-sm text-slate-400 mt-0.5 break-words">{c.text}</p>
+                                      <p className="text-sm text-txt-secondary mt-0.5 break-words">{c.text}</p>
                                     )}
 
                                     {/* Actions */}
@@ -640,20 +639,20 @@ export default function EventDetailPanel() {
                                       <button
                                         onClick={() => handleLikeComment(c)}
                                         className={`text-[10px] flex items-center gap-0.5 transition-colors
-                                          ${isLiked ? 'text-red-400' : 'text-slate-600 hover:text-red-400'}`}
+                                          ${isLiked ? 'text-red-400' : 'text-txt-muted hover:text-red-400'}`}
                                       >
                                         {isLiked ? '❤️' : '🤍'} {c.likes?.length || ''}
                                       </button>
                                       {isAuthor && editingId !== c._id && (
                                         <button
                                           onClick={() => { setEditingId(c._id); setEditText(c.text); }}
-                                          className="text-[10px] text-slate-600 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
+                                          className="text-[10px] text-txt-muted hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
                                         >Edit</button>
                                       )}
                                       {(isAuthor || isOrganizer) && (
                                         <button
                                           onClick={() => handleDeleteComment(c._id)}
-                                          className="text-[10px] text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                                          className="text-[10px] text-txt-muted hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
                                         >Delete</button>
                                       )}
                                     </div>
@@ -664,7 +663,7 @@ export default function EventDetailPanel() {
                           </AnimatePresence>
                         </div>
                       ) : (
-                        <p className="text-xs text-slate-600 italic text-center py-3">
+                        <p className="text-xs text-txt-muted italic text-center py-3">
                           No comments yet — start the discussion!
                         </p>
                       )}
@@ -688,7 +687,7 @@ export default function EventDetailPanel() {
                     </div>
                   ) : eventEnded ? (
                     /* Event over */
-                    <div className="text-center py-1.5 text-sm text-slate-600 font-medium">
+                    <div className="text-center py-1.5 text-sm text-txt-muted font-medium">
                       This event has ended
                     </div>
                   ) : (
