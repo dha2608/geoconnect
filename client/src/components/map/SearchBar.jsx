@@ -417,7 +417,7 @@ export default function SearchBar() {
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={(e) => handleDeleteHistory(e, i)}
                             title="Remove from history"
-                            className="p-2 mr-1.5 text-txt-muted hover:text-txt-primary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                            className="p-1.5 mr-1.5 text-txt-muted/40 hover:text-txt-primary transition-all flex-shrink-0 rounded-md hover:bg-white/[0.05]"
                           >
                             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M18 6L6 18M6 6l12 12"/>
@@ -492,9 +492,9 @@ export default function SearchBar() {
                               onMouseDown={(e) => e.preventDefault()}
                               onClick={() => handleSetDestination(result)}
                               title="Set as destination"
-                              className="p-2 mr-2 text-txt-muted hover:text-accent-primary transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                               className="p-1.5 mr-2 text-txt-muted/60 hover:text-accent-primary transition-colors flex-shrink-0 rounded-md hover:bg-white/[0.05]"
                             >
-                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                                 <polygon points="3 11 22 2 13 21 11 13 3 11"/>
                               </svg>
                             </button>
@@ -550,9 +550,9 @@ export default function SearchBar() {
                               onMouseDown={(e) => e.preventDefault()}
                               onClick={() => handleSetDestination(result)}
                               title="Set as destination"
-                              className="p-2 mr-2 text-txt-muted hover:text-accent-primary transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                              className="p-1.5 mr-2 text-txt-muted/60 hover:text-accent-primary transition-colors flex-shrink-0 rounded-md hover:bg-white/[0.05]"
                             >
-                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                                 <polygon points="3 11 22 2 13 21 11 13 3 11"/>
                               </svg>
                             </button>
