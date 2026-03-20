@@ -26,23 +26,119 @@ const cardVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } },
 };
 
-/* ── Stat card icons ──────────────────────────────────────────────────────── */
+/* ── Inline SVG icons ─────────────────────────────────────────────────────── */
+const SVG_PROPS = {
+  width: '18',
+  height: '18',
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: '2',
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+};
+
+const PinSvg = () => (
+  <svg {...SVG_PROPS}>
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+const PenSvg = () => (
+  <svg {...SVG_PROPS}>
+    <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5Z" />
+    <path d="m15 5 4 4" />
+  </svg>
+);
+const CalendarSvg = () => (
+  <svg {...SVG_PROPS}>
+    <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+const StarSvg = () => (
+  <svg {...SVG_PROPS}>
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+  </svg>
+);
+const CheckSvg = () => (
+  <svg {...SVG_PROPS}>
+    <path d="M9 11l3 3L22 4" />
+    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+  </svg>
+);
+const HeartSvg = () => (
+  <svg {...SVG_PROPS}>
+    <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+  </svg>
+);
+const UsersSvg = () => (
+  <svg {...SVG_PROPS}>
+    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 00-3-3.87" />
+    <path d="M16 3.13a4 4 0 010 7.75" />
+  </svg>
+);
+const UserSvg = () => (
+  <svg {...SVG_PROPS}>
+    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+/* ── Empty-state icon components (fills the 64px EmptyState slot) ─────────── */
+const ChartEmptySvg = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ width: '100%', height: '100%' }}
+  >
+    <path d="M3 3v18h18" />
+    <path d="M18 17V9" />
+    <path d="M13 17V5" />
+    <path d="M8 17v-3" />
+  </svg>
+);
+const ListEmptySvg = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ width: '100%', height: '100%' }}
+  >
+    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+    <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
+    <path d="M12 11h4" />
+    <path d="M12 16h4" />
+    <path d="M8 11h.01" />
+    <path d="M8 16h.01" />
+  </svg>
+);
+
+/* ── Stat card config ─────────────────────────────────────────────────────── */
 const STAT_CONFIG = [
-  { key: 'pinsCreated',   label: 'Pins',        icon: '📍', color: 'text-accent-danger'    },
-  { key: 'postsCreated',  label: 'Posts',        icon: '✍️', color: 'text-accent-primary'   },
-  { key: 'eventsCreated', label: 'Events',       icon: '🎉', color: 'text-accent-violet'    },
-  { key: 'reviewsWritten',label: 'Reviews',      icon: '⭐', color: 'text-accent-warning'   },
-  { key: 'checkIns',      label: 'Check-ins',    icon: '📌', color: 'text-accent-success'   },
-  { key: 'likesGiven',    label: 'Likes Given',  icon: '❤️', color: 'text-pink-400'         },
-  { key: 'followers',     label: 'Followers',    icon: '👥', color: 'text-accent-secondary' },
-  { key: 'following',     label: 'Following',    icon: '👤', color: 'text-indigo-400'       },
+  { key: 'pinsCreated',    label: 'Pins',        icon: <PinSvg />,      color: 'text-accent-danger'    },
+  { key: 'postsCreated',   label: 'Posts',        icon: <PenSvg />,      color: 'text-accent-primary'   },
+  { key: 'eventsCreated',  label: 'Events',       icon: <CalendarSvg />, color: 'text-accent-violet'    },
+  { key: 'reviewsWritten', label: 'Reviews',      icon: <StarSvg />,     color: 'text-accent-warning'   },
+  { key: 'checkIns',       label: 'Check-ins',    icon: <CheckSvg />,    color: 'text-accent-success'   },
+  { key: 'likesGiven',     label: 'Likes Given',  icon: <HeartSvg />,    color: 'text-pink-400'         },
+  { key: 'followers',      label: 'Followers',    icon: <UsersSvg />,    color: 'text-accent-secondary' },
+  { key: 'following',      label: 'Following',    icon: <UserSvg />,     color: 'text-indigo-400'       },
 ];
 
 /* ── Activity type config ─────────────────────────────────────────────────── */
 const TYPE_BADGE = {
-  pin:   { label: 'Pin',   bg: 'bg-accent-danger/15 text-accent-danger',   icon: '📍' },
-  post:  { label: 'Post',  bg: 'bg-accent-primary/15 text-accent-primary', icon: '✍️' },
-  event: { label: 'Event', bg: 'bg-accent-violet/15 text-accent-violet',   icon: '🎉' },
+  pin:   { label: 'Pin',   bg: 'bg-accent-danger/15 text-accent-danger',   icon: <PinSvg /> },
+  post:  { label: 'Post',  bg: 'bg-accent-primary/15 text-accent-primary', icon: <PenSvg /> },
+  event: { label: 'Event', bg: 'bg-accent-violet/15 text-accent-violet',   icon: <CalendarSvg /> },
 };
 
 /* ── Heatmap helpers ──────────────────────────────────────────────────────── */
@@ -111,7 +207,7 @@ const StatCard = memo(function StatCard({ icon, label, value, color }) {
       variants={cardVariants}
       className="glass rounded-xl p-4 flex items-center gap-3 border border-surface-divider"
     >
-      <span className={`text-2xl ${color}`}>{icon}</span>
+      <span className={`shrink-0 ${color}`}>{icon}</span>
       <div className="min-w-0 flex-1">
         <p className="text-2xl font-bold text-txt-primary leading-tight">
           {value?.toLocaleString() ?? '—'}
@@ -128,13 +224,18 @@ function ActivityHeatmap({ heatmapData }) {
 
   return (
     <div className="glass rounded-xl p-4 border border-surface-divider overflow-x-auto">
-      {/* Month labels */}
-      <div className="flex mb-1 ml-8">
-        {monthLabels.map((m) => (
+      {/* Month labels — each span covers the exact pixel-width of its month's columns */}
+      <div className="flex mb-1 ml-8" style={{ gap: 0 }}>
+        {monthLabels.map((m, idx) => (
           <span
             key={`${m.label}-${m.index}`}
-            className="text-[10px] text-txt-muted"
-            style={{ position: 'relative', left: `${m.index * 14}px` }}
+            className="text-[10px] text-txt-muted shrink-0"
+            style={{
+              width:
+                idx < monthLabels.length - 1
+                  ? `${(monthLabels[idx + 1].index - m.index) * 14.5}px`
+                  : 'auto',
+            }}
           >
             {m.label}
           </span>
@@ -188,8 +289,7 @@ const ActivityItem = memo(function ActivityItem({ item }) {
     day: 'numeric',
     year: 'numeric',
   });
-  const imgSrc =
-    item.images?.[0] || item.coverImage || null;
+  const imgSrc = item.images?.[0] || item.coverImage || null;
 
   return (
     <motion.div
@@ -204,7 +304,7 @@ const ActivityItem = memo(function ActivityItem({ item }) {
           loading="lazy"
         />
       ) : (
-        <div className="w-12 h-12 rounded-lg bg-surface-hover flex items-center justify-center text-xl shrink-0">
+        <div className="w-12 h-12 rounded-lg bg-surface-hover flex items-center justify-center text-txt-muted shrink-0">
           {badge.icon}
         </div>
       )}
@@ -219,7 +319,7 @@ const ActivityItem = memo(function ActivityItem({ item }) {
       </div>
       {item.likes && (
         <div className="text-xs text-txt-muted flex items-center gap-1 shrink-0">
-          <span>❤️</span>
+          <span className="text-pink-400"><HeartSvg /></span>
           <span>{item.likes.length}</span>
         </div>
       )}
@@ -352,7 +452,7 @@ export default function ActivityPage() {
             </motion.div>
           ) : (
             <EmptyState
-              icon="📊"
+              icon={<ChartEmptySvg />}
               title="No stats available"
               description="Start creating content to see your activity stats."
             />
@@ -409,7 +509,7 @@ export default function ActivityPage() {
             </>
           ) : (
             <EmptyState
-              icon="📋"
+              icon={<ListEmptySvg />}
               title="No recent activity"
               description="Your pins, posts, and events will appear here."
             />

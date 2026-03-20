@@ -179,7 +179,7 @@ const itemVariants = {
  * @param {string}  className    Extra wrapper classes
  */
 export default function EmptyState({ icon, title, description, action, className = '' }) {
-  const IconNode = icons[icon] ?? null;
+  const IconNode = typeof icon === 'string' ? (icons[icon] ?? null) : (icon ?? null);
 
   return (
     <motion.div
