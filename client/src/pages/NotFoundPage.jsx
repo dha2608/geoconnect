@@ -21,7 +21,9 @@ export default function NotFoundPage() {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.15, type: 'spring', stiffness: 300, damping: 20 }}
           >
-            <span className="text-8xl select-none block mb-2">🗺️</span>
+            <span className="select-none block mb-2">
+              <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-accent-primary opacity-80" aria-hidden="true"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16"/><path d="M16 6v16"/></svg>
+            </span>
             <h1 className="text-6xl font-heading font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-500 bg-clip-text text-transparent">
               404
             </h1>
