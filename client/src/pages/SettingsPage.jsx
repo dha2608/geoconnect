@@ -99,6 +99,76 @@ function SectionHeader({ icon, title, description }) {
   );
 }
 
+/* ─────────────────────────── Section Nav Config ─────────────────────────── */
+const SETTINGS_SECTIONS = [
+  {
+    id: 'settings-account',
+    label: 'Account',
+    guestHidden: false,
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'settings-privacy',
+    label: 'Privacy',
+    guestHidden: false,
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'settings-notifications',
+    label: 'Notifications',
+    guestHidden: false,
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 01-3.46 0"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'settings-appearance',
+    label: 'Appearance',
+    guestHidden: false,
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2m0 16v2M2 12h2m16 0h2"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'settings-security',
+    label: 'Security',
+    guestHidden: true,
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0110 0v4"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'settings-danger',
+    label: 'Danger Zone',
+    guestHidden: false,
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    ),
+  },
+];
+
 /* ─────────────────────────── Map Style Option ───────────────────────────── */
 const MAP_STYLES = [
   { id: 'dark', label: 'Dark', gradient: 'from-[#0d1117] to-[#1a2332]', accent: 'bg-accent-primary/40' },
@@ -186,6 +256,69 @@ function DeleteModal({ isOpen, onClose, onConfirm, loading }) {
         </div>
       )}
     </AnimatePresence>
+  );
+}
+
+/* ─────────────────────────── Section Navigation ────────────────────────── */
+function SectionNav({ isGuest }) {
+  const [activeId, setActiveId] = useState(SETTINGS_SECTIONS[0].id);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveId(entry.target.id);
+          }
+        });
+      },
+      { rootMargin: '0px 0px -75% 0px', threshold: 0 },
+    );
+
+    SETTINGS_SECTIONS.forEach(({ id, guestHidden }) => {
+      if (guestHidden && isGuest) return;
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [isGuest]);
+
+  const scrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setActiveId(id);
+    }
+  };
+
+  const visibleSections = SETTINGS_SECTIONS.filter((s) => !(s.guestHidden && isGuest));
+
+  return (
+    <div className="sticky top-0 z-10 -mx-1 px-1 pt-1.5 pb-2 glass border-b border-surface-divider/40 backdrop-blur-xl">
+      {/* hide native scrollbar on all browsers */}
+      <style>{`.sn-scroll::-webkit-scrollbar{display:none}`}</style>
+      <div className="sn-scroll flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        {visibleSections.map((section) => {
+          const isActive = activeId === section.id;
+          return (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => scrollTo(section.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border whitespace-nowrap flex-shrink-0 transition-all duration-200 cursor-pointer ${
+                isActive
+                  ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/30'
+                  : 'glass text-txt-muted border-surface-divider hover:text-txt-secondary'
+              }`}
+            >
+              {section.icon}
+              {section.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -468,8 +601,13 @@ export default function SettingsPage() {
           <p className="text-sm text-txt-muted mt-1">Manage your account and preferences</p>
         </motion.div>
 
-        {/* ══════════════════ 1. ACCOUNT ══════════════════ */}
+        {/* ── Section nav ── */}
         <motion.div variants={sectionVariants}>
+          <SectionNav isGuest={isGuest} />
+        </motion.div>
+
+        {/* ══════════════════ 1. ACCOUNT ══════════════════ */}
+        <motion.div id="settings-account" variants={sectionVariants} className="scroll-mt-16">
           <GlassCard animate={false} padding="p-6">
             <SectionHeader
               icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent-primary"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
@@ -583,7 +721,7 @@ export default function SettingsPage() {
         </motion.div>
 
         {/* ══════════════════ 2. PRIVACY ══════════════════ */}
-        <motion.div variants={sectionVariants}>
+        <motion.div id="settings-privacy" variants={sectionVariants} className="scroll-mt-16">
           <GlassCard animate={false} padding="p-6">
             <SectionHeader
               icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent-secondary"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
@@ -617,7 +755,7 @@ export default function SettingsPage() {
         </motion.div>
 
         {/* ══════════════════ 3. NOTIFICATIONS ══════════════════ */}
-        <motion.div variants={sectionVariants}>
+        <motion.div id="settings-notifications" variants={sectionVariants} className="scroll-mt-16">
           <GlassCard animate={false} padding="p-6">
             <SectionHeader
               icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent-warning"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>}
@@ -661,7 +799,7 @@ export default function SettingsPage() {
         </motion.div>
 
         {/* ══════════════════ 4. APPEARANCE ══════════════════ */}
-        <motion.div variants={sectionVariants}>
+        <motion.div id="settings-appearance" variants={sectionVariants} className="scroll-mt-16">
           <GlassCard animate={false} padding="p-6">
             <SectionHeader
               icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent-success"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2m0 16v2M2 12h2m16 0h2"/></svg>}
@@ -772,7 +910,7 @@ export default function SettingsPage() {
         </motion.div>
 
         {!isGuest && (
-          <motion.div variants={sectionVariants}>
+          <motion.div id="settings-security" variants={sectionVariants} className="scroll-mt-16">
             <GlassCard animate={false} padding="p-6">
               <SectionHeader
                 icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent-violet"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>}
@@ -986,7 +1124,7 @@ export default function SettingsPage() {
         )}
 
         {/* ══════════════════ 6. DANGER ZONE ══════════════════ */}
-        <motion.div variants={sectionVariants}>
+        <motion.div id="settings-danger" variants={sectionVariants} className="scroll-mt-16">
           <GlassCard animate={false} padding="p-6" className="border-accent-danger/20 shadow-lg">
             <SectionHeader
               icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent-danger"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
