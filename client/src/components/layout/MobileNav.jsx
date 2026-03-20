@@ -97,23 +97,22 @@ function NavItem({ id, label, Icon, isActive, onClick }) {
       aria-label={label}
       aria-current={isActive ? 'page' : undefined}
     >
-      {/* Active indicator pill */}
+      {/* Active bg highlight */}
       {isActive && (
         <motion.div
           layoutId="mobile-nav-indicator"
-          className="absolute -top-1 w-8 h-1 rounded-full bg-accent-primary"
+          className="absolute inset-1.5 rounded-xl bg-white/[0.08]"
           transition={{ type: 'spring', damping: 28, stiffness: 400 }}
-          style={{ boxShadow: '0 0 8px rgba(59,130,246,0.4)' }}
         />
       )}
 
       <Icon
-        className={`transition-colors duration-150 ${
+        className={`relative z-10 transition-colors duration-150 ${
           isActive ? 'text-accent-primary' : 'text-txt-muted'
         }`}
       />
       <span
-        className={`text-[10px] font-body transition-colors duration-150 ${
+        className={`relative z-10 text-[10px] font-body transition-colors duration-150 ${
           isActive ? 'text-accent-primary font-medium' : 'text-txt-muted'
         }`}
       >
@@ -243,10 +242,10 @@ export default function MobileNav() {
                   whileTap={{ scale: 0.9 }}
                   animate={{ rotate: createMenuOpen ? 45 : 0 }}
                   transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-                  className="w-12 h-12 -mt-5 rounded-full flex items-center justify-center text-white relative"
+                  className="w-11 h-11 -mt-4 rounded-full flex items-center justify-center text-white relative"
                   style={{
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)',
-                    boxShadow: '0 4px 20px rgba(139,92,246,0.35), 0 0 40px rgba(6,182,212,0.15)',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                    boxShadow: '0 2px 12px rgba(99,102,241,0.3)',
                   }}
                   aria-label={t('nav.create', 'Create')}
                   aria-expanded={createMenuOpen}
