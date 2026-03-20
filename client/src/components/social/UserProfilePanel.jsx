@@ -21,9 +21,9 @@ import ReportModal from '../ui/ReportModal';
 const CATEGORY_COLORS = {
   restaurant: '#ef4444',
   cafe:       '#f59e0b',
-  bar:        '#8b5cf6',
+  bar:        'var(--accent-violet)',
   park:       '#10b981',
-  museum:     '#3b82f6',
+  museum:     'var(--accent-primary)',
   hotel:      '#06b6d4',
   shopping:   '#ec4899',
   gym:        '#f97316',
@@ -512,7 +512,7 @@ export default function UserProfilePanel({ userId }) {
                   exit={{ opacity: 0 }}
                 >
                   <GlassCard padding="p-6" animate={false}>
-                    <p className="text-center text-sm text-red-400">{tabError}</p>
+                    <p className="text-center text-sm text-accent-danger">{tabError}</p>
                   </GlassCard>
                 </motion.div>
 

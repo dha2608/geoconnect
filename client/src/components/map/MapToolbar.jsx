@@ -155,7 +155,7 @@ export default function MapToolbar() {
                 <motion.div
                   layoutId="toolbar-glow"
                   className="absolute inset-0 rounded-lg bg-accent-primary/15"
-                  style={{ boxShadow: '0 0 12px rgba(139,92,246,0.2)' }}
+                  style={{ boxShadow: '0 0 12px color-mix(in srgb, var(--accent-violet) 20%, transparent)' }}
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 />
               )}

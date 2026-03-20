@@ -113,7 +113,7 @@ export default function FeedPanel() {
     () =>
       isMobile
         ? 'fixed top-16 bottom-16 left-0 right-0 z-20 glass overflow-hidden flex flex-col'
-        : 'fixed top-16 bottom-0 w-[380px] z-20 glass border-r border-accent-violet/10 overflow-hidden flex flex-col',
+        : 'fixed top-16 bottom-0 w-[380px] z-20 glass border-r border-surface-divider overflow-hidden flex flex-col',
     [isMobile]
   );
 
@@ -201,7 +201,7 @@ export default function FeedPanel() {
                     className="w-5 h-5"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke={pullDistance >= PULL_THRESHOLD || refreshing ? '#8b5cf6' : 'rgba(255,255,255,0.3)'}
+                    stroke={pullDistance >= PULL_THRESHOLD || refreshing ? 'var(--accent-violet)' : 'rgba(255,255,255,0.3)'}
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"

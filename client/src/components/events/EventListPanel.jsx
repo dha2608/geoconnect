@@ -40,8 +40,8 @@ import { openModal, closePanel }  from '../../features/ui/uiSlice';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const EVENT_CATEGORIES = [
-  { value: 'meetup', label: 'Meetup', color: '#3b82f6', emoji: '🤝' },
-  { value: 'party',  label: 'Party',  color: '#8b5cf6', emoji: '🎉' },
+  { value: 'meetup', label: 'Meetup', color: 'var(--accent-primary)', emoji: '🤝' },
+  { value: 'party',  label: 'Party',  color: 'var(--accent-violet)', emoji: '🎉' },
   { value: 'sports', label: 'Sports', color: '#10b981', emoji: '⚽' },
   { value: 'music',  label: 'Music',  color: '#ec4899', emoji: '🎵' },
   { value: 'food',   label: 'Food',   color: '#f59e0b', emoji: '🍕' },
@@ -124,7 +124,7 @@ function EventCard({ event, onClick }) {
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center
                      text-lg flex-shrink-0 select-none"
-          style={{ backgroundColor: `${cat.color}22` }}
+          style={{ backgroundColor: `color-mix(in srgb, ${cat.color} 13%, transparent)` }}
         >
           {cat.emoji}
         </div>
@@ -132,20 +132,20 @@ function EventCard({ event, onClick }) {
         <div className="flex-1 min-w-0">
           {/* Title row */}
           <div className="flex items-center justify-between gap-2 mb-0.5">
-            <h3 className="text-[13px] font-semibold text-slate-200 font-[Syne] truncate leading-snug">
+            <h3 className="text-[13px] font-semibold text-txt-primary font-[Syne] truncate leading-snug">
               {event.title}
             </h3>
             {/* Status badge */}
             {ended ? (
               <span className="flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded-full
-                               font-semibold bg-slate-700/40 text-slate-600 uppercase tracking-wide">
+                               font-semibold bg-surface-hover text-txt-muted uppercase tracking-wide">
                 Ended
               </span>
             ) : started ? (
               <span className="flex-shrink-0 flex items-center gap-1 text-[9px] px-1.5 py-0.5
-                               rounded-full font-semibold bg-green-500/15 text-green-400
+                               rounded-full font-semibold bg-accent-success/15 text-accent-success
                                uppercase tracking-wide">
-                <span className="w-1 h-1 rounded-full bg-green-400 animate-pulse" />
+                <span className="w-1 h-1 rounded-full bg-accent-success animate-pulse" />
                 Live
               </span>
             ) : null}
@@ -153,28 +153,28 @@ function EventCard({ event, onClick }) {
 
           {/* Date / time */}
           {event.startTime && (
-            <p className="text-[11px] text-slate-500 mb-1">
+            <p className="text-[11px] text-txt-muted mb-1">
               {format(new Date(event.startTime), 'EEE, MMM d · h:mm a')}
             </p>
           )}
 
           {/* Address snippet */}
           {event.address && (
-            <p className="text-[11px] text-slate-600 truncate mb-1.5">
+            <p className="text-[11px] text-txt-muted truncate mb-1.5">
               📍 {event.address}
             </p>
           )}
 
           {/* Footer row: attendees + capacity */}
           <div className="flex items-center gap-2 mt-1.5">
-            <span className="text-[11px] text-slate-600">
+            <span className="text-[11px] text-txt-muted">
               👥 {count} {count === 1 ? 'person' : 'people'} going
             </span>
             {isFull && (
               <span className="text-[10px] text-yellow-500/80 font-semibold">· Full</span>
             )}
             {capacity > 0 && !isFull && (
-              <span className="text-[11px] text-slate-700">· {capacity - count} spots left</span>
+              <span className="text-[11px] text-txt-muted">· {capacity - count} spots left</span>
             )}
           </div>
 
@@ -183,12 +183,12 @@ function EventCard({ event, onClick }) {
             <div className="flex flex-wrap gap-1 mt-1.5">
               {event.tags.slice(0, 3).map((tag) => (
                 <span key={tag} className="px-1.5 py-0.5 rounded-full text-[9px]
-                                           bg-blue-500/10 text-blue-400/70 border border-blue-500/15">
+                                           bg-accent-primary/10 text-accent-primary/70 border border-accent-primary/15">
                   #{tag}
                 </span>
               ))}
               {event.tags.length > 3 && (
-                <span className="text-[9px] text-slate-600">+{event.tags.length - 3}</span>
+                <span className="text-[9px] text-txt-muted">+{event.tags.length - 3}</span>
               )}
             </div>
           )}
@@ -364,7 +364,7 @@ export default function EventListPanel() {
           <div className="flex-shrink-0 px-4 pt-5 pb-3
                           border-b border-surface-divider">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-100 font-[Syne] tracking-tight">
+              <h2 className="text-lg font-bold text-txt-primary font-[Syne] tracking-tight">
                 Events
               </h2>
               <div className="flex items-center gap-2">
@@ -380,9 +380,9 @@ export default function EventListPanel() {
                 <button
                   onClick={handleClose}
                   aria-label="Close events panel"
-                  className="w-8 h-8 rounded-full flex items-center justify-center
-                             text-slate-500 hover:text-slate-300 text-xl leading-none
-                             hover:bg-surface-hover transition-all duration-150"
+                   className="w-8 h-8 rounded-full flex items-center justify-center
+                              text-txt-muted hover:text-txt-primary text-xl leading-none
+                              hover:bg-surface-hover transition-all duration-150"
                 >
                   ×
                 </button>
@@ -399,8 +399,8 @@ export default function EventListPanel() {
                   className={[
                     'flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-200',
                     activeTab === tab.id
-                      ? 'bg-blue-500/20 text-blue-300 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-400',
+                      ? 'bg-accent-primary/20 text-accent-primary shadow-sm'
+                      : 'text-txt-muted hover:text-txt-secondary',
                   ].join(' ')}
                 >
                   {tab.label}
@@ -414,13 +414,13 @@ export default function EventListPanel() {
             <button
               onClick={() => setShowFilters((p) => !p)}
               className="flex items-center gap-1.5 text-[11px] font-medium
-                         text-slate-500 hover:text-slate-300 transition-colors"
+                         text-txt-muted hover:text-txt-primary transition-colors"
             >
               <span>🔽</span>
               Filters
               {activeFilterCount > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold
-                                 bg-blue-500/20 text-blue-300">
+                                 bg-accent-primary/20 text-accent-primary">
                   {activeFilterCount}
                 </span>
               )}
@@ -439,7 +439,7 @@ export default function EventListPanel() {
                     {/* Tag chips */}
                     {popularTags?.length > 0 && (
                       <div>
-                        <p className="text-[10px] text-slate-600 font-medium uppercase tracking-wider mb-1.5">
+                        <p className="text-[10px] text-txt-muted font-medium uppercase tracking-wider mb-1.5">
                           Tags
                         </p>
                         <div className="flex flex-wrap gap-1.5">
@@ -453,11 +453,11 @@ export default function EventListPanel() {
                                 className={[
                                   'px-2 py-0.5 rounded-full text-[10px] font-medium transition-all border',
                                   active
-                                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-                                    : 'bg-[var(--glass-bg)] text-slate-500 border-[var(--glass-border)] hover:text-slate-300',
+                                    ? 'bg-accent-primary/20 text-accent-primary border-accent-primary/30'
+                                    : 'bg-[var(--glass-bg)] text-txt-muted border-[var(--glass-border)] hover:text-txt-secondary',
                                 ].join(' ')}
                               >
-                                #{tag} {t.count != null && <span className="text-slate-600">({t.count})</span>}
+                                #{tag} {t.count != null && <span className="text-txt-muted">({t.count})</span>}
                               </button>
                             );
                           })}
@@ -468,7 +468,7 @@ export default function EventListPanel() {
                     {/* Date range */}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-[10px] text-slate-600 font-medium uppercase tracking-wider">
+                        <label className="text-[10px] text-txt-muted font-medium uppercase tracking-wider">
                           From
                         </label>
                         <input
@@ -477,11 +477,11 @@ export default function EventListPanel() {
                           onChange={(e) => setDateFrom(e.target.value)}
                           className="w-full mt-1 px-2 py-1.5 rounded-lg text-[11px]
                                      bg-[var(--glass-bg)] border border-[var(--glass-border)]
-                                     text-slate-300 focus:outline-none focus:border-blue-500/40"
+                                     text-txt-primary focus:outline-none focus:border-accent-primary/40"
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-600 font-medium uppercase tracking-wider">
+                        <label className="text-[10px] text-txt-muted font-medium uppercase tracking-wider">
                           To
                         </label>
                         <input
@@ -490,7 +490,7 @@ export default function EventListPanel() {
                           onChange={(e) => setDateTo(e.target.value)}
                           className="w-full mt-1 px-2 py-1.5 rounded-lg text-[11px]
                                      bg-[var(--glass-bg)] border border-[var(--glass-border)]
-                                     text-slate-300 focus:outline-none focus:border-blue-500/40"
+                                     text-txt-primary focus:outline-none focus:border-accent-primary/40"
                         />
                       </div>
                     </div>
@@ -499,7 +499,7 @@ export default function EventListPanel() {
                     {activeFilterCount > 0 && (
                       <button
                         onClick={clearFilters}
-                        className="text-[10px] text-red-400/70 hover:text-red-400 transition-colors"
+                        className="text-[10px] text-accent-danger/70 hover:text-accent-danger transition-colors"
                       >
                         Clear all filters
                       </button>
@@ -520,7 +520,7 @@ export default function EventListPanel() {
                 exit={{ opacity: 0 }}
                 className="flex-shrink-0 px-4 pt-2.5 pb-0"
               >
-                <p className="text-[10px] text-slate-700 font-medium uppercase tracking-wider">
+                <p className="text-[10px] text-txt-muted font-medium uppercase tracking-wider">
                   {filteredEvents.length} {filteredEvents.length === 1 ? 'event' : 'events'}
                 </p>
               </motion.div>

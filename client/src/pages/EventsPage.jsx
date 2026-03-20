@@ -45,8 +45,8 @@ import { openModal } from '../features/ui/uiSlice';
 
 const EVENT_CATEGORIES = [
   { value: 'all',           label: 'All',           emoji: '✨' },
-  { value: 'meetup',        label: 'Meetup',        emoji: '🤝', color: '#3b82f6' },
-  { value: 'party',         label: 'Party',         emoji: '🎉', color: '#8b5cf6' },
+  { value: 'meetup',        label: 'Meetup',        emoji: '🤝', color: 'var(--accent-primary)' },
+  { value: 'party',         label: 'Party',         emoji: '🎉', color: 'var(--accent-violet)' },
   { value: 'sports',        label: 'Sports',        emoji: '⚽', color: '#10b981' },
   { value: 'music',         label: 'Music',         emoji: '🎵', color: '#ec4899' },
   { value: 'food',          label: 'Food',          emoji: '🍕', color: '#f59e0b' },
@@ -102,7 +102,7 @@ const gridVariants = {
 
 function EventCardSkeleton() {
   return (
-    <div className="glass rounded-2xl border border-[var(--glass-border)] p-4 animate-pulse">
+    <div className="glass rounded-2xl border border-surface-divider p-4 animate-pulse">
       <div className="flex items-start gap-3">
         <div className="w-12 h-12 rounded-2xl bg-surface-hover flex-shrink-0" />
         <div className="flex-1 space-y-2.5">
@@ -153,7 +153,7 @@ const EventCard = memo(function EventCard({ event, onClick }) {
       {/* Category colour accent bar on the left edge */}
       <div
         className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-2xl"
-        style={{ backgroundColor: cat.color ?? '#3b82f6' }}
+        style={{ backgroundColor: cat.color ?? 'var(--accent-primary)' }}
       />
 
       <div className="p-4 pl-[18px]">
@@ -161,7 +161,7 @@ const EventCard = memo(function EventCard({ event, onClick }) {
           {/* Icon bubble */}
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 select-none"
-            style={{ backgroundColor: `${cat.color ?? '#3b82f6'}22` }}
+            style={{ backgroundColor: `color-mix(in srgb, ${cat.color ?? 'var(--accent-primary)'} 13%, transparent)` }}
           >
             {cat.emoji}
           </div>
@@ -179,9 +179,9 @@ const EventCard = memo(function EventCard({ event, onClick }) {
                 </span>
               ) : started ? (
                 <span className="flex-shrink-0 flex items-center gap-1 text-[9px] px-1.5 py-0.5
-                                 rounded-full font-semibold bg-green-500/15 text-green-400
+                                 rounded-full font-semibold bg-accent-success/15 text-accent-success
                                  uppercase tracking-wide">
-                  <span className="w-1 h-1 rounded-full bg-green-400 animate-pulse" />
+                  <span className="w-1 h-1 rounded-full bg-accent-success animate-pulse" />
                   Live
                 </span>
               ) : null}
@@ -220,7 +220,7 @@ const EventCard = memo(function EventCard({ event, onClick }) {
                   <span
                     key={tag}
                     className="px-1.5 py-0.5 rounded-full text-[10px]
-                               bg-violet-500/10 text-violet-400/70 border border-violet-500/15"
+                               bg-accent-violet/10 text-accent-violet/70 border border-accent-violet/15"
                   >
                     #{tag}
                   </span>
@@ -249,7 +249,7 @@ const CategoryChip = memo(function CategoryChip({ category, isActive, onClick })
         'flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium',
         'transition-all duration-200 border',
         isActive
-          ? 'bg-violet-500/20 text-violet-400 border-violet-500/40 shadow-sm'
+          ? 'bg-accent-violet/20 text-accent-violet border-accent-violet/40 shadow-sm'
           : 'glass text-txt-muted border-[var(--glass-border)] hover:text-txt-secondary hover:border-txt-muted/30',
       ].join(' ')}
     >
@@ -492,8 +492,8 @@ export default function EventsPage() {
               whileTap={{ scale: 0.96 }}
               onClick={handleCreateEvent}
               className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-xl
-                         bg-gradient-to-r from-blue-500 to-violet-500 text-white text-sm font-semibold
-                         hover:opacity-90 transition-opacity shadow-lg shadow-violet-500/20 flex-shrink-0"
+                         bg-gradient-to-r from-accent-primary to-accent-violet text-white text-sm font-semibold
+                         hover:opacity-90 transition-opacity shadow-lg shadow-accent-violet/20 flex-shrink-0"
             >
               <span className="text-lg leading-none">+</span>
               Create Event
@@ -567,7 +567,7 @@ export default function EventsPage() {
                   'flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium',
                   'transition-all duration-200 whitespace-nowrap',
                   activeTab === tab.id
-                    ? 'bg-violet-500/20 text-violet-400 shadow-sm'
+                    ? 'bg-accent-violet/20 text-accent-violet shadow-sm'
                     : 'text-txt-muted hover:text-txt-secondary',
                 ].join(' ')}
               >
@@ -595,7 +595,7 @@ export default function EventsPage() {
             </svg>
             Filters
             {activeFilterCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full text-xs font-bold bg-violet-500/20 text-violet-400">
+              <span className="px-1.5 py-0.5 rounded-full text-xs font-bold bg-accent-violet/20 text-accent-violet">
                 {activeFilterCount}
               </span>
             )}
@@ -634,7 +634,7 @@ export default function EventsPage() {
                               className={[
                                 'px-2.5 py-1 rounded-full text-xs font-medium transition-all border',
                                 active
-                                  ? 'bg-violet-500/20 text-violet-400 border-violet-500/30'
+                                  ? 'bg-accent-violet/20 text-accent-violet border-accent-violet/30'
                                   : 'glass text-txt-muted border-[var(--glass-border)] hover:text-txt-secondary',
                               ].join(' ')}
                             >
@@ -681,7 +681,7 @@ export default function EventsPage() {
                   {activeFilterCount > 0 && (
                     <button
                       onClick={clearFilters}
-                      className="text-xs text-red-400/70 hover:text-red-400 transition-colors"
+                      className="text-xs text-accent-danger/70 hover:text-accent-danger transition-colors"
                     >
                       Clear all filters
                     </button>
@@ -714,8 +714,8 @@ export default function EventsPage() {
             variants={sectionVariants}
             className="glass border border-red-500/20 rounded-2xl p-4 flex items-center gap-3"
           >
-            <span className="text-red-400 text-lg">⚠️</span>
-            <p className="text-sm text-red-400">
+            <span className="text-accent-danger text-lg">⚠️</span>
+            <p className="text-sm text-accent-danger">
               Failed to load events. <button onClick={() => dispatch(fetchViewportEvents(WORLD_BOUNDS))} className="underline hover:no-underline">Try again</button>
             </p>
           </motion.div>
@@ -763,8 +763,8 @@ export default function EventsPage() {
         onClick={handleCreateEvent}
         aria-label="Create new event"
         className="sm:hidden fixed bottom-6 right-4 z-40 w-14 h-14 rounded-full
-                   bg-gradient-to-r from-blue-500 to-violet-500 text-white text-2xl font-bold
-                   shadow-xl shadow-violet-500/30
+                   bg-gradient-to-r from-accent-primary to-accent-violet text-white text-2xl font-bold
+                   shadow-xl shadow-accent-violet/30
                    flex items-center justify-center
                    hover:opacity-90 transition-opacity"
       >

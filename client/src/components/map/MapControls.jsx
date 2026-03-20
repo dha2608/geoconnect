@@ -126,7 +126,7 @@ export default function MapControls() {
           fill="none"
           aria-hidden="true"
         >
-          <polygon points="12,2 16,14 12,11 8,14" fill="#ef4444" stroke="#ef4444" strokeWidth="1" />
+          <polygon points="12,2 16,14 12,11 8,14" fill="var(--accent-danger)" stroke="var(--accent-danger)" strokeWidth="1" />
           <polygon points="12,22 16,14 12,17 8,14" fill="currentColor" stroke="currentColor" strokeWidth="1" opacity="0.4" />
           <circle cx="12" cy="12" r="2" fill="currentColor" opacity="0.6" />
         </svg>
