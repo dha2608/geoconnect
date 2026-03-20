@@ -43,8 +43,8 @@ const SPRING = { type: 'spring', stiffness: 320, damping: 32, mass: 0.85 };
 
 const TYPE_CONFIG = {
   follow: {
-    color: '#06b6d4',
-    bg: 'rgba(6,182,212,0.12)',
+    color: 'var(--accent-secondary)',
+    bg: 'color-mix(in srgb, var(--accent-secondary) 12%, transparent)',
     Icon: () => (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
         <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
@@ -53,8 +53,8 @@ const TYPE_CONFIG = {
     ),
   },
   like: {
-    color: '#ef4444',
-    bg: 'rgba(239,68,68,0.12)',
+    color: 'var(--accent-danger)',
+    bg: 'color-mix(in srgb, var(--accent-danger) 12%, transparent)',
     Icon: () => (
       <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
         <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
@@ -62,8 +62,8 @@ const TYPE_CONFIG = {
     ),
   },
   comment: {
-    color: '#3b82f6',
-    bg: 'rgba(59,130,246,0.12)',
+    color: 'var(--accent-primary)',
+    bg: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
     Icon: () => (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
@@ -71,8 +71,8 @@ const TYPE_CONFIG = {
     ),
   },
   event: {
-    color: '#8b5cf6',
-    bg: 'rgba(139,92,246,0.12)',
+    color: 'var(--accent-violet)',
+    bg: 'color-mix(in srgb, var(--accent-violet) 12%, transparent)',
     Icon: () => (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -83,8 +83,8 @@ const TYPE_CONFIG = {
     ),
   },
   review: {
-    color: '#f59e0b',
-    bg: 'rgba(245,158,11,0.12)',
+    color: 'var(--accent-warning)',
+    bg: 'color-mix(in srgb, var(--accent-warning) 12%, transparent)',
     Icon: () => (
       <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -92,8 +92,8 @@ const TYPE_CONFIG = {
     ),
   },
   message: {
-    color: '#94a3b8',
-    bg: 'rgba(148,163,184,0.10)',
+    color: 'var(--txt-muted)',
+    bg: 'color-mix(in srgb, var(--txt-muted) 10%, transparent)',
     Icon: () => (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
@@ -198,7 +198,7 @@ const NotificationItem = memo(function NotificationItem({ notification, onRead, 
           {!read && (
             <span
               className="w-2 h-2 rounded-full block group-hover:opacity-0 transition-opacity duration-150"
-              style={{ backgroundColor: '#8b5cf6', boxShadow: '0 0 6px rgba(139,92,246,0.6)' }}
+              style={{ backgroundColor: 'var(--accent-violet)', boxShadow: '0 0 6px color-mix(in srgb, var(--accent-violet) 60%, transparent)' }}
             />
           )}
           <button

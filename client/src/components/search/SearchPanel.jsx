@@ -258,13 +258,13 @@ export default function SearchPanel() {
   // Focus ring on input wrapper
   const focusRing = () => {
     if (wrapRef.current) {
-      wrapRef.current.style.borderColor = 'rgba(59,130,246,0.50)';
-      wrapRef.current.style.boxShadow   = '0 0 0 3px rgba(59,130,246,0.10)';
+      wrapRef.current.style.borderColor = 'color-mix(in srgb, var(--accent-primary) 50%, transparent)';
+      wrapRef.current.style.boxShadow   = '0 0 0 3px color-mix(in srgb, var(--accent-primary) 10%, transparent)';
     }
   };
   const blurRing = () => {
     if (wrapRef.current) {
-      wrapRef.current.style.borderColor = 'rgba(59,130,246,0.18)';
+      wrapRef.current.style.borderColor = 'color-mix(in srgb, var(--accent-primary) 18%, transparent)';
       wrapRef.current.style.boxShadow   = 'none';
     }
   };
@@ -333,7 +333,7 @@ export default function SearchPanel() {
                 icon={<IconMapPin className="w-[12px] h-[12px]" />}
                 label="Places"
                 count={counts.places}
-                color="#3b82f6"
+                color="var(--accent-primary)"
               />
             )}
             <div className="flex flex-col gap-1.5">
@@ -366,7 +366,7 @@ export default function SearchPanel() {
                 icon={<IconUser className="w-[12px] h-[12px]" />}
                 label="Users"
                 count={counts.users}
-                color="#8b5cf6"
+                color="var(--accent-violet)"
               />
             )}
             <div className="flex flex-col gap-1.5">
@@ -398,7 +398,7 @@ export default function SearchPanel() {
                 icon={<IconPin className="w-[12px] h-[12px]" />}
                 label="Pins"
                 count={counts.pins}
-                color="#10b981"
+                color="var(--accent-success)"
               />
             )}
             <div className="flex flex-col gap-1.5">
@@ -430,7 +430,7 @@ export default function SearchPanel() {
                 icon={<IconCalendar className="w-[12px] h-[12px]" />}
                 label="Events"
                 count={counts.events}
-                color="#f59e0b"
+                color="var(--accent-warning)"
               />
             )}
             <div className="flex flex-col gap-1.5">
@@ -520,7 +520,7 @@ export default function SearchPanel() {
             aria-label="Search"
             className="w-full bg-transparent border-none outline-none font-body text-sm
                        text-txt-primary placeholder:text-txt-muted"
-            style={{ padding: '13px 44px 13px 42px', caretColor: '#3b82f6' }}
+            style={{ padding: '13px 44px 13px 42px', caretColor: 'var(--accent-primary)' }}
           />
           <span className="absolute right-[12px] flex items-center">
             {isLoading ? (
@@ -532,7 +532,7 @@ export default function SearchPanel() {
                 onClick={handleClear}
                 aria-label="Clear search input"
                 className="w-[24px] h-[24px] flex items-center justify-center rounded-md
-                           bg-[rgba(71,85,105,0.28)] text-txt-muted hover:text-txt-primary
+                           bg-surface-hover text-txt-muted hover:text-txt-primary
                            transition-colors duration-150"
               >
                 <IconX className="w-[11px] h-[11px]" />
@@ -589,12 +589,12 @@ export default function SearchPanel() {
             className="flex-shrink-0 mx-4 my-1 flex items-center gap-2 px-3.5 py-[10px]
                        rounded-xl text-[13px] font-body"
             style={{
-              background: 'rgba(239,68,68,0.07)',
-              border:     '1px solid rgba(239,68,68,0.22)',
-              color:      '#fca5a5',
+              background: 'color-mix(in srgb, var(--accent-danger) 7%, transparent)',
+              border:     '1px solid color-mix(in srgb, var(--accent-danger) 22%, transparent)',
+              color:      'var(--accent-danger)',
             }}
           >
-            <span className="flex-shrink-0 text-[#f87171]"><IconAlert /></span>
+            <span className="flex-shrink-0 text-accent-danger"><IconAlert /></span>
             {error}
           </motion.div>
         )}

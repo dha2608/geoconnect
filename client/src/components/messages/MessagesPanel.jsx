@@ -253,7 +253,7 @@ const SingleCheckIcon = () => (
 
 /** Double check = read by recipient */
 const DoubleCheckIcon = ({ read }) => (
-  <svg viewBox="0 0 20 16" fill="none" stroke={read ? '#60a5fa' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3">
+  <svg viewBox="0 0 20 16" fill="none" stroke={read ? 'var(--accent-primary)' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3">
     <polyline points="1 8.5 5 12.5 13 4.5" />
     <polyline points="5 8.5 9 12.5 17 4.5" />
   </svg>
@@ -342,7 +342,7 @@ function MessageBubble({ message, isOwn, otherParticipantId, currentUserId, onDe
     : 'rounded-bl-sm text-txt-primary border border-[var(--glass-border)]';
 
   const bubbleStyle = isOwn
-    ? { background: '#6366f1', boxShadow: '0 2px 12px rgba(139,92,246,0.25)' }
+    ? { background: 'var(--accent-primary)', boxShadow: '0 2px 12px color-mix(in srgb, var(--accent-violet) 25%, transparent)' }
     : { background: 'var(--glass-bg)' };
 
   return (
@@ -707,7 +707,7 @@ function NewConversationView({ currentUserId, onClose, onBack, onStartChat }) {
 
         {/* Error */}
         {error && (
-          <p className="text-center text-sm text-red-400 font-body py-4">{error}</p>
+          <p className="text-center text-sm text-accent-danger font-body py-4">{error}</p>
         )}
 
         {/* No results */}
@@ -946,10 +946,10 @@ function ConversationListView({ currentUserId, onClose, onSelectConversation, on
                           : 'No messages yet'}
                       </p>
                       {hasUnread && (
-                        <span
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: '#8b5cf6', boxShadow: '0 0 6px rgba(139,92,246,0.6)' }}
-                        />
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: 'var(--accent-violet)', boxShadow: '0 0 6px color-mix(in srgb, var(--accent-violet) 60%, transparent)' }}
+                          />
                       )}
                     </div>
                   </div>
@@ -1366,9 +1366,14 @@ function ActiveChatView({ conversation, currentUserId, onBack, onClose }) {
               'w-10 h-10 flex items-center justify-center rounded-xl flex-shrink-0',
               'transition-all duration-150',
               (inputText.trim() || selectedImages.length > 0) && !isSending
-                ? 'bg-accent-primary text-white shadow-[0_0_16px_rgba(139,92,246,0.4)] hover:bg-blue-500'
+                ? 'bg-accent-primary text-white hover:bg-accent-primary/90'
                 : 'bg-surface-hover text-txt-muted cursor-not-allowed',
             ].join(' ')}
+            style={
+              (inputText.trim() || selectedImages.length > 0) && !isSending
+                ? { boxShadow: '0 0 16px color-mix(in srgb, var(--accent-violet) 40%, transparent)' }
+                : undefined
+            }
           >
             {isSending ? (
               <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
