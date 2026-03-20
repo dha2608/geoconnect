@@ -6,7 +6,7 @@ import MapViewportTracker from './MapViewportTracker';
 import UserLocationMarker from './UserLocationMarker';
 import MapControls from './MapControls';
 import SearchBar from './SearchBar';
-import QuickCategories from './QuickCategories';
+
 import NearbyUsersLayer from '../social/NearbyUsersLayer';
 import PinClusterLayer from '../pins/PinClusterLayer';
 import EventLayer from '../events/EventLayer';
@@ -131,10 +131,9 @@ const MapView = memo(function MapView() {
         <MapToolbar />
       </MapContainer>
 
-      {/* SearchBar + QuickCategories rendered above the Leaflet canvas */}
+      {/* SearchBar + overlays rendered above the Leaflet canvas */}
       <div className="absolute inset-0 pointer-events-none z-[1000]">
         <SearchBar />
-        <QuickCategories />
         <PinFilterWidget />
       </div>
     </div>

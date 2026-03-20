@@ -1,464 +1,368 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { setActivePanel, closePanel, setSidebarOpen, toggleSidebarExpanded } from '../../features/ui/uiSlice';
-import { logout } from '../../features/auth/authSlice';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import {
+  setSidebarOpen,
+  setActivePanel,
+  closePanel,
+} from '../../features/ui/uiSlice';
+import { logout as logoutAction } from '../../features/auth/authSlice';
 import Avatar from '../ui/Avatar';
 
 /* ── Constants ─────────────────────────────────────────────────────── */
-const SIDEBAR_COLLAPSED = 72;
-const SIDEBAR_EXPANDED = 240;
+const SIDEBAR_W = 56; // Desktop icon-only width (px)
+const MOBILE_W = 260; // Mobile drawer width (px)
 
-/* ── Animation variants ────────────────────────────────────────────── */
-const sidebarVariants = {
-  hidden: { x: -320, opacity: 0 },
-  visible: { x: 0, opacity: 1, transition: { type: 'spring', damping: 30, stiffness: 300 } },
-  exit: { x: -320, opacity: 0, transition: { duration: 0.2 } },
-};
+/* ── Tooltip ───────────────────────────────────────────────────────── */
+function Tooltip({ label, visible, parentRef }) {
+  if (!visible || !parentRef.current) return null;
+  const rect = parentRef.current.getBoundingClientRect();
+  return (
+    <div
+      className="fixed z-[200] pointer-events-none"
+      style={{ top: rect.top + rect.height / 2, left: rect.right + 10, transform: 'translateY(-50%)' }}
+    >
+      <div className="rounded-md bg-elevated/95 backdrop-blur-sm border border-surface-divider px-2.5 py-1 text-xs font-medium text-txt-primary shadow-lg whitespace-nowrap">
+        {label}
+      </div>
+    </div>
+  );
+}
 
-const tooltipVariants = {
-  hidden: { opacity: 0, x: -4, scale: 0.96 },
-  visible: { opacity: 1, x: 0, scale: 1, transition: { duration: 0.15, ease: 'easeOut' } },
-  exit: { opacity: 0, x: -4, scale: 0.96, transition: { duration: 0.1 } },
-};
-
-const dropdownVariants = {
-  hidden: { opacity: 0, y: 8, scale: 0.95 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', damping: 25, stiffness: 400 } },
-  exit: { opacity: 0, y: 8, scale: 0.95, transition: { duration: 0.12 } },
-};
-
-/* ── Tooltip with delay ────────────────────────────────────────────── */
-function Tooltip({ children, label, show }) {
-  const [visible, setVisible] = useState(false);
+/* ── NavItem ───────────────────────────────────────────────────────── */
+const NavItem = memo(function NavItem({ icon, label, isActive, badge, onClick, expanded }) {
+  const [hovered, setHovered] = useState(false);
+  const ref = useRef(null);
   const timerRef = useRef(null);
 
-  const handleEnter = useCallback(() => {
-    if (!show) return;
-    timerRef.current = setTimeout(() => setVisible(true), 400);
-  }, [show]);
-
-  const handleLeave = useCallback(() => {
+  const handleEnter = () => {
+    timerRef.current = setTimeout(() => setHovered(true), 100);
+  };
+  const handleLeave = () => {
     clearTimeout(timerRef.current);
-    setVisible(false);
-  }, []);
-
-  useEffect(() => () => clearTimeout(timerRef.current), []);
+    setHovered(false);
+  };
 
   return (
-    <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
-      {children}
-      <AnimatePresence>
-        {visible && (
-          <motion.div
-            variants={tooltipVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="absolute left-full ml-3 top-1/2 -translate-y-1/2 z-50 px-3 py-1.5 bg-elevated border border-surface-divider text-txt-primary text-xs font-medium rounded-lg shadow-md whitespace-nowrap pointer-events-none"
-          >
-            {label}
-            {/* Arrow */}
-            <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-r-[5px] border-r-elevated" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-/* ── Section label ─────────────────────────────────────────────────── */
-function SectionLabel({ label, expanded }) {
-  return (
-    <div className="px-3 pt-4 pb-1">
-      <AnimatePresence mode="wait">
-        {expanded ? (
-          <motion.span
-            key="label"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="text-[10px] font-semibold uppercase tracking-widest text-txt-muted select-none"
-          >
-            {label}
-          </motion.span>
-        ) : (
-          <motion.div
-            key="dot"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="mx-auto w-4 h-px bg-surface-divider"
-          />
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-/* ── Nav item ──────────────────────────────────────────────────────── */
-function NavItem({ item, isActive, expanded, badge, onClick }) {
-  return (
-    <Tooltip label={item.label} show={!expanded}>
+    <div className="relative" ref={ref} onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       <button
         onClick={onClick}
-        className={`relative w-full flex items-center gap-3 rounded-xl transition-all duration-150 group
-          ${expanded ? 'px-3 h-11' : 'justify-center h-11 mx-auto'}
+        className={`
+          group relative flex items-center w-full rounded-lg transition-all duration-150
+          ${expanded ? 'h-9 gap-3 px-3' : 'h-9 w-9 mx-auto justify-center'}
           ${isActive
-            ? 'bg-gradient-to-r from-blue-500/12 to-violet-500/12 text-blue-400'
-            : 'text-txt-muted hover:text-txt-secondary hover:bg-surface-hover'
-          }`}
-        style={expanded ? {} : { width: 44 }}
-        aria-label={item.label}
-        aria-current={isActive ? 'page' : undefined}
+            ? 'bg-white/[0.08] text-txt-primary'
+            : 'text-txt-muted hover:bg-white/[0.05] hover:text-txt-secondary'}
+        `}
+        aria-label={label}
+        aria-pressed={isActive}
       >
-        {/* Active indicator pill — Discord-style left bar */}
-        <AnimatePresence>
-          {isActive && (
-            <motion.div
-              layoutId="sidebar-active-pill"
-              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-gradient-to-b from-blue-500 to-violet-500"
-              style={{ height: expanded ? 24 : 20 }}
-              initial={{ opacity: 0, scaleY: 0 }}
-              animate={{ opacity: 1, scaleY: 1 }}
-              exit={{ opacity: 0, scaleY: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 400 }}
-            />
-          )}
-        </AnimatePresence>
+        {/* Active dot indicator (collapsed) */}
+        {isActive && !expanded && (
+          <motion.div
+            layoutId="sidebar-dot"
+            className="absolute -left-[2px] top-1/2 -translate-y-1/2 h-4 w-[3px] rounded-full bg-accent-primary"
+            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+          />
+        )}
 
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="flex-shrink-0"
-        >
-          <path d={item.icon} />
+        {/* Active pill (expanded) */}
+        {isActive && expanded && (
+          <motion.div
+            layoutId="sidebar-active-bg"
+            className="absolute inset-0 rounded-lg bg-white/[0.08]"
+            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+          />
+        )}
+
+        <svg className="h-[18px] w-[18px] shrink-0 relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isActive ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d={icon} />
         </svg>
 
-        {/* Label (expanded only) */}
-        <AnimatePresence>
-          {expanded && (
-            <motion.span
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.15 }}
-              className="text-sm font-medium whitespace-nowrap overflow-hidden"
-            >
-              {item.label}
-            </motion.span>
-          )}
-        </AnimatePresence>
+        {expanded && (
+          <span className="text-[13px] font-medium truncate relative z-10">{label}</span>
+        )}
 
         {/* Badge */}
         {badge > 0 && (
-          <span className={`flex-shrink-0 min-w-[18px] h-[18px] bg-gradient-to-r from-blue-500 to-violet-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white
-            ${expanded ? 'ml-auto' : 'absolute -top-1 -right-1'}`}
-          >
+          <span className={`
+            ${expanded ? 'ml-auto' : 'absolute -top-0.5 -right-0.5'}
+            min-w-[16px] h-4 px-1 flex items-center justify-center
+            rounded-full bg-accent-primary text-[10px] font-bold text-white
+          `}>
             {badge > 99 ? '99+' : badge}
           </span>
         )}
       </button>
-    </Tooltip>
+
+      {/* Tooltip (collapsed only) */}
+      {!expanded && <Tooltip label={label} visible={hovered} parentRef={ref} />}
+    </div>
   );
-}
+});
 
-/* ── User dropdown menu ────────────────────────────────────────────── */
-function UserMenu({ user, expanded, onClose }) {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { t } = useTranslation();
-  const menuRef = useRef(null);
-
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) onClose();
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [onClose]);
-
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [onClose]);
-
-  const menuItems = [
-    {
-      label: t('nav.profile', 'My Profile'),
-      icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
-      action: () => { dispatch(setActivePanel('profile')); onClose(); },
-    },
-    {
-      label: t('common.settings', 'Settings'),
-      icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z',
-      iconExtra: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z',
-      action: () => { navigate('/settings'); onClose(); },
-    },
-    { type: 'divider' },
-    {
-      label: t('common.logout', 'Log out'),
-      icon: 'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1',
-      action: () => { dispatch(logout()); onClose(); },
-      danger: true,
-    },
-  ];
-
-  return (
-    <motion.div
-      ref={menuRef}
-      variants={dropdownVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      className={`absolute z-50 glass border border-surface-divider shadow-lg rounded-xl py-1.5 min-w-[180px]
-        ${expanded ? 'bottom-full mb-2 left-0 right-0' : 'bottom-0 left-full ml-3'}`}
-      role="menu"
-    >
-      {/* User info header */}
-      <div className="px-3 py-2 border-b border-surface-divider">
-        <p className="text-sm font-medium text-txt-primary truncate">{user?.name || 'User'}</p>
-        <p className="text-xs text-txt-muted truncate">@{user?.username || 'user'}</p>
-      </div>
-
-      {menuItems.map((item, i) =>
-        item.type === 'divider' ? (
-          <div key={`divider-${i}`} className="my-1 border-t border-surface-divider" />
-        ) : (
-          <button
-            key={item.label}
-            onClick={item.action}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors
-              ${item.danger
-                ? 'text-accent-danger hover:bg-accent-danger/10'
-                : 'text-txt-secondary hover:text-txt-primary hover:bg-surface-hover'
-              }`}
-            role="menuitem"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-              <path d={item.icon} />
-              {item.iconExtra && <path d={item.iconExtra} />}
-            </svg>
-            {item.label}
-          </button>
-        ),
-      )}
-    </motion.div>
-  );
+/* ── Divider ───────────────────────────────────────────────────────── */
+function Divider() {
+  return <div className="mx-3 my-1.5 h-px bg-surface-divider/50" />;
 }
 
 /* ── Main Sidebar ──────────────────────────────────────────────────── */
 export default function Sidebar() {
-  const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { t } = useTranslation();
 
-  const { sidebarOpen, sidebarExpanded, activePanel, isMobile } = useSelector((state) => state.ui);
-  const { user } = useSelector((state) => state.auth);
+  const { sidebarOpen, activePanel, isMobile } = useSelector((state) => state.ui);
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
   const { unreadCount: unreadMessages } = useSelector((state) => state.messages);
   const { unreadCount: unreadNotifications } = useSelector((state) => state.notifications);
 
-  const expanded = !isMobile && sidebarExpanded;
-  const isVisible = isMobile ? sidebarOpen : true;
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
+  const expanded = isMobile; // Mobile always expanded, desktop always icon-only
 
-  /* ── Navigation sections ── */
-  const sections = [
-    {
-      label: t('nav.sectionMain', 'Main'),
-      items: [
-        { id: 'feed', label: t('nav.feed', 'Feed'), icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-        { id: 'explore', label: t('nav.explore', 'Explore'), icon: 'M12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2ZM16.24 7.76L14.12 14.12L7.76 16.24L9.88 9.88Z', path: '/explore' },
-        { id: 'search', label: t('nav.search', 'Search'), icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
-        { id: 'activity', label: t('nav.activity', 'Activity'), icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', path: '/activity' },
-      ],
-    },
-    {
-      label: t('nav.sectionContent', 'Content'),
-      items: [
-        { id: 'collections', label: t('nav.collections', 'Collections'), icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10', path: '/collections' },
-        { id: 'events', label: t('nav.events', 'Events'), icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-      ],
-    },
-    {
-      label: t('nav.sectionSocial', 'Social'),
-      items: [
-        { id: 'notifications', label: t('nav.notifications', 'Notifications'), icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9', badge: 'notifications' },
-        { id: 'messages', label: t('nav.messages', 'Messages'), icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', badge: 'messages' },
-        { id: 'leaderboard', label: t('nav.leaderboard', 'Leaderboard'), icon: 'M16 8V2H8v6M2 8h20l-2 12H4L2 8zM12 12v4', path: '/leaderboard' },
-      ],
-    },
+  /* ── Navigation items (flat, no sections in collapsed) ── */
+  const NAV_ITEMS = [
+    { id: 'feed', label: t('nav.feed', 'Feed'), icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+    { id: 'explore', label: t('nav.explore', 'Explore'), icon: 'M12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2ZM16.24 7.76L14.12 14.12L7.76 16.24L9.88 9.88Z', path: '/explore' },
+    { id: 'search', label: t('nav.search', 'Search'), icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
+    null, // divider
+    { id: 'activity', label: t('nav.activity', 'Activity'), icon: 'M13 10V3L4 14h7v7l9-11h-7z', path: '/activity' },
+    { id: 'collections', label: t('nav.collections', 'Collections'), icon: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z', path: '/collections' },
+    { id: 'events', label: t('nav.events', 'Events'), icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', path: '/events' },
+    null, // divider
+    { id: 'notifications', label: t('nav.notifications', 'Notifications'), icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9', badge: 'notifications' },
+    { id: 'messages', label: t('nav.messages', 'Messages'), icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', badge: 'messages' },
+    { id: 'leaderboard', label: t('nav.leaderboard', 'Leaderboard'), icon: 'M16 8V2H8v6M2 8h20l-2 12H4L2 8zM12 12v4', path: '/leaderboard' },
   ];
+
+  /* ── Helpers ── */
+  const isItemActive = useCallback((item) => {
+    if (item.path) return location.pathname === item.path;
+    return activePanel === item.id;
+  }, [location.pathname, activePanel]);
 
   const handleNavClick = useCallback((item) => {
     if (item.path) {
       navigate(item.path);
+      dispatch(closePanel());
     } else {
       dispatch(setActivePanel(activePanel === item.id ? null : item.id));
     }
     if (isMobile) dispatch(setSidebarOpen(false));
-  }, [navigate, dispatch, activePanel, isMobile]);
+  }, [dispatch, navigate, activePanel, isMobile]);
 
-  const isItemActive = useCallback((item) => {
-    return item.path ? location.pathname === item.path : activePanel === item.id;
-  }, [location.pathname, activePanel]);
+  const getBadge = useCallback((item) => {
+    if (item.badge === 'messages') return unreadMessages;
+    if (item.badge === 'notifications') return unreadNotifications;
+    return 0;
+  }, [unreadMessages, unreadNotifications]);
+
+  /* ── Close user menu on outside click ── */
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const handler = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setUserMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [userMenuOpen]);
+
+  /* ── Close user menu on Escape ── */
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const handler = (e) => { if (e.key === 'Escape') setUserMenuOpen(false); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [userMenuOpen]);
+
+  const handleLogout = useCallback(async () => {
+    setUserMenuOpen(false);
+    await dispatch(logoutAction()).unwrap();
+    navigate('/welcome');
+  }, [dispatch, navigate]);
+
+  /* ── Render ── */
+  const isVisible = isMobile ? sidebarOpen : true;
 
   return (
-    <AnimatePresence>
-      {isVisible && (
-        <>
-          {/* Mobile overlay backdrop */}
-          {isMobile && (
-            <motion.div
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => dispatch(setSidebarOpen(false))}
-            />
-          )}
+    <>
+      {/* Mobile backdrop */}
+      <AnimatePresence>
+        {isMobile && sidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[38] bg-black/50 backdrop-blur-[2px]"
+            onClick={() => dispatch(setSidebarOpen(false))}
+          />
+        )}
+      </AnimatePresence>
 
+      {/* Sidebar */}
+      <AnimatePresence>
+        {isVisible && (
           <motion.aside
-            variants={sidebarVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="fixed top-0 left-0 bottom-0 z-30 glass border-r border-surface-divider flex flex-col overflow-hidden"
             data-tour="sidebar"
-            style={{
-              width: isMobile ? SIDEBAR_EXPANDED : expanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED,
-              transition: isMobile ? undefined : 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-            }}
-            role="navigation"
-            aria-label="Main navigation"
+            initial={isMobile ? { x: -MOBILE_W } : false}
+            animate={isMobile ? { x: 0 } : undefined}
+            exit={isMobile ? { x: -MOBILE_W } : undefined}
+            transition={{ type: 'spring', stiffness: 350, damping: 32 }}
+            className={`
+              fixed top-0 bottom-0 left-0 z-[39] flex flex-col
+              bg-base/95 backdrop-blur-xl border-r border-surface-divider/40
+              ${isMobile ? '' : ''}
+            `}
+            style={{ width: isMobile ? MOBILE_W : SIDEBAR_W }}
           >
-            {/* ── Nav sections ── */}
-            <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-2 sidebar-scroll">
-              {sections.map((section) => (
-                <div key={section.label}>
-                  <SectionLabel label={section.label} expanded={expanded || isMobile} />
-                  <div className="flex flex-col gap-0.5">
-                    {section.items.map((item) => (
-                      <NavItem
-                        key={item.id}
-                        item={item}
-                        isActive={isItemActive(item)}
-                        expanded={expanded || isMobile}
-                        badge={item.badge === 'messages' ? unreadMessages : item.badge === 'notifications' ? unreadNotifications : 0}
-                        onClick={() => handleNavClick(item)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
+            {/* Logo area */}
+            <div className={`flex items-center shrink-0 ${expanded ? 'h-14 px-4 gap-3' : 'h-14 justify-center'}`}>
+              <motion.div
+                className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-blue-500 to-violet-500"
+                whileHover={{ rotate: 8, scale: 1.08 }}
+                transition={{ type: 'spring', stiffness: 300 }}
+              >
+                <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                  <circle cx="12" cy="9" r="2.5" />
+                </svg>
+              </motion.div>
+              {expanded && (
+                <span className="font-heading text-sm font-bold tracking-tight text-txt-primary">GeoConnect</span>
+              )}
+              {/* Mobile close button */}
+              {isMobile && (
+                <button
+                  onClick={() => dispatch(setSidebarOpen(false))}
+                  className="ml-auto w-7 h-7 rounded-md flex items-center justify-center text-txt-muted hover:text-txt-primary hover:bg-white/[0.05] transition-colors"
+                  aria-label="Close sidebar"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                </button>
+              )}
+            </div>
+
+            {/* Navigation */}
+            <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-2 ${expanded ? 'px-3' : 'px-2'}`}>
+              <div className="flex flex-col gap-0.5">
+                {NAV_ITEMS.map((item, i) =>
+                  item === null ? (
+                    <Divider key={`d-${i}`} />
+                  ) : (
+                    <NavItem
+                      key={item.id}
+                      icon={item.icon}
+                      label={item.label}
+                      isActive={isItemActive(item)}
+                      badge={getBadge(item)}
+                      onClick={() => handleNavClick(item)}
+                      expanded={expanded}
+                    />
+                  )
+                )}
+              </div>
             </nav>
 
-            {/* ── Bottom section: user profile + expand toggle ── */}
-            <div className="border-t border-surface-divider px-2.5 py-3 flex flex-col gap-2 relative">
-              {/* User profile button */}
-              <Tooltip label={user?.name || 'Profile'} show={!expanded && !isMobile}>
-                <button
-                  onClick={() => setUserMenuOpen((prev) => !prev)}
-                  className={`w-full flex items-center gap-3 rounded-xl transition-all duration-150 hover:bg-surface-hover
-                    ${expanded || isMobile ? 'px-2.5 py-2' : 'justify-center py-2'}`}
-                  aria-label="User menu"
-                  aria-expanded={userMenuOpen}
-                  aria-haspopup="menu"
-                >
-                  <Avatar
-                    src={user?.avatar}
-                    name={user?.name || 'User'}
-                    size="sm"
-                    online
-                  />
-                  <AnimatePresence>
-                    {(expanded || isMobile) && (
-                      <motion.div
-                        initial={{ opacity: 0, width: 0 }}
-                        animate={{ opacity: 1, width: 'auto' }}
-                        exit={{ opacity: 0, width: 0 }}
-                        className="flex-1 min-w-0 text-left"
-                      >
-                        <p className="text-sm font-medium text-txt-primary truncate leading-tight">
-                          {user?.name || 'User'}
-                        </p>
-                        <p className="text-[11px] text-txt-muted truncate leading-tight">
-                          {t('common.online', 'Online')}
-                        </p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  {(expanded || isMobile) && (
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className={`text-txt-muted flex-shrink-0 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`}
-                    >
-                      <path d="M18 15l-6-6-6 6" />
-                    </svg>
-                  )}
-                </button>
-              </Tooltip>
-
-              {/* User dropdown menu */}
+            {/* User section */}
+            <div ref={userMenuRef} className={`relative shrink-0 border-t border-surface-divider/40 ${expanded ? 'p-3' : 'py-3 flex justify-center'}`}>
               <AnimatePresence>
                 {userMenuOpen && (
-                  <UserMenu
-                    user={user}
-                    expanded={expanded || isMobile}
-                    onClose={() => setUserMenuOpen(false)}
-                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                    transition={{ duration: 0.12 }}
+                    className={`
+                      absolute z-50 overflow-hidden rounded-lg bg-elevated/95 backdrop-blur-xl border border-surface-divider shadow-xl
+                      ${expanded ? 'bottom-full mb-2 left-3 right-3' : 'bottom-0 left-full ml-2 w-44'}
+                    `}
+                  >
+                    <div className="p-1">
+                      {isAuthenticated ? (
+                        <>
+                          <button
+                            onClick={() => { setUserMenuOpen(false); navigate('/profile'); if (isMobile) dispatch(setSidebarOpen(false)); }}
+                            className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md text-[13px] text-txt-secondary hover:bg-white/[0.05] hover:text-txt-primary transition-colors"
+                          >
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                            Profile
+                          </button>
+                          <button
+                            onClick={() => { setUserMenuOpen(false); navigate('/settings'); if (isMobile) dispatch(setSidebarOpen(false)); }}
+                            className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md text-[13px] text-txt-secondary hover:bg-white/[0.05] hover:text-txt-primary transition-colors"
+                          >
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
+                            Settings
+                          </button>
+                          <div className="mx-1.5 my-1 h-px bg-surface-divider/50" />
+                          <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md text-[13px] text-red-400 hover:bg-red-500/10 transition-colors"
+                          >
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                            Log out
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => { setUserMenuOpen(false); navigate('/login'); }}
+                            className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md text-[13px] text-txt-secondary hover:bg-white/[0.05] hover:text-txt-primary transition-colors"
+                          >
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></svg>
+                            Sign in
+                          </button>
+                          <button
+                            onClick={() => { setUserMenuOpen(false); navigate('/register'); }}
+                            className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md text-[13px] text-accent-primary hover:bg-accent-primary/10 transition-colors"
+                          >
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" /></svg>
+                            Create account
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* Expand/Collapse toggle (desktop only) */}
-              {!isMobile && (
-                <Tooltip label={expanded ? t('common.collapse', 'Collapse') : t('common.expand', 'Expand')} show={!expanded}>
-                  <button
-                    onClick={() => dispatch(toggleSidebarExpanded())}
-                    className="w-full flex items-center justify-center h-9 rounded-xl text-txt-muted hover:text-txt-secondary hover:bg-surface-hover transition-all duration-150"
-                    aria-label={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
-                  >
-                    <motion.svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      animate={{ rotate: expanded ? 180 : 0 }}
-                      transition={{ duration: 0.25 }}
-                    >
-                      <path d="M13 17l5-5-5-5" />
-                      <path d="M6 17l5-5-5-5" />
-                    </motion.svg>
-                  </button>
-                </Tooltip>
-              )}
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className={`
+                  flex items-center rounded-lg transition-colors duration-150
+                  hover:bg-white/[0.05]
+                  ${expanded ? 'w-full gap-3 px-2 py-2' : 'w-9 h-9 justify-center mx-auto'}
+                `}
+                aria-label={user?.name || 'User menu'}
+              >
+                <Avatar
+                  src={user?.avatar}
+                  name={user?.name || 'Guest'}
+                  size="xs"
+                />
+                {expanded && (
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-[13px] font-medium text-txt-primary truncate">
+                      {isAuthenticated ? (user?.name || 'User') : 'Guest'}
+                    </p>
+                    {isAuthenticated && user?.email && (
+                      <p className="text-[11px] text-txt-muted truncate">{user.email}</p>
+                    )}
+                  </div>
+                )}
+                {expanded && (
+                  <svg className={`h-3.5 w-3.5 text-txt-muted transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9" /></svg>
+                )}
+              </button>
             </div>
           </motion.aside>
-        </>
-      )}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

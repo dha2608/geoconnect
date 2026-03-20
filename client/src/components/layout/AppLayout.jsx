@@ -42,7 +42,7 @@ const LIGHT_TILES = new Set(['street', 'light', 'satellite']);
 
 export default function AppLayout() {
   const dispatch = useDispatch();
-  const { isMobile, isTablet, sidebarOpen, sidebarExpanded, activePanel, modalData } = useSelector((state) => state.ui);
+  const { isMobile, isTablet, sidebarOpen, activePanel, modalData } = useSelector((state) => state.ui);
   const { user } = useSelector((state) => state.auth);
   const { tileLayer } = useSelector((state) => state.map);
 
@@ -116,7 +116,7 @@ export default function AppLayout() {
       <Sidebar />
       <main
         className={`fixed top-0 bottom-0 right-0 overflow-hidden ${isMobile ? 'left-0 pb-16' : ''}`}
-        style={isMobile ? undefined : { left: sidebarExpanded ? 240 : 72, transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}
+        style={isMobile ? undefined : { left: 56, transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}
         role="main"
       >
         <SectionErrorBoundary name="Map">
@@ -201,7 +201,7 @@ export default function AppLayout() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
                 className="fixed top-0 bottom-0 right-0 z-[15] bg-black/20 backdrop-blur-[1px] cursor-pointer"
-                style={{ left: sidebarExpanded ? 240 : 72, transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                style={{ left: 56, transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}
                 onClick={() => dispatch(closePanel())}
               />
             )}
