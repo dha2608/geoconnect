@@ -10,8 +10,8 @@ const tierStyles = {
   },
   silver: {
     border: 'border-slate-400/30',
-    bg: 'bg-slate-600/20',
-    text: 'text-slate-300',
+    bg: 'bg-surface-hover/20',
+    text: 'text-txt-secondary',
     glow: 'hover:shadow-slate-400/20',
     ring: 'ring-slate-400/30',
   },

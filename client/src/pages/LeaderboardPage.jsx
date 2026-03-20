@@ -44,7 +44,7 @@ const SCOPES = [
 /* ── Medal colors for top 3 ──────────────────────────────────── */
 const medalColors = {
   1: 'from-amber-400 to-yellow-500 text-amber-900',
-  2: 'from-slate-300 to-slate-400 text-slate-800',
+  2: 'from-txt-secondary to-txt-muted text-txt-primary',
   3: 'from-amber-600 to-amber-700 text-amber-100',
 };
 

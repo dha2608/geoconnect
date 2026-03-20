@@ -114,13 +114,13 @@ function FieldError({ message }) {
 const INPUT_CLS = [
   'w-full px-3 py-2.5 rounded-lg text-sm',
   'bg-[var(--glass-bg)] border border-[var(--glass-border)]',
-  'text-slate-100 placeholder:text-slate-600',
+  'text-txt-primary placeholder:text-txt-muted',
   'focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25',
   'transition-colors duration-200',
   '[color-scheme:dark]',           // makes date-picker chrome dark in Chromium
 ].join(' ');
 
-const LABEL_CLS = 'block text-[11px] font-semibold tracking-widest text-slate-500 uppercase mb-1.5';
+const LABEL_CLS = 'block text-[11px] font-semibold tracking-widest text-txt-muted uppercase mb-1.5';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -432,12 +432,12 @@ export default function CreateEventModal() {
                 </div>
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center gap-2 text-slate-600 pointer-events-none">
+              <div className="h-full flex flex-col items-center justify-center gap-2 text-txt-muted pointer-events-none">
                 <span className="text-3xl">📷</span>
                 <p className="text-xs font-medium">
                   {isDragging ? 'Drop it here!' : 'Drop an image or click to upload'}
                 </p>
-                <p className="text-[10px] text-slate-700">PNG · JPG · WebP · max 5 MB</p>
+                <p className="text-[10px] text-txt-muted">PNG · JPG · WebP · max 5 MB</p>
               </div>
             )}
           </div>
@@ -537,7 +537,7 @@ export default function CreateEventModal() {
 
         {/* ── Tags ───────────────────────────────────────────────────────── */}
         <div>
-          <label className={LABEL_CLS}>Tags <span className="normal-case text-slate-600">(max 10)</span></label>
+          <label className={LABEL_CLS}>Tags <span className="normal-case text-txt-muted">(max 10)</span></label>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {tags.map((tag) => (
               <motion.span
@@ -613,7 +613,7 @@ export default function CreateEventModal() {
                     'flex-1 py-2 text-xs font-medium transition-all duration-200 capitalize',
                     recurrence.type === type
                       ? 'bg-blue-500/20 text-blue-300'
-                      : 'text-slate-500 hover:text-slate-300',
+                      : 'text-txt-muted hover:text-txt-secondary',
                   ].join(' ')}
                 >
                   {type === 'none' ? 'One-time' : type}
@@ -630,7 +630,7 @@ export default function CreateEventModal() {
               >
                 {/* Interval */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500 whitespace-nowrap">Every</span>
+                  <span className="text-xs text-txt-muted whitespace-nowrap">Every</span>
                   <input
                     type="number"
                     min="1"
@@ -639,7 +639,7 @@ export default function CreateEventModal() {
                     onChange={(e) => setRecurrence((prev) => ({ ...prev, interval: Math.max(1, Math.min(52, Number(e.target.value) || 1)) }))}
                     className={`${INPUT_CLS} w-20 text-center`}
                   />
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-txt-muted">
                     {recurrence.type === 'daily' ? 'day(s)' : recurrence.type === 'weekly' ? 'week(s)' : 'month(s)'}
                   </span>
                 </div>
@@ -647,7 +647,7 @@ export default function CreateEventModal() {
                 {/* Days of week (only for weekly) */}
                 {recurrence.type === 'weekly' && (
                   <div>
-                    <span className="text-xs text-slate-500 mb-1.5 block">On days:</span>
+                    <span className="text-xs text-txt-muted mb-1.5 block">On days:</span>
                     <div className="flex gap-1.5">
                       {DAYS_OF_WEEK.map((day, idx) => (
                         <button
@@ -665,7 +665,7 @@ export default function CreateEventModal() {
                             'w-9 h-9 rounded-lg text-xs font-semibold transition-all duration-200',
                             recurrence.daysOfWeek.includes(idx)
                               ? 'bg-blue-500/25 text-blue-300 border border-blue-500/40'
-                              : 'bg-[var(--glass-bg)] text-slate-500 border border-[var(--glass-border)] hover:text-slate-300',
+                              : 'bg-[var(--glass-bg)] text-txt-muted border border-[var(--glass-border)] hover:text-txt-secondary',
                           ].join(' ')}
                         >
                           {day}
@@ -677,8 +677,8 @@ export default function CreateEventModal() {
 
                 {/* End date */}
                 <div>
-                  <label htmlFor="evt-rec-end" className="text-xs text-slate-500 mb-1 block">
-                    Repeat until <span className="text-slate-600">(optional)</span>
+                  <label htmlFor="evt-rec-end" className="text-xs text-txt-muted mb-1 block">
+                    Repeat until <span className="text-txt-muted">(optional)</span>
                   </label>
                   <input
                     id="evt-rec-end"
@@ -709,7 +709,7 @@ export default function CreateEventModal() {
         <div className="grid grid-cols-2 gap-3 items-start">
           <div>
             <label htmlFor="evt-cap" className={LABEL_CLS}>
-              Capacity&nbsp;<span className="normal-case text-slate-600">(0 = unlimited)</span>
+              Capacity&nbsp;<span className="normal-case text-txt-muted">(0 = unlimited)</span>
             </label>
             <input
               id="evt-cap"
@@ -744,7 +744,7 @@ export default function CreateEventModal() {
                         'flex-1 flex items-center justify-center gap-1.5 text-xs font-medium transition-all duration-200',
                         field.value === value
                           ? 'bg-blue-500/20 text-blue-300'
-                          : 'text-slate-500 hover:text-slate-300',
+                          : 'text-txt-muted hover:text-txt-secondary',
                       ].join(' ')}
                     >
                       <span>{icon}</span>
@@ -759,7 +759,7 @@ export default function CreateEventModal() {
 
         {/* ── Reminders ───────────────────────────────────────────────── */}
         <div>
-          <label className={LABEL_CLS}>Reminders <span className="normal-case text-slate-600">(max 5)</span></label>
+          <label className={LABEL_CLS}>Reminders <span className="normal-case text-txt-muted">(max 5)</span></label>
 
           {/* Active reminders */}
           {reminders.length > 0 && (
@@ -799,7 +799,7 @@ export default function CreateEventModal() {
                   onClick={() => handleAddReminder(preset.minutes)}
                   className="px-2.5 py-1.5 rounded-lg text-xs font-medium
                              bg-[var(--glass-bg)] border border-[var(--glass-border)]
-                             text-slate-500 hover:text-slate-300 hover:border-amber-500/30
+                             text-txt-muted hover:text-txt-secondary hover:border-amber-500/30
                              transition-all duration-200"
                 >
                   {preset.label}
@@ -814,9 +814,9 @@ export default function CreateEventModal() {
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg
                           bg-surface-hover border border-[var(--glass-border)]">
             <span className="text-blue-400 text-sm">📍</span>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-txt-muted">
               Location from map centre:&nbsp;
-              <span className="font-mono text-slate-400">
+              <span className="font-mono text-txt-secondary">
                 {mapCenter[0].toFixed(5)}, {mapCenter[1].toFixed(5)}
               </span>
             </p>

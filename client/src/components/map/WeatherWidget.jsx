@@ -292,7 +292,7 @@ export default function WeatherWidget() {
                   <StatPill
                     icon={
                       <svg
-                        className="w-3.5 h-3.5 text-slate-400"
+                        className="w-3.5 h-3.5 text-txt-secondary"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
