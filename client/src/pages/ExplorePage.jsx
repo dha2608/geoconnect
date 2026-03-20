@@ -16,16 +16,16 @@ const CATEGORY_ICONS = {
 };
 
 const CATEGORY_COLORS = {
-  food: 'from-orange-500/20 to-red-500/20 border-orange-500/30',
-  entertainment: 'from-purple-500/20 to-pink-500/20 border-purple-500/30',
-  shopping: 'from-blue-500/20 to-cyan-500/20 border-blue-500/30',
-  outdoors: 'from-green-500/20 to-emerald-500/20 border-green-500/30',
-  culture: 'from-amber-500/20 to-yellow-500/20 border-amber-500/30',
-  travel: 'from-sky-500/20 to-blue-500/20 border-sky-500/30',
-  sports: 'from-red-500/20 to-orange-500/20 border-red-500/30',
-  health: 'from-teal-500/20 to-green-500/20 border-teal-500/30',
-  education: 'from-indigo-500/20 to-purple-500/20 border-indigo-500/30',
-  other: 'from-gray-500/20 to-slate-500/20 border-gray-500/30',
+  food:          'from-accent-warning/20 to-accent-danger/20 border-accent-warning/30',
+  entertainment: 'from-accent-violet/20 to-accent-violet/10 border-accent-violet/30',
+  shopping:      'from-accent-primary/20 to-accent-secondary/20 border-accent-primary/30',
+  outdoors:      'from-accent-success/20 to-accent-success/10 border-accent-success/30',
+  culture:       'from-accent-warning/20 to-accent-warning/10 border-accent-warning/30',
+  travel:        'from-accent-primary/20 to-accent-primary/10 border-accent-primary/30',
+  sports:        'from-accent-danger/20 to-accent-warning/20 border-accent-danger/30',
+  health:        'from-accent-secondary/20 to-accent-success/20 border-accent-secondary/30',
+  education:     'from-accent-violet/20 to-accent-violet/10 border-accent-violet/30',
+  other:         'from-surface-hover to-surface-divider border-surface-divider',
 };
 
 // ── Sub-components ────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ const CategoryChip = memo(function CategoryChip({ category, count, isActive, onC
       onClick={onClick}
       whileHover={{ scale: 1.04 }}
       whileTap={{ scale: 0.97 }}
-      className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl border backdrop-blur-sm transition-all duration-200 bg-gradient-to-br ${colorClass} ${isActive ? 'ring-2 ring-violet-500 shadow-lg shadow-violet-500/10' : 'hover:shadow-md'}`}
+      className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl border backdrop-blur-sm transition-all duration-200 bg-gradient-to-br ${colorClass} ${isActive ? 'ring-2 ring-accent-violet shadow-lg shadow-accent-violet/10' : 'hover:shadow-md'}`}
     >
       <span className="text-xl">{CATEGORY_ICONS[category] || '📍'}</span>
       <div className="text-left">
@@ -71,7 +71,7 @@ const TrendingPinCard = memo(function TrendingPinCard({ pin, onClick }) {
       variants={cardVariants}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
       onClick={onClick}
-      className="group cursor-pointer rounded-2xl overflow-hidden glass border border-surface-divider hover:border-violet-500/30 transition-all duration-300"
+      className="group cursor-pointer rounded-2xl overflow-hidden glass border border-surface-divider hover:border-accent-violet/30 transition-all duration-300"
     >
       <div className="relative h-40 overflow-hidden">
         {pin.images?.[0] ? (
@@ -87,7 +87,7 @@ const TrendingPinCard = memo(function TrendingPinCard({ pin, onClick }) {
           </span>
         </div>
         <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm">
-          <svg className="w-3 h-3 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>
+          <svg className="w-3 h-3 text-accent-danger" fill="currentColor" viewBox="0 0 20 20"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>
           <span className="text-xs text-white font-medium">{pin.likes?.length || pin.likesCount || 0}</span>
         </div>
       </div>
@@ -114,7 +114,7 @@ const EventCard = memo(function EventCard({ event, onClick }) {
       variants={cardVariants}
       whileHover={{ y: -2 }}
       onClick={onClick}
-      className="group cursor-pointer flex gap-3 p-3 rounded-xl glass border border-surface-divider hover:border-violet-500/30 transition-all"
+      className="group cursor-pointer flex gap-3 p-3 rounded-xl glass border border-surface-divider hover:border-accent-violet/30 transition-all"
     >
       {startDate && (
         <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-accent-primary/10 flex flex-col items-center justify-center">
@@ -142,9 +142,9 @@ const UserCard = memo(function UserCard({ user, onClick }) {
       variants={cardVariants}
       whileHover={{ y: -2 }}
       onClick={onClick}
-      className="group cursor-pointer flex flex-col items-center gap-2 p-4 rounded-2xl glass border border-surface-divider hover:border-violet-500/30 transition-all"
+      className="group cursor-pointer flex flex-col items-center gap-2 p-4 rounded-2xl glass border border-surface-divider hover:border-accent-violet/30 transition-all"
     >
-      <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-surface-divider group-hover:ring-violet-500/30 transition-all">
+        <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-surface-divider group-hover:ring-accent-violet/30 transition-all">
         {user.avatar ? (
           <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
         ) : (
@@ -185,12 +185,12 @@ const RecommendedPinCard = memo(function RecommendedPinCard({ pin, onClick }) {
         <div className="flex items-center gap-2 mt-1">
           {pin.averageRating > 0 && (
             <div className="flex items-center gap-0.5">
-              <svg className="w-3 h-3 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+              <svg className="w-3 h-3 text-accent-warning" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
               <span className="text-xs text-txt-muted">{pin.averageRating.toFixed(1)}</span>
             </div>
           )}
           <div className="flex items-center gap-0.5">
-            <svg className="w-3 h-3 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>
+            <svg className="w-3 h-3 text-accent-danger" fill="currentColor" viewBox="0 0 20 20"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>
             <span className="text-xs text-txt-muted">{pin.likes?.length || pin.likesCount || 0}</span>
           </div>
         </div>
@@ -334,7 +334,7 @@ export default function ExplorePage() {
             animate={{ opacity: [0.7, 1, 0.7] }}
             transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-accent-primary/15 via-accent-secondary/5 via-50% to-purple-500/15" />
+            <div className="absolute inset-0 bg-gradient-to-br from-accent-primary/15 via-accent-secondary/5 via-50% to-accent-violet/15" />
             <div className="absolute -top-10 -left-10 w-72 h-72 bg-accent-primary/10 rounded-full blur-3xl" />
             <div className="absolute -bottom-10 -right-10 w-56 h-56 bg-accent-secondary/10 rounded-full blur-3xl" />
           </motion.div>
@@ -346,7 +346,7 @@ export default function ExplorePage() {
             transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
           />
           <motion.div
-            className="absolute bottom-6 left-8 w-9 h-9 rounded-full bg-gradient-to-br from-purple-500/25 to-accent-primary/25 blur-xl"
+            className="absolute bottom-6 left-8 w-9 h-9 rounded-full bg-gradient-to-br from-accent-violet/25 to-accent-primary/25 blur-xl"
             animate={{ y: [4, -4, 4], x: [-3, 3, -3] }}
             transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}
           />

@@ -215,7 +215,7 @@ function RegisterForm({ onSuccess }) {
               animate={{ scale: 1 }}
               onClick={removeAvatar}
               className="absolute -top-1 -right-1 w-6 h-6 bg-accent-danger rounded-full flex items-center justify-center
-                         text-white text-xs hover:bg-red-600 transition-colors shadow-lg"
+                         text-white text-xs hover:opacity-90 transition-opacity shadow-lg"
               aria-label="Remove avatar"
             >
               x
@@ -368,7 +368,7 @@ function TwoFactorForm({ onSuccess, onBack }) {
         <button
           type="button"
           onClick={() => { setUseBackup(!useBackup); dispatch(clearError()); }}
-          className="text-sm text-violet-400 hover:text-violet-300 transition-colors"
+          className="text-sm text-accent-violet hover:text-accent-violet/80 transition-colors"
         >
           {useBackup ? 'Use authenticator app' : 'Use backup code'}
         </button>
@@ -433,7 +433,7 @@ export default function AuthPage() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-heading font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-500 bg-clip-text text-transparent mb-2">
+          <h1 className="text-4xl font-heading font-bold bg-gradient-to-r from-accent-primary via-accent-violet to-accent-secondary bg-clip-text text-transparent mb-2">
             {t('common.appName', 'GeoConnect')}
           </h1>
           <p className="text-txt-secondary text-sm">{t('auth.tagline')}</p>

@@ -28,21 +28,21 @@ const cardVariants = {
 
 /* ── Stat card icons ──────────────────────────────────────────────────────── */
 const STAT_CONFIG = [
-  { key: 'pinsCreated', label: 'Pins', icon: '📍', color: 'text-red-400' },
-  { key: 'postsCreated', label: 'Posts', icon: '✍️', color: 'text-blue-400' },
-  { key: 'eventsCreated', label: 'Events', icon: '🎉', color: 'text-purple-400' },
-  { key: 'reviewsWritten', label: 'Reviews', icon: '⭐', color: 'text-yellow-400' },
-  { key: 'checkIns', label: 'Check-ins', icon: '📌', color: 'text-green-400' },
-  { key: 'likesGiven', label: 'Likes Given', icon: '❤️', color: 'text-pink-400' },
-  { key: 'followers', label: 'Followers', icon: '👥', color: 'text-cyan-400' },
-  { key: 'following', label: 'Following', icon: '👤', color: 'text-indigo-400' },
+  { key: 'pinsCreated',   label: 'Pins',        icon: '📍', color: 'text-accent-danger'    },
+  { key: 'postsCreated',  label: 'Posts',        icon: '✍️', color: 'text-accent-primary'   },
+  { key: 'eventsCreated', label: 'Events',       icon: '🎉', color: 'text-accent-violet'    },
+  { key: 'reviewsWritten',label: 'Reviews',      icon: '⭐', color: 'text-accent-warning'   },
+  { key: 'checkIns',      label: 'Check-ins',    icon: '📌', color: 'text-accent-success'   },
+  { key: 'likesGiven',    label: 'Likes Given',  icon: '❤️', color: 'text-pink-400'         },
+  { key: 'followers',     label: 'Followers',    icon: '👥', color: 'text-accent-secondary' },
+  { key: 'following',     label: 'Following',    icon: '👤', color: 'text-indigo-400'       },
 ];
 
 /* ── Activity type config ─────────────────────────────────────────────────── */
 const TYPE_BADGE = {
-  pin: { label: 'Pin', bg: 'bg-red-500/15 text-red-400', icon: '📍' },
-  post: { label: 'Post', bg: 'bg-blue-500/15 text-blue-400', icon: '✍️' },
-  event: { label: 'Event', bg: 'bg-purple-500/15 text-purple-400', icon: '🎉' },
+  pin:   { label: 'Pin',   bg: 'bg-accent-danger/15 text-accent-danger',   icon: '📍' },
+  post:  { label: 'Post',  bg: 'bg-accent-primary/15 text-accent-primary', icon: '✍️' },
+  event: { label: 'Event', bg: 'bg-accent-violet/15 text-accent-violet',   icon: '🎉' },
 };
 
 /* ── Heatmap helpers ──────────────────────────────────────────────────────── */
@@ -51,10 +51,10 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 function getHeatmapColor(count) {
   if (count === 0) return 'bg-surface-hover';
-  if (count === 1) return 'bg-green-900/60';
-  if (count <= 3) return 'bg-green-700/70';
-  if (count <= 6) return 'bg-green-500/80';
-  return 'bg-green-400';
+  if (count === 1) return 'bg-accent-success/15';
+  if (count <= 3) return 'bg-accent-success/40';
+  if (count <= 6) return 'bg-accent-success/70';
+  return 'bg-accent-success';
 }
 
 function buildHeatmapGrid(heatmapData) {
@@ -322,7 +322,7 @@ export default function ActivityPage() {
           </div>
           <button
             onClick={() => navigate(`/profile/${user?._id || ''}`)}
-            className="text-sm text-violet-400 hover:underline"
+            className="text-sm text-accent-violet hover:underline"
           >
             View Profile
           </button>
