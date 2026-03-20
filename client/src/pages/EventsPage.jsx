@@ -146,9 +146,9 @@ const EventCard = memo(function EventCard({ event, onClick }) {
       whileTap={{ scale: 0.985 }}
       onClick={onClick}
       className="group relative cursor-pointer rounded-2xl overflow-hidden
-                 border border-[var(--glass-border)] bg-[var(--glass-bg)]
+                 glass
                  hover:border-accent-violet/30 hover:bg-surface-active
-                 backdrop-blur-sm transition-colors duration-200"
+                 transition-colors duration-200"
     >
       {/* Category colour accent bar on the left edge */}
       <div
@@ -250,7 +250,7 @@ const CategoryChip = memo(function CategoryChip({ category, isActive, onClick })
         'transition-all duration-200 border',
         isActive
           ? 'bg-accent-violet/20 text-accent-violet border-accent-violet/40 shadow-sm'
-          : 'glass text-txt-muted border-[var(--glass-border)] hover:text-txt-secondary hover:border-txt-muted/30',
+          : 'glass text-txt-muted border-surface-divider hover:text-txt-secondary hover:border-txt-muted/30',
       ].join(' ')}
     >
       <span>{category.emoji}</span>
@@ -467,7 +467,7 @@ export default function EventsPage() {
               <button
                 onClick={() => navigate(-1)}
                 aria-label="Go back"
-                className="w-9 h-9 rounded-full glass border border-[var(--glass-border)]
+                className="w-9 h-9 rounded-full glass border border-surface-divider
                            flex items-center justify-center text-txt-muted
                            hover:text-txt-primary hover:bg-surface-hover transition-all duration-150 flex-shrink-0"
               >
@@ -521,7 +521,7 @@ export default function EventsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search events by name, tag, or location…"
-            className="w-full pl-10 pr-10 py-3 rounded-2xl glass border border-[var(--glass-border)]
+            className="w-full pl-10 pr-10 py-3 rounded-2xl glass border border-surface-divider
                        text-txt-primary text-sm placeholder:text-txt-muted
                        focus:outline-none focus:border-accent-primary/50 transition-colors"
           />
@@ -558,7 +558,7 @@ export default function EventsPage() {
 
         {/* ── Tabs ──────────────────────────────────────────────────────────── */}
         <motion.div variants={sectionVariants}>
-          <div className="flex gap-1 p-1 rounded-2xl glass border border-[var(--glass-border)] w-fit max-w-full overflow-x-auto">
+          <div className="flex gap-1 p-1 rounded-2xl glass border border-surface-divider w-fit max-w-full overflow-x-auto">
             {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
@@ -615,7 +615,7 @@ export default function EventsPage() {
                 <GlassCard
                   animate={false}
                   padding="p-4"
-                  className="rounded-2xl border border-[var(--glass-border)] space-y-4"
+                  className="rounded-2xl border border-surface-divider space-y-4"
                 >
                   {/* Popular tags */}
                   {popularTags?.length > 0 && (
@@ -635,7 +635,7 @@ export default function EventsPage() {
                                 'px-2.5 py-1 rounded-full text-xs font-medium transition-all border',
                                 active
                                   ? 'bg-accent-violet/20 text-accent-violet border-accent-violet/30'
-                                  : 'glass text-txt-muted border-[var(--glass-border)] hover:text-txt-secondary',
+                                  : 'glass text-txt-muted border-surface-divider hover:text-txt-secondary',
                               ].join(' ')}
                             >
                               #{tag}
@@ -659,7 +659,7 @@ export default function EventsPage() {
                         type="date"
                         value={dateFrom}
                         onChange={(e) => setDateFrom(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl text-sm glass border border-[var(--glass-border)]
+                        className="w-full px-3 py-2 rounded-xl text-sm glass border border-surface-divider
                                    text-txt-primary focus:outline-none focus:border-accent-primary/40"
                       />
                     </div>
@@ -671,7 +671,7 @@ export default function EventsPage() {
                         type="date"
                         value={dateTo}
                         onChange={(e) => setDateTo(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl text-sm glass border border-[var(--glass-border)]
+                        className="w-full px-3 py-2 rounded-xl text-sm glass border border-surface-divider
                                    text-txt-primary focus:outline-none focus:border-accent-primary/40"
                       />
                     </div>

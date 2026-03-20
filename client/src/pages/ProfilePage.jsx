@@ -283,7 +283,7 @@ function UserStatsSection({ stats, loading }) {
       variants={statsContainerVariants}
       initial="hidden"
       animate="visible"
-      className="grid grid-cols-3 sm:grid-cols-6 gap-2 px-2 mt-5"
+      className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 px-2 mt-5"
     >
       {loading
         ? Array.from({ length: 6 }).map((_, i) => (
