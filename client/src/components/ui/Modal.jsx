@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useId } from 'react';
 
 const overlayVariants = {
   hidden: { opacity: 0 },
@@ -17,6 +17,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), in
 export default function Modal({ isOpen, onClose, title, children, size = 'md', className = '' }) {
   const modalRef = useRef(null);
   const previousFocusRef = useRef(null);
+  const bodyId = useId();
 
   // Body scroll lock
   useEffect(() => {
@@ -94,6 +95,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', c
             role="dialog"
             aria-modal="true"
             aria-label={title || 'Dialog'}
+            aria-describedby={bodyId}
             tabIndex={-1}
             onKeyDown={handleKeyDown}
             className={`relative glass w-full ${sizeClasses[size]} max-h-[85vh] overflow-y-auto p-6 outline-none ${className}`}
@@ -116,7 +118,9 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', c
                 </button>
               </div>
             )}
-            {children}
+            <div id={bodyId}>
+              {children}
+            </div>
           </motion.div>
         </div>
       )}

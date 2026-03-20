@@ -262,7 +262,7 @@ const PostCard = memo(function PostCard({ post }) {
             {isAuthor && (
               <motion.button whileTap={{ scale: 0.9 }} onClick={() => dispatch(openModal({ type: 'editPost', data: post }))}
                 aria-label="Edit post"
-                className="p-1.5 rounded-lg text-txt-muted hover:text-accent-primary hover:bg-accent-primary/8 transition-colors">
+                className="p-1.5 rounded-lg text-txt-muted hover:text-accent-primary hover:bg-accent-primary/10 transition-colors">
                 <Icon name="pencil" size={14} />
               </motion.button>
             )}
@@ -338,7 +338,7 @@ const PostCard = memo(function PostCard({ post }) {
           <div className="flex flex-wrap gap-1.5 mb-2">
             {post.hashtags.map(tag => (
               <span key={tag}
-                className="text-accent-primary bg-accent-primary/8 rounded-full px-2.5 py-0.5 text-[11px] font-body font-medium cursor-pointer hover:bg-accent-primary/15 transition-colors">
+                className="text-accent-primary bg-accent-primary/10 rounded-full px-2.5 py-0.5 text-[11px] font-body font-medium cursor-pointer hover:bg-accent-primary/15 transition-colors">
                 #{tag}
               </span>
             ))}

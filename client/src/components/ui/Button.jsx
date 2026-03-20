@@ -2,10 +2,10 @@ import { motion } from 'framer-motion';
 import { forwardRef } from 'react';
 
 const variants = {
-  primary:  'bg-gradient-to-r from-blue-500 to-violet-500 hover:opacity-90 text-white shadow-[0_0_20px_rgba(139,92,246,0.25)]',
-  secondary:'bg-accent-secondary hover:bg-cyan-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)]',
+  primary:  'bg-gradient-to-r from-accent-primary to-accent-violet hover:opacity-90 text-white shadow-[0_0_20px_rgba(139,92,246,0.25)]',
+  secondary:'bg-accent-secondary hover:opacity-90 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)]',
   ghost:    'bg-transparent hover:bg-surface-hover text-txt-secondary hover:text-txt-primary border border-surface-divider',
-  danger:   'bg-accent-danger hover:bg-red-600 text-white shadow-[0_0_16px_rgba(239,68,68,0.25)]',
+  danger:   'bg-accent-danger hover:opacity-90 text-white shadow-[0_0_16px_rgba(239,68,68,0.25)]',
   glass:    'glass hover:border-accent-violet/25 text-txt-primary',
   outline:  'bg-transparent border border-accent-violet/50 text-accent-violet hover:bg-accent-violet/10',
 };

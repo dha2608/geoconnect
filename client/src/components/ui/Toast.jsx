@@ -15,6 +15,7 @@ export function ToastProvider() {
         duration: 4000,
         role: 'status',
         ariaProps: { role: 'status', 'aria-live': 'polite' },
+        className: 'font-body',
         style: {
           background: isLight ? 'rgba(255, 255, 255, 0.82)' : 'rgba(8, 12, 24, 0.92)',
           backdropFilter: 'blur(20px)',
@@ -22,7 +23,6 @@ export function ToastProvider() {
           border: isLight ? '1px solid rgba(255, 255, 255, 0.45)' : '1px solid rgba(139, 92, 246, 0.12)',
           borderRadius: '12px',
           fontSize: '14px',
-          fontFamily: 'DM Sans, sans-serif',
           boxShadow: isLight
             ? '0 4px 16px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.5)'
             : '0 4px 16px rgba(0,0,0,0.3)',

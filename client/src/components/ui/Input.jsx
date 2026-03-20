@@ -12,11 +12,12 @@ const SearchIcon = () => (
 
 // ─── Input Component ──────────────────────────────────────────────────────────
 
-const Input = forwardRef(({ label, error, icon: Icon, variant = 'default', type = 'text', className = '', ...props }, ref) => {
+const Input = forwardRef(({ id, label, error, icon: Icon, variant = 'default', type = 'text', className = '', ...props }, ref) => {
   const [focused, setFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
   const isSearch = variant === 'search';
+  const errorId = id ? `${id}-error` : undefined;
 
   // Search variant uses built-in magnifier; custom icon overrides it
   const LeftIcon = Icon || (isSearch ? SearchIcon : null);
@@ -24,7 +25,7 @@ const Input = forwardRef(({ label, error, icon: Icon, variant = 'default', type 
   return (
     <div className={`space-y-1.5 ${isSearch ? 'w-full' : ''}`}>
       {label && (
-        <label className="block text-sm font-medium text-txt-secondary">{label}</label>
+        <label htmlFor={id} className="block text-sm font-medium text-txt-secondary">{label}</label>
       )}
       <div className="relative">
         {LeftIcon && (
@@ -34,7 +35,10 @@ const Input = forwardRef(({ label, error, icon: Icon, variant = 'default', type 
         )}
         <motion.input
           ref={ref}
+          id={id}
           type={isPassword && showPassword ? 'text' : type}
+          aria-invalid={!!error}
+          aria-describedby={error && errorId ? errorId : undefined}
           className={[
             'w-full border text-sm text-txt-primary placeholder-txt-muted outline-none transition-all duration-150',
             isSearch ? 'rounded-full py-2.5 px-4 bg-surface-hover/80 backdrop-blur-sm' : 'rounded-xl px-4 py-3 bg-elevated',
@@ -55,6 +59,7 @@ const Input = forwardRef(({ label, error, icon: Icon, variant = 'default', type 
         {isPassword && (
           <button
             type="button"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-txt-muted hover:text-txt-secondary transition-colors"
           >
@@ -68,6 +73,7 @@ const Input = forwardRef(({ label, error, icon: Icon, variant = 'default', type 
       </div>
       {error && (
         <motion.p
+          id={errorId}
           initial={{ opacity: 0, y: -5 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-xs text-accent-danger"
