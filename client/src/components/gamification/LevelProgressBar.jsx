@@ -53,7 +53,7 @@ export default function LevelProgressBar({ compact = false, className = '' }) {
         >
           Lv.{level}
         </span>
-        <div className="flex-1 h-1.5 rounded-full bg-[var(--surface-hover)] overflow-hidden">
+        <div className="flex-1 h-1.5 rounded-full bg-surface-hover overflow-hidden">
           <motion.div
             className={`h-full rounded-full bg-gradient-to-r ${gradient}`}
             initial={{ width: 0 }}
@@ -61,7 +61,7 @@ export default function LevelProgressBar({ compact = false, className = '' }) {
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           />
         </div>
-        <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+        <span className="text-[10px] text-txt-muted tabular-nums">
           {totalXP?.toLocaleString()} XP
         </span>
       </div>
@@ -83,10 +83,10 @@ export default function LevelProgressBar({ compact = false, className = '' }) {
           </motion.div>
 
           <div>
-            <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+            <h4 className="text-sm font-semibold text-txt-primary">
               {levelTitle}
             </h4>
-            <p className="text-xs text-[var(--text-secondary)]">
+            <p className="text-xs text-txt-secondary">
               {isMaxLevel
                 ? 'Max level reached'
                 : `${xpNeeded - xpInLevel} XP to next level`}
@@ -95,15 +95,15 @@ export default function LevelProgressBar({ compact = false, className = '' }) {
         </div>
 
         <div className="text-right">
-          <span className="text-lg font-bold text-[var(--text-primary)] tabular-nums">
+          <span className="text-lg font-bold text-txt-primary tabular-nums">
             {totalXP?.toLocaleString()}
           </span>
-          <span className="text-xs text-[var(--text-muted)] ml-1">XP</span>
+          <span className="text-xs text-txt-muted ml-1">XP</span>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="relative h-2.5 rounded-full bg-[var(--surface-hover)] overflow-hidden">
+      <div className="relative h-2.5 rounded-full bg-surface-hover overflow-hidden">
         <motion.div
           className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${gradient}`}
           initial={{ width: 0 }}
@@ -121,10 +121,10 @@ export default function LevelProgressBar({ compact = false, className = '' }) {
 
       {/* XP range labels */}
       <div className="flex justify-between mt-1.5">
-        <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+        <span className="text-[10px] text-txt-muted tabular-nums">
           {currentThreshold.toLocaleString()}
         </span>
-        <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+        <span className="text-[10px] text-txt-muted tabular-nums">
           {isMaxLevel ? 'MAX' : nextThreshold.toLocaleString()}
         </span>
       </div>

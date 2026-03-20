@@ -48,11 +48,11 @@ export default function DailyChallenges({ className = '' }) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-base leading-none">🎯</span>
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+          <h3 className="text-sm font-semibold text-txt-primary">
             Daily Challenges
           </h3>
         </div>
-        <span className="text-xs text-[var(--text-muted)] tabular-nums">
+        <span className="text-xs text-txt-muted tabular-nums">
           {completedCount}/{challenges.length}
         </span>
       </div>
@@ -77,7 +77,7 @@ export default function DailyChallenges({ className = '' }) {
               className={`relative p-3 rounded-xl border transition-colors ${
                 challenge.completed
                   ? 'border-accent-success/20 bg-accent-success/5'
-                  : 'border-[var(--surface-divider)] bg-[var(--surface-hover)]/50'
+                  : 'border-surface-divider bg-surface-hover/50'
               }`}
             >
               <div className="flex items-start gap-2.5">
@@ -91,7 +91,7 @@ export default function DailyChallenges({ className = '' }) {
                       className={`text-xs font-medium ${
                         challenge.completed
                           ? 'text-accent-success line-through'
-                          : 'text-[var(--text-primary)]'
+                          : 'text-txt-primary'
                       }`}
                     >
                       {challenge.description}
@@ -103,7 +103,7 @@ export default function DailyChallenges({ className = '' }) {
 
                   {/* Progress bar */}
                   <div className="mt-1.5 flex items-center gap-2">
-                    <div className="flex-1 h-1.5 rounded-full bg-[var(--surface-hover)] overflow-hidden">
+                    <div className="flex-1 h-1.5 rounded-full bg-surface-hover overflow-hidden">
                       <motion.div
                         className={`h-full rounded-full ${
                           challenge.completed
@@ -119,7 +119,7 @@ export default function DailyChallenges({ className = '' }) {
                         }}
                       />
                     </div>
-                    <span className="text-[10px] text-[var(--text-muted)] tabular-nums shrink-0">
+                    <span className="text-[10px] text-txt-muted tabular-nums shrink-0">
                       {challenge.progress}/{challenge.target}
                     </span>
                   </div>

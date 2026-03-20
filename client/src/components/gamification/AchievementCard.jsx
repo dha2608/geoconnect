@@ -61,8 +61,8 @@ export default function AchievementCard({
       <motion.div
         className={`flex items-center gap-2.5 p-2 rounded-xl transition-colors ${
           earned
-            ? 'bg-[var(--surface-hover)]'
-            : 'bg-[var(--surface-hover)]/50 opacity-50'
+            ? 'bg-surface-hover'
+            : 'bg-surface-hover/50 opacity-50'
         } ${className}`}
         whileHover={{ scale: 1.02 }}
         transition={{ duration: 0.15 }}
@@ -71,16 +71,16 @@ export default function AchievementCard({
           {achievement?.icon || '🏆'}
         </span>
         <div className="min-w-0 flex-1">
-          <p className={`text-xs font-medium truncate ${earned ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`}>
+          <p className={`text-xs font-medium truncate ${earned ? 'text-txt-primary' : 'text-txt-muted'}`}>
             {achievement?.name}
           </p>
           {earned && (
-            <p className="text-[10px] text-[var(--text-muted)]">+{achievement?.xpReward} XP</p>
+            <p className="text-[10px] text-txt-muted">+{achievement?.xpReward} XP</p>
           )}
         </div>
         {!earned && (
-          <div className="w-5 h-5 rounded-full border border-[var(--surface-divider)] flex items-center justify-center">
-            <span className="text-[10px] text-[var(--text-muted)]">?</span>
+          <div className="w-5 h-5 rounded-full border border-surface-divider flex items-center justify-center">
+            <span className="text-[10px] text-txt-muted">?</span>
           </div>
         )}
       </motion.div>
@@ -112,7 +112,7 @@ export default function AchievementCard({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-0.5">
-            <h4 className="text-sm font-semibold text-[var(--text-primary)] truncate">
+            <h4 className="text-sm font-semibold text-txt-primary truncate">
               {achievement?.name}
             </h4>
             <span
@@ -121,15 +121,15 @@ export default function AchievementCard({
               {achievement?.tier}
             </span>
           </div>
-          <p className="text-xs text-[var(--text-secondary)] line-clamp-2">
+          <p className="text-xs text-txt-secondary line-clamp-2">
             {achievement?.description}
           </p>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-[var(--surface-divider)]">
-        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">
+      <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-surface-divider">
+        <span className="text-[10px] text-txt-muted uppercase tracking-wide">
           {categoryLabels[achievement?.category] || achievement?.category}
         </span>
 
@@ -138,7 +138,7 @@ export default function AchievementCard({
             +{achievement?.xpReward} XP
           </span>
           {earned && earnedAt && (
-            <span className="text-[10px] text-[var(--text-muted)]">
+            <span className="text-[10px] text-txt-muted">
               {new Date(earnedAt).toLocaleDateString()}
             </span>
           )}
@@ -161,10 +161,10 @@ export default function AchievementCard({
 
       {/* Hidden overlay for locked */}
       {!earned && achievement?.isHidden && (
-        <div className="absolute inset-0 glass flex items-center justify-center bg-[var(--bg-base)]/60">
+        <div className="absolute inset-0 glass flex items-center justify-center bg-base/60">
           <div className="text-center">
             <span className="text-2xl">🔒</span>
-            <p className="text-xs text-[var(--text-muted)] mt-1">Hidden Achievement</p>
+            <p className="text-xs text-txt-muted mt-1">Hidden Achievement</p>
           </div>
         </div>
       )}

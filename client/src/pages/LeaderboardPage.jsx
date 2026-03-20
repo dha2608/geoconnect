@@ -58,7 +58,7 @@ function LeaderboardRow({ entry, rank, isCurrentUser }) {
       className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${
         isCurrentUser
           ? 'bg-accent-primary/10 border border-accent-primary/20'
-          : 'hover:bg-[var(--surface-hover)]'
+          : 'hover:bg-surface-hover'
       }`}
     >
       {/* Rank */}
@@ -70,14 +70,14 @@ function LeaderboardRow({ entry, rank, isCurrentUser }) {
             {rank}
           </span>
         ) : (
-          <span className="text-sm text-[var(--text-muted)] font-medium tabular-nums">
+          <span className="text-sm text-txt-muted font-medium tabular-nums">
             {rank}
           </span>
         )}
       </div>
 
       {/* Avatar */}
-      <div className="w-9 h-9 rounded-full overflow-hidden bg-[var(--surface-hover)] shrink-0">
+      <div className="w-9 h-9 rounded-full overflow-hidden bg-surface-hover shrink-0">
         {entry.userInfo?.avatar ? (
           <img
             src={entry.userInfo.avatar}
@@ -85,7 +85,7 @@ function LeaderboardRow({ entry, rank, isCurrentUser }) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-sm font-bold text-[var(--text-muted)]">
+          <div className="w-full h-full flex items-center justify-center text-sm font-bold text-txt-muted">
             {entry.userInfo?.name?.[0]?.toUpperCase() || '?'}
           </div>
         )}
@@ -93,23 +93,23 @@ function LeaderboardRow({ entry, rank, isCurrentUser }) {
 
       {/* Name + level */}
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-[var(--text-primary)] truncate">
+        <p className="text-sm font-medium text-txt-primary truncate">
           {entry.userInfo?.name}
           {isCurrentUser && (
             <span className="text-[10px] text-accent-primary ml-1.5">(You)</span>
           )}
         </p>
-        <p className="text-xs text-[var(--text-muted)]">
+        <p className="text-xs text-txt-muted">
           Lv.{entry.level} · {entry.levelTitle}
         </p>
       </div>
 
       {/* XP */}
       <div className="text-right shrink-0">
-        <p className="text-sm font-bold text-[var(--text-primary)] tabular-nums">
+        <p className="text-sm font-bold text-txt-primary tabular-nums">
           {entry.xp?.toLocaleString()}
         </p>
-        <p className="text-[10px] text-[var(--text-muted)]">XP</p>
+        <p className="text-[10px] text-txt-muted">XP</p>
       </div>
     </motion.div>
   );
@@ -118,15 +118,15 @@ function LeaderboardRow({ entry, rank, isCurrentUser }) {
 /* ── Tab Pill ────────────────────────────────────────────────── */
 function TabPill({ options, value, onChange }) {
   return (
-    <div className="flex gap-1 p-1 rounded-xl bg-[var(--surface-hover)]/60">
+    <div className="flex gap-1 p-1 rounded-xl bg-surface-hover/60">
       {options.map((opt) => (
         <button
           key={opt.key}
           onClick={() => onChange(opt.key)}
           className={`relative px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
             value === opt.key
-              ? 'text-[var(--text-primary)]'
-              : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+              ? 'text-txt-primary'
+              : 'text-txt-muted hover:text-txt-secondary'
           }`}
         >
           {value === opt.key && (
@@ -176,8 +176,8 @@ export default function LeaderboardPage() {
     >
       {/* Page header */}
       <motion.div variants={fadeUp} className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Leaderboard</h1>
-        <p className="text-sm text-[var(--text-secondary)] mt-1">
+        <h1 className="text-2xl font-bold text-txt-primary">Leaderboard</h1>
+        <p className="text-sm text-txt-secondary mt-1">
           Compete with the community and earn your place
         </p>
       </motion.div>
@@ -194,11 +194,11 @@ export default function LeaderboardPage() {
           {/* My rank card */}
           {myRank && !loading && (
             <div className="glass p-3 flex items-center gap-3">
-              <span className="text-xs text-[var(--text-muted)]">Your Rank</span>
+              <span className="text-xs text-txt-muted">Your Rank</span>
               <span className="text-lg font-bold text-accent-primary tabular-nums">
                 #{myRank}
               </span>
-              <span className="text-xs text-[var(--text-muted)]">of {leaderboard?.length || 0}</span>
+              <span className="text-xs text-txt-muted">of {leaderboard?.length || 0}</span>
             </div>
           )}
 
@@ -249,7 +249,7 @@ export default function LeaderboardPage() {
 
           {/* Recent achievements */}
           <div className="glass p-4">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-txt-primary mb-3 flex items-center gap-2">
               <span>🏆</span> Recent Achievements
             </h3>
             {earnedAchievements?.length > 0 ? (
@@ -264,13 +264,13 @@ export default function LeaderboardPage() {
                   />
                 ))}
                 {earnedAchievements.length > 5 && (
-                  <p className="text-[10px] text-[var(--text-muted)] text-center pt-1">
+                  <p className="text-[10px] text-txt-muted text-center pt-1">
                     +{earnedAchievements.length - 5} more
                   </p>
                 )}
               </div>
             ) : (
-              <p className="text-xs text-[var(--text-muted)] text-center py-4">
+              <p className="text-xs text-txt-muted text-center py-4">
                 No achievements earned yet. Keep exploring!
               </p>
             )}

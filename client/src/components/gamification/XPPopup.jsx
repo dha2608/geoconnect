@@ -55,7 +55,7 @@ function XPToast({ popup, onDismiss }) {
       </span>
 
       <div className="min-w-0">
-        <p className="text-xs text-[var(--text-secondary)] leading-tight">
+        <p className="text-xs text-txt-secondary leading-tight">
           {actionLabels[popup.action] || popup.action}
         </p>
         <p className="text-sm font-bold text-accent-primary leading-tight">
